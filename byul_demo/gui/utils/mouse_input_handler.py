@@ -85,8 +85,6 @@ class MouseInputHandler(QObject):
             event.pos() - self._press_pos).manhattanLength() < 5:
 
             self._pending_click_event = event
-            # self._click_timer.start(100)
-            # QTimer.singleShot(100, self._emit_delayed_click)
             self._emit_delayed_click()
 
         return False

@@ -44,7 +44,7 @@ class GridCanvas(QWidget):
 
     tick_elapsed = Signal(float)
 
-    def __init__(self, block_size=100, interval_msec=30, min_px=30, parent=None):
+    def __init__(self, block_size=100, interval_msec=3, min_px=30, parent=None):
         super().__init__(parent)
         self.parent = parent
 
@@ -155,26 +155,21 @@ class GridCanvas(QWidget):
         min_x = center_x - (self.grid_width // 2)
         min_y = center_y - (self.grid_height // 2)
 
-        # for npc in self.grid_map_ctr.npc_dict.values():
-        rect = QRect(min_x, min_y, self.grid_width, self.grid_height)
-        npcs = None
-        if self.grid_map_ctr.npc_dict:
-            # for npc in self.grid_map_ctr.npc_dict.values():
-            npcs = self.grid_map_ctr.get_npcs_in_rect(rect)
-            for npc in npcs:
-                npc.on_tick(elapsed_sec)
-        
         self.move_from_keys(self._pressed_keys)
         self.grid_map.update_buffer_cells()
 
         if self.needs_redraw:
-            self.draw_cells_and_npcs(npcs)            
+            rect = QRect(min_x, min_y, self.grid_width, self.grid_height)
+            npcs = None
+            if self.grid_map_ctr.npc_dict:
+                npcs = self.grid_map_ctr.find_npcs_in_rect(rect)
+                for npc in npcs:
+                    npc.on_tick(elapsed_sec)            
+            self.draw_cells_and_npcs(npcs)
             self.needs_redraw = False
 
         if g_logger.debug_mode:
-            last = time.time()
-            elapsed = ( last - now )  * 1000
-            self.tick_elapsed.emit(elapsed)
+            self.tick_elapsed.emit(elapsed_sec * 1000)
 
         self.update()
 
@@ -210,34 +205,7 @@ class GridCanvas(QWidget):
                     painter.drawRect(px, py, self.cell_size, self.cell_size)
                     continue
 
-                # painter.setBrush(cell.get_color())
-                # painter.drawRect(px, py, self.cell_size, self.cell_size)
-
                 image = None
-                if cell.status == CellStatus.NPC:
-                    if len(cell.npc_ids) > 0:
-                        start = c_coord(cell.x, cell.y)
-                        npc = None
-                        old_npc = None
-                        for npc_id in cell.npc_ids:
-                            # self.grid_map_ctr.add_npc(npc_id, start)
-                            old_npc = npc
-                            npc = self.grid_map_ctr.get_npc(npc_id)
-                            if npc is None:
-                                npc = old_npc
-
-                        # 가장 마지막의 npc의 그림만 알면 된다.
-                        if npc and not npc.anim_started:
-                            image = npc.get_image()
-                        else:
-                            # 애니매이션이 시작되었다 기존에 셀에 그린 npc는 제거한다.
-                            # 이미지를 그리지 않고 empty 이미지를 그린다.
-                            image = ImageManager.get_empty_image()
-
-                # elif cell.status == CellStatus.EMPTY:
-                else:
-                    image = ImageManager.get_empty_image()
-
                 if self.selected_npc:
                     coord = c_coord(gx, gy)
                     
@@ -279,11 +247,12 @@ class GridCanvas(QWidget):
         if g_logger.debug_mode:
             t1 = time.time()
             elapsed = (t1 - t0) * 1000
-            # QTimer.singleShot(0, lambda: self.draw_cells_ended.emit(t1))
-            # QTimer.singleShot(0, lambda: self.draw_cells_elapsed.emit(elapsed))
             self.draw_cells_elapsed.emit(elapsed)            
 
-    def draw_npcs(self, painter, npcs):
+    def draw_npcs(self, painter, npcs:list[NPC]):
+        center_x, center_y = self.grid_map.get_center()
+        min_x = center_x - (self.grid_width // 2)
+        min_y = center_y - (self.grid_height // 2)        
         for npc in npcs:
             npc_phantom_start = npc.phantom_start
             win_pos_x, win_pos_y = self.get_win_pos_at_coord(npc_phantom_start)

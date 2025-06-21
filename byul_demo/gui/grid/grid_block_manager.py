@@ -58,7 +58,7 @@ class GridBlockManager(QObject):
             (y // self.block_size) * self.block_size
         )
 
-    def request_load_block(self, x: int, y: int):
+    def request_load_block(self, x: int, y: int, interval_msec=5):
         key = self.get_origin(x, y)
 
         if key in self.block_cache or key in self.loading_set:
@@ -71,9 +71,9 @@ class GridBlockManager(QObject):
 
         if not self._pending_timer:
             self._pending_timer = True
-            QTimer.singleShot(0, self._process_next_block)
+            QTimer.singleShot(interval_msec, self._process_next_block)
 
-    def _process_next_block(self):
+    def _process_next_block(self, interval_msec=5):
         self._pending_timer = False
 
         while (self.loading_queue and
@@ -91,7 +91,7 @@ class GridBlockManager(QObject):
         # ❗️다음 예약이 필요한 경우
         if self.loading_queue and not self._pending_timer:
             self._pending_timer = True
-            QTimer.singleShot(0, self._process_next_block)
+            QTimer.singleShot(interval_msec, self._process_next_block)
 
         # ✅ 완료 여부 알림
         # if not self.loading_queue and not self._active_threads:
@@ -145,7 +145,7 @@ class GridBlockManager(QObject):
             if self.on_npc_evict:
                 self.on_npc_evict(old_key)
 
-    def _finalize_thread(self, key: c_coord):
+    def _finalize_thread(self, key: c_coord, interval_msec=5):
         self.loading_set.discard(key)
 
         thread = self._active_threads.pop(key, None)
@@ -155,7 +155,7 @@ class GridBlockManager(QObject):
 
         if not self._pending_timer:
             self._pending_timer = True
-            QTimer.singleShot(0, self._process_next_block)
+            QTimer.singleShot(interval_msec, self._process_next_block)
 
     def _on_load_block_failed(self, key: c_coord):
         # 중복 처리 방어

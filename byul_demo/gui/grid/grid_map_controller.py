@@ -95,7 +95,8 @@ class GridMapController(QObject):
         # self._spawn_next_npc_batch()
         self._spawn_npc_batch(pending_npcs)
 
-    def _spawn_npc_batch(self, pending_npcs: list[tuple[str, c_coord]], batch_size: int = 10):
+    def _spawn_npc_batch(self, pending_npcs: list[tuple[str, c_coord]], 
+                         batch_size: int = 1, interval_msec=2):
         if not pending_npcs:
             return
 
@@ -107,7 +108,7 @@ class GridMapController(QObject):
                 count += 1
 
             if pending_npcs:
-                QTimer.singleShot(2, run_batch)
+                QTimer.singleShot(interval_msec, run_batch)
 
         run_batch()
 
@@ -126,7 +127,7 @@ class GridMapController(QObject):
         self._evict_npc_batch(pending_npc_removals)
 
     def _evict_npc_batch(self, pending_npc_removals: list[str], 
-                        batch_size: int = 10):
+                        batch_size: int = 1, interval_msec=2):
         if not pending_npc_removals:
             return
 
@@ -139,7 +140,7 @@ class GridMapController(QObject):
                 count += 1
 
             if pending_npc_removals:
-                QTimer.singleShot(2, run_batch)
+                QTimer.singleShot(interval_msec, run_batch)
 
         run_batch()
 
@@ -307,12 +308,16 @@ class GridMapController(QObject):
 
         pass
 
-    def get_npcs_in_rect(self, rect: QRect) -> list[NPC]:
+    def find_npcs_in_rect(self, rect: QRect) -> list[NPC]:
         result = []
         seen = set()
 
-        for x in range(rect.left(), rect.right()):
-            for y in range(rect.top(), rect.bottom()):
+        x0 = rect.left()
+        x1 = rect.right()
+        y0 = rect.top()
+        y1 = rect.bottom()
+        for x in range(x0, x1):
+            for y in range(y0, y1):
                 cell = self.grid_map.get_cell(x, y)
                 if not cell or not cell.npc_ids:
                     continue
