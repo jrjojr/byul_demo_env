@@ -18,7 +18,6 @@ from config import BYUL_DEMO_ENV_PATH
 
 from threading import Lock
 
-
 class GridBlockManager(QObject):
     # loading_block_completed = Signal()
     to_cells_elapsed = Signal(float, int)
