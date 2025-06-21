@@ -161,8 +161,7 @@ class NPC(QObject):
 
         # self.proto_coord_list.clear()
         # self.real_coord_list.clear()
-        self.proto_route.close()
-        self.real_route.close()
+
         self.phantom_start = None
         self.prev_goal = None
 
@@ -171,9 +170,6 @@ class NPC(QObject):
         # self.finder.changed_coords_func = ffi.NULL
         # self.finder.cost_func = ffi.NULL
         # self.finder.is_blocked_func = ffi.NULL  # 필요 시 활성화
-
-        # 🔸 C 객체 정리
-        # self.finder.close()
 
         # 🔸 이미지 캐시 제거 (선택적)
         # self.images.clear()
@@ -314,8 +310,6 @@ start_delay_sec : {self.start_delay_sec}''')
                 next = None
 
             if next is not None:
-                if self.next is not None:
-                    self.next.close()
                 self.next = next
                 self.phantom_start = self.start
                 self.anim_started = True
@@ -550,9 +544,6 @@ start_delay_sec : {self.start_delay_sec}''')
                 f'len(self.proto_route): {len(self.proto_route)}')
 
         finally:
-            # p는 이제 더이상 필요없다
-            # 래퍼클래스라서 메모리 해제 해야 한다.            
-            # p.close()
             pass
 
     def on_real_route_found(self):
@@ -573,9 +564,7 @@ start_delay_sec : {self.start_delay_sec}''')
                 f'len(self.real_coord_list): {len(self.real_route)}')                
 
         finally:
-            # p는 이제 더이상 필요없다
-            # 래퍼클래스라서 메모리 해제 해야 한다.            
-            # p.close()
+
             pass
 
     def clear_proto_route(self):

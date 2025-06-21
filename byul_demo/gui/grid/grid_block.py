@@ -4,18 +4,10 @@ from coord import c_coord
 
 import json
 from pathlib import Path
-from PySide6.QtCore import QThread, Signal
 
 from utils.log_to_panel import g_logger
 
-import json
-from pathlib import Path
 from PySide6.QtCore import QThread, Signal
-
-from coord import c_coord
-from utils.log_to_panel import g_logger
-
-from coord import c_coord
 
 import time
 
@@ -48,6 +40,9 @@ class GridBlock:
             cell_dict[(cell.x, cell.y)] = cell
 
         return cls(x0, y0, block_size, cell_dict)
+
+
+
 
     def get_key(self) -> c_coord:
         return (self.x0, self.y0)

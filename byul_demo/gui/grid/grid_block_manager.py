@@ -138,7 +138,7 @@ class GridBlockManager(QObject):
                 break
 
             old_key = evictable_keys[0]
-            self.block_cache.pop(old_key)
+            old_block = self.block_cache.pop(old_key)
             removed += 1
 
             g_logger.log_debug(f"[evict_block] ⛔ 제거: {old_key}")
@@ -622,4 +622,3 @@ class GridBlockManager(QObject):
             path = Path(self.grid_block_dir) / f"block_{bx}_{by}.json"
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(block_data.to_json(), f, indent=4)
-

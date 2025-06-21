@@ -2,8 +2,6 @@ from enum import Enum, Flag, auto
 from typing import Optional, Any
 from PySide6.QtGui import QColor
 
-from route import RouteDir
-
 import random
 import string
 import uuid
@@ -57,12 +55,6 @@ class GridCell:
             self.npc_ids.remove(npc_id)
         if len(self.npc_ids) <= 0:
             self.status = CellStatus.EMPTY
-
-    # # GridCell.remove_npc_id 는 그냥 비워버리거나 status만 바꾸기:
-    # def remove_npc_id(self, npc_id: str):
-    #     if npc_id in self.npc_ids:
-    #         # ❌ self.npc_ids.remove(npc_id) ← 이건 절대 하지 않기
-    #         self.status = CellStatus.EMPTY
 
     def has_flag(self, flag: CellFlag) -> bool:
         return flag in self.flags

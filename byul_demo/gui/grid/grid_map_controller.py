@@ -70,9 +70,10 @@ class GridMapController(QObject):
         cell = self.get_cell(npc.start)
         if cell:
             cell.remove_npc_id(npc_id)
-        else:
-            g_logger.log_debug(
-                f'npc({npc_id})의 위치 셀을 찾을 수 없음: {npc.start}')
+        # else:
+        #       # 이미 블락이 제거되었으면 셀도 존재하지 않는다.
+        #     g_logger.log_debug(
+        #         f'npc({npc_id})의 위치 셀을 찾을 수 없음: {npc.start}')
 
         # 관련 리소스 해제 (비동기 스레드 종료 등 추가 처리 필요 시 여기에)
         npc.close()
@@ -85,18 +86,15 @@ class GridMapController(QObject):
         if not block:
             return
 
-        # self._pending_npcs = []
         pending_npcs = []
         for cell in block.cells.values():
             for npc_id in cell.npc_ids:
-                # self._pending_npcs.append((npc_id, c_coord(cell.x, cell.y)))
                 pending_npcs.append((npc_id, c_coord(cell.x, cell.y)))
 
-        # self._spawn_next_npc_batch()
         self._spawn_npc_batch(pending_npcs)
 
     def _spawn_npc_batch(self, pending_npcs: list[tuple[str, c_coord]], 
-                         batch_size: int = 1, interval_msec=2):
+                         batch_size: int = 10, interval_msec=1):
         if not pending_npcs:
             return
 
@@ -127,7 +125,7 @@ class GridMapController(QObject):
         self._evict_npc_batch(pending_npc_removals)
 
     def _evict_npc_batch(self, pending_npc_removals: list[str], 
-                        batch_size: int = 1, interval_msec=2):
+                        batch_size: int = 1, interval_msec=50):
         if not pending_npc_removals:
             return
 

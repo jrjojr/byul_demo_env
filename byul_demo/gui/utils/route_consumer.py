@@ -10,7 +10,7 @@ def on_real_route_found(self):
         return
 
     coord_list = p.to_list()
-    p.close()
+
     self.real_consumer.consume(coord_list)
 
 '''
