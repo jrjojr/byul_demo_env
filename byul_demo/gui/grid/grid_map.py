@@ -5,13 +5,12 @@ import json
 import time
 from pathlib import Path
 
-from PySide6.QtCore import Signal, Slot, QRect
+from PySide6.QtCore import Signal, Slot, QRect, QTimer
 
-from grid.grid_cell import GridCell, CellStatus, CellFlag, TerrainType
+from grid.grid_cell import GridCell, CellFlag
+from grid.grid_block import GridBlock
 from grid.grid_block_manager import GridBlockManager
 from map import c_map
-
-from coord import c_coord
 
 from utils.log_to_panel import g_logger
 from utils.route_changing_detector import RouteChangingDetector
@@ -30,14 +29,15 @@ class GridMap(GridBlockManager):
 
     update_buffer_cells_elapsed = Signal(float)
 
-    def __init__(self, block_size=100):
+    def __init__(self, block_size=100, on_block_loaded=None,
+                 on_block_evicted=None):
         super().__init__(block_size)
 
         self.map = c_map()
         self.parent = None
 
         # 셀 캐시 버퍼 (GridCanvas에서 사용)
-        self.buffer_cells: dict[c_coord, GridCell] = dict()
+        self.buffer_cells: dict[tuple[int,int], GridCell] = dict()
         self.buffer_cells_width = 0
         self.buffer_cells_height = 0
 
@@ -45,20 +45,40 @@ class GridMap(GridBlockManager):
         self.center_y = 0
         
         key = self.get_origin(self.center_x, self.center_y)
-        self.request_load_block(key.x, key.y)
+        self.request_load_block(key[0], key[1])
 
         self.route_detector = RouteChangingDetector()
 
+        self.on_block_loaded = on_block_loaded
+        self.on_block_evicted = on_block_evicted
+
         # self.load_block_succeeded.connect(self.to_buffer_cells)
         # self.load_block_succeeded.connect(self.update_buffer_cells)
+        
+        # 부드러운 중심 이동용 타이머
+        self._pending_move_timer: QTimer = None
+        self._queued_move_center: tuple[int, int, int] = None        
 
-    @Slot(c_coord)
-    def to_buffer_cells(self, key:c_coord):
+    def after_block_loaded(self, key: tuple, block: GridBlock):
+        if self.on_block_loaded:
+            self.on_block_loaded(key)
+        pass
+
+    def before_block_evicted(self, key: tuple, block: GridBlock):
+        if self.on_block_evicted:
+            self.on_block_evicted(key)        
+        pass
+
+    def after_block_evicted(self, key: tuple):
+        pass
+
+    @Slot(int,int)
+    def to_buffer_cells(self, key_x, key_y):
         if g_logger.debug_mode:
             start = time.time()
            
-        x0 = key.x
-        y0 = key.y
+        x0 = key_x
+        y0 = key_y
         width = self.block_size
         height = self.block_size
 
@@ -122,8 +142,8 @@ class GridMap(GridBlockManager):
                      self.buffer_cells_width, self.buffer_cells_height)
         return rect
 
-    def load_from_dict(self, data: dict[c_coord, GridCell]):
-        self._cells = {c_coord.from_tuple(k): v for k, v in data.items()}
+    def load_from_dict(self, data: dict[tuple[int, int], GridCell]):
+        self._cells = dict(data)  # 그대로 복사
 
     def find_width(self, dir: str | Path = None):
         dir = Path(dir) if dir else self.grid_block_path
@@ -253,7 +273,7 @@ class GridMap(GridBlockManager):
         - 없으면 블럭 캐시를 확인하여 해당 셀을 가져오고,
         그래도 없으면 None
         """
-        coord = c_coord(x, y)
+        coord = (x, y)
         # 1. 셀 캐시 먼저 확인
         # if coord in self.buffer_cells:
         #     return self.buffer_cells[coord]
@@ -296,13 +316,31 @@ class GridMap(GridBlockManager):
         self.update_buffer_cells()
         self.center_changed.emit(gx, gy)
 
-    def move_center(self, dx: int, dy: int, distance=1):
-        """
-        중심 좌표를 (dx, dy)만큼 직접 이동하며,
-        내부적으로 set_center를 호출하지 않고 로딩 및 시그널을 직접 처리한다.
-        """
-        # g_logger.log_debug('move_center가 호출되었다')
-        
+    def move_center(self, dx: int, dy: int, distance=1, delay_msec=100):
+        if dx == 0 and dy == 0:
+            return
+
+        self._queued_move_center = (dx, dy, distance)
+
+        # if self._pending_move_timer:
+        #     self._pending_move_timer.stop()
+
+        # self._pending_move_timer = QTimer.singleShot(
+        #     delay_msec, self._execute_queued_move_center)
+
+        self._execute_queued_move_center()
+
+    def _execute_queued_move_center(self):
+        if not self._queued_move_center:
+            return
+
+        dx, dy, distance = self._queued_move_center
+        self._queued_move_center = None
+        self._pending_move_timer = None
+
+        self._real_move_center(dx, dy, distance)
+
+    def _real_move_center(self, dx: int, dy: int, distance=1):
         if dx == 0 and dy == 0:
             return
 
@@ -310,7 +348,6 @@ class GridMap(GridBlockManager):
             t0 = time.time()
             self.move_center_started.emit(t0)
 
-        # 현재 중심 → 목표 중심
         cx, cy = self.get_center()
         new_x = cx + dx
         new_y = cy + dy
@@ -320,33 +357,21 @@ class GridMap(GridBlockManager):
             f'→ 이동량=({dx}, {dy}) → 목표=({new_x}, {new_y})'
         )
 
-        # 경로 변경 여부에 따른 이동 사유 결정
         if self.route_detector.has_changed((cx, cy), (new_x, new_y)):
             self._move_reason = "changed"
         else:
             self._move_reason = "continue"
 
         self._target_step = 1
-
         self.center_x = new_x
         self.center_y = new_y
 
         min_x = new_x - (self.buffer_cells_width // 2)
         min_y = new_y - (self.buffer_cells_height // 2)
 
-        rect = QRect(min_x, min_y,
-                    self.buffer_cells_width, self.buffer_cells_height)
+        rect = QRect(min_x, min_y, self.buffer_cells_width, self.buffer_cells_height)
 
-        # → forward 기반으로 교체
-        if not self.is_blocks_loaded_forward_for_rect(rect, dx, dy, 
-                                                      distance):
-            # g_logger.log_debug(
-            #     f'좌표({new_x},{new_y})이 포함된 '
-            #     f'사각형({rect.left()}, {rect.top()}, '
-            #     f'{rect.width()}, {rect.height()})의 ({dx}, {dy})방향으로 '
-            #     f'{distance}만큼 블락을 로딩한다.'
-            #     )
-                        
+        if not self.is_blocks_loaded_forward_for_rect(rect, dx, dy, distance):
             self.load_blocks_forward_for_rect(rect, dx, dy, distance)
 
         self.update_buffer_cells()
@@ -356,18 +381,17 @@ class GridMap(GridBlockManager):
             t1 = time.time()
             self.move_center_ended.emit(t1)
             elapsed = (t1 - t0) * 1000
-            self.move_center_elapsed.emit(elapsed)
-            # g_logger.log_debug(f"[move_center] 처리 시간: {elapsed:.3f} ms")
+            self.move_center_elapsed.emit(elapsed)    
 
-    def get_block_key_for_coord(self, coord: c_coord) -> c_coord:
+    def get_block_key_for_coord(self, coord: tuple[int,int]) -> tuple[int,int]:
         """좌표가 음수일 경우도 포함하여 블락 키를 올바르게 계산"""
-        bx = coord.x // self.block_size
-        by = coord.y // self.block_size
+        bx = coord[0] // self.block_size
+        by = coord[1] // self.block_size
 
         # 보정: 음수 좌표일 때 정확히 블락 위치 계산
-        if coord.x < 0 and coord.x % self.block_size != 0:
+        if coord[0] < 0 and coord[0] % self.block_size != 0:
             bx -= 1
-        if coord.y < 0 and coord.y % self.block_size != 0:
+        if coord[1] < 0 and coord[1] % self.block_size != 0:
             by -= 1
 
-        return c_coord(bx, by)
+        return (bx, by)

@@ -1,4 +1,4 @@
-#include "coord.h"
+#include "internal/coord.h"
 #include <glib.h>
 
 coord coord_new_full(gint x, gint y) {

@@ -11,7 +11,7 @@ from PySide6.QtCore import (
 from grid.grid_cell import GridCell, CellStatus, CellFlag, TerrainType
 from grid.grid_map import GridMap
 from grid.grid_map_controller import GridMapController
-from coord import c_coord
+
 from route import RouteDir
 import time
 from utils.log_to_panel import g_logger
@@ -92,8 +92,6 @@ class GridCanvas(QWidget):
         self.mouse_handler.double_clicked.connect(self._on_dbl_clicked)
         self.last_mouse_pos = QPoint()
 
-        self.set_cell_size(80)
-
         self.npc_selected.connect(self.on_npc_selected)
         self.selected_npc = None
 
@@ -112,11 +110,11 @@ class GridCanvas(QWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        coord = c_coord(0, 0)
+        coord = (0, 0)
         QTimer.singleShot(1000, lambda: self.spawn_npc_at(coord))
         self.request_redraw()
 
-    def spawn_npc_at(self, coord:c_coord):
+    def spawn_npc_at(self, coord:tuple):
         npc_id = NPC.generate_random_npc_id()
         self.grid_map_ctr.add_npc(npc_id, coord)
         npc = self.grid_map_ctr.get_npc(npc_id)
@@ -159,10 +157,10 @@ class GridCanvas(QWidget):
         min_y = center_y - (self.grid_height // 2)
         rect = QRect(min_x, min_y, self.grid_width, self.grid_height)
         npcs = None
-        if self.grid_map_ctr.npc_dict:
+        if self.grid_map_ctr.npc_mgr.npc_dict:
             npcs = self.grid_map_ctr.find_npcs_in_rect(rect)
             for npc in npcs:
-                npc.on_tick(elapsed_sec)            
+                npc.on_tick(elapsed_sec)
 
         if self.needs_redraw:
             self.draw_cells_and_npcs(npcs)
@@ -207,7 +205,7 @@ class GridCanvas(QWidget):
 
                 image = None
                 if self.selected_npc:
-                    coord = c_coord(gx, gy)
+                    coord = (gx, gy)
                     
                     if not cell.terrain in self.selected_npc.movable_terrain:
                         image = ImageManager.get_obstacle_for_npc_image()
@@ -232,12 +230,13 @@ class GridCanvas(QWidget):
             self.draw_npcs(painter, npcs)
 
         if self.selected_npc:
-            npc_phantom_start = self.selected_npc.phantom_start
-            win_pos_x, win_pos_y = self.get_win_pos_at_coord(npc_phantom_start)
-            if win_pos_x and win_pos_y:
-                self.draw_selected_npc(painter, win_pos_x, win_pos_y,
-                                        self.selected_npc.disp_dx, 
-                                        self.selected_npc.disp_dy)
+            if self.selected_npc.phantom_start:
+                npc_phantom_start = self.selected_npc.phantom_start
+                win_pos_x, win_pos_y = self.get_win_pos_at_coord(npc_phantom_start)
+                if win_pos_x and win_pos_y:
+                    self.draw_selected_npc(painter, win_pos_x, win_pos_y,
+                                            self.selected_npc.disp_dx, 
+                                            self.selected_npc.disp_dy)
 
         if self.last_mouse_pos:
             self.draw_hover_cell(painter, self.last_mouse_pos, 120)
@@ -268,7 +267,7 @@ class GridCanvas(QWidget):
             cell = self.get_cell_at_win_pos(
                 self.last_mouse_pos.x(), self.last_mouse_pos.y())
             if cell:
-                c = c_coord(cell.x, cell.y)
+                c = (cell.x, cell.y)
                 self.grid_map_ctr.toggle_obstacle(c, self.selected_npc)
 
         # print(f"[KEY] {event.key()}, focus: {self.hasFocus()}")            
@@ -444,8 +443,8 @@ class GridCanvas(QWidget):
 
         return grid_x, grid_y
 
-    def get_grid_at_coord(self, coord:c_coord):
-        cx, cy = coord.x, coord.y
+    def get_grid_at_coord(self, coord:tuple):
+        cx, cy = coord[0], coord[1]
         center_x, center_y = self.grid_map.get_center()
 
         grid_x = cx - (center_x - self.grid_width // 2)
@@ -459,7 +458,7 @@ class GridCanvas(QWidget):
         pos_x, pos_y = self.convert_pos_grid_to_win(grid_x, grid_y)
         return pos_x, pos_y
     
-    def get_win_pos_at_coord(self, coord:c_coord):
+    def get_win_pos_at_coord(self, coord:tuple):
         gx, gy = self.get_grid_at_coord(coord)
 
         if gx == None or gy == None:
@@ -470,7 +469,7 @@ class GridCanvas(QWidget):
     @Slot(int)
     def set_cell_size(self, cell_size:int):
         self.cell_size = cell_size
-        for npc in self.grid_map_ctr.npc_dict.values():
+        for npc in self.grid_map_ctr.npc_mgr.npc_dict.values():
             npc.set_cell_size(cell_size)
 
         self.change_grid_from_window()
@@ -489,7 +488,7 @@ class GridCanvas(QWidget):
         gx = cell.x
         gy = cell.y
 
-        coord = c_coord(gx, gy)
+        coord = (gx, gy)
         if self.click_mode == "select_npc":
             npc = self.get_first_npc_in_cell(cell)
             if npc:
@@ -502,12 +501,12 @@ class GridCanvas(QWidget):
         
         elif self.click_mode == "spawn_npc_at":
             self.spawn_npc_at(coord)
-            g_logger.log_always(f"NPC 추가됨: at ({coord.x},{coord.y})")
+            g_logger.log_always(f"NPC 추가됨: at ({coord[0]},{coord[1]})")
 
         elif self.click_mode == "despawn_npc_at":
             if cell.npc_ids:
                 npc_id = cell.npc_ids[0]  # 첫 NPC만 제거
-                npc = self.grid_map_ctr.npc_dict[npc_id]
+                npc = self.grid_map_ctr.npc_mgr.npc_dict[npc_id]
                 if npc:
                     if npc == self.selected_npc:
                         self.selected_npc = None
@@ -515,7 +514,7 @@ class GridCanvas(QWidget):
                     self.grid_map_ctr.remove_npc(npc_id)
                     self.selected_npc = None
                     g_logger.log_always(
-                        f"NPC 제거됨: {npc_id} at ({coord.x},{coord.y})")
+                        f"NPC 제거됨: {npc_id} at ({coord[0]},{coord[1]})")
 
         elif self.click_mode == "obstacle":
             g_logger.log_debug(f"장애물 추가: ({gx}, {gy})")            
@@ -533,7 +532,7 @@ class GridCanvas(QWidget):
         gx = cell.x
         gy = cell.y
         
-        coord = c_coord(gx, gy)
+        coord = (gx, gy)
 
         if self.click_mode == "select_npc":
             if self.selected_npc:
@@ -559,7 +558,7 @@ class GridCanvas(QWidget):
         gx = cell.x
         gy = cell.y
         
-        coord = c_coord(gx, gy)
+        coord = (gx, gy)
 
         if self.click_mode == "select_npc":
             if self.selected_npc:
@@ -591,7 +590,7 @@ class GridCanvas(QWidget):
         if not cell.npc_ids:
             return None
         first_id = cell.npc_ids[0]
-        return self.grid_map_ctr.npc_dict.get(first_id)
+        return self.grid_map_ctr.npc_mgr.npc_dict.get(first_id)
 
     @Slot(NPC)
     def on_npc_selected(self, npc:NPC):

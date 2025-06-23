@@ -45,6 +45,16 @@ class GridCell:
         self.timestamp: float = 0.0
         self.custom_data: dict[str, Any] = {}
 
+    def close(self):
+        self.npc_ids.clear()
+        self.items.clear()
+        self.custom_data.clear()
+
+        self.zone_id = None
+        self.owner_npc_id = None
+        self.effect_id = None
+        self.event_id = None
+
     def add_npc_id(self, npc_id: str):
         if npc_id not in self.npc_ids:
             self.npc_ids.append(npc_id)

@@ -115,7 +115,7 @@ class CanvasSettingWidget(QWidget):
             self.label_selected_npc.setText("-")
 
         self.label_total_npc_len.setText(
-            f"총 NPC 수: {len(canvas.grid_map_ctr.npc_dict)}")
+            f"총 NPC 수: {len(canvas.grid_map_ctr.npc_mgr.npc_dict)}")
         
         mem_mb = get_memory_usage_mb()
         mem_usage = f"메모리 사용량: {mem_mb:.1f} MB"
@@ -202,7 +202,7 @@ class CanvasSettingWidget(QWidget):
     @Slot(str)
     def on_npc_added(self, npc_id:str):
         # 총 NPC 수 표시
-        npc_count = len(self.canvas.grid_map_ctr.npc_dict)
+        npc_count = len(self.canvas.grid_map_ctr.npc_mgr.npc_dict)
         full_id = npc_id
         short_id = full_id if len(full_id) <= 15 else full_id[:11] + "..."
 
@@ -228,7 +228,7 @@ class CanvasSettingWidget(QWidget):
         self.label_total_npc_len.setText(f"현재 선택된 npc : {short_id}")
         self.label_total_npc_len.setToolTip(f"NPC ID: {full_id}")           
 
-        npc_count = len(self.canvas.grid_map_ctr.npc_dict)
+        npc_count = len(self.canvas.grid_map_ctr.npc_mgr.npc_dict)
         msg = f"""{short_id} 제거됨 
 총 NPC 수: {npc_count}
 """

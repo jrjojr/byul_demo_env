@@ -22,8 +22,10 @@
   #define BYUL_PLATFORM_MACOS 0
 #endif
 
-// 정적 라이브러리 여부 감지
-#if defined(BYUL_STATIC)
+// 정적 라이브러리 여부 또는 Pybind11 바인딩 감지
+#if defined(PYBIND11_BINDINGS)
+  #define BYUL_API
+#elif defined(BYUL_STATIC)
   #define BYUL_API
 #else
   // DLL Export 설정

@@ -1,13 +1,12 @@
 import json
 import time
 from pathlib import Path
+from typing import Tuple
 
 from PySide6.QtCore import QThread, Signal
 
 from grid.grid_block import GridBlock, BlockLoaderThread
 from grid.grid_cell import GridCell
-
-from coord import c_coord
 
 from utils.log_to_panel import g_logger
 
@@ -48,7 +47,7 @@ class DummyBlock(GridBlock):
             for dx in range(block_size):
                 x = x0 + dx
                 y = y0 + dy
-                result[c_coord(x, y)] = GridCell.random(
+                result[(x, y)] = GridCell.random(
                     x=x, y=y,
                     npc_chance=self.npc_chance,
                     terrain_ratio_normal=self.terrain_ratio_normal,
@@ -87,7 +86,7 @@ class DummyBlock(GridBlock):
         cell_dict = {}
         for raw in raw_cells:
             cell = GridCell.from_dict(raw)
-            cell_dict[c_coord(cell.x, cell.y)] = cell
+            cell_dict[(cell.x, cell.y)] = cell
 
         return cls(
             x0=x0,
@@ -113,8 +112,8 @@ class DummyBlock(GridBlock):
             json.dump(data, f, indent=4, ensure_ascii=False)
 
 class DummyBlockThread(QThread):
-    succeeded = Signal(c_coord, DummyBlock)
-    failed = Signal(c_coord)
+    succeeded = Signal(tuple, DummyBlock)
+    failed = Signal(tuple)
     loading_block_started = Signal(float)    
 
     def __init__(self,
@@ -160,11 +159,11 @@ class DummyBlockThread(QThread):
                 event_chance=self.event_chance
             )
             self.result = block
-            self.succeeded.emit(c_coord(self.x0, self.y0), block)
+            self.succeeded.emit((self.x0, self.y0), block)
         except Exception as e:
             g_logger.log_debug_threadsafe(
                 f"[\u274c DummyBlockThread 실패] ({self.x0},{self.y0}): {e}")
-            self.failed.emit(c_coord(self.x0, self.y0))
+            self.failed.emit((self.x0, self.y0))
 
 class DummyBlockLoaderThread(BlockLoaderThread):
     def run(self):

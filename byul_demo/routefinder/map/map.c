@@ -62,15 +62,47 @@ void map_free(const map s) {
     g_free(s);
 }
 
+// guint map_hash(const map m) {
+//     if (!m) return 0;
+//     return (guint)(guintptr)m;    
+// }
+
 guint map_hash(const map m) {
     if (!m) return 0;
-    return (guint)(guintptr)m;    
+
+    guint h = 17;
+    h = h * 31 + m->width;
+    h = h * 31 + m->height;
+    h = h * 31 + m->mode;
+
+    h = h * 31 + g_hash_table_size(m->blocked_coords); // 대략만 포함
+
+    return h;
 }
 
 gboolean map_equal(const map ma, const map mb) {
     if (!ma || !mb) return FALSE;
-    return g_direct_equal(ma, mb);    
+
+    if (ma->width != mb->width) return FALSE;
+    if (ma->height != mb->height) return FALSE;
+    if (ma->mode != mb->mode) return FALSE;
+
+    // blocked_coords 크기 비교 먼저
+    guint size_a = g_hash_table_size(ma->blocked_coords);
+    guint size_b = g_hash_table_size(mb->blocked_coords);
+    if (size_a != size_b) return FALSE;
+
+    // // 실제 내용 비교
+    // if (!g_hash_table_equal(ma->blocked_coords, mb->blocked_coords)) {
+    //     return FALSE;
+    // }
+
+    // tiles 비교는 생략 가능 (성능 고려)
+
+    return TRUE;
 }
+
+
 
 map map_copy(const map m) {
     if (!m) return NULL;

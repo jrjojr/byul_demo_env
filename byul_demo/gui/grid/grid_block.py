@@ -1,6 +1,5 @@
 from typing import Dict, Tuple
 from grid.grid_cell import GridCell
-from coord import c_coord
 
 import json
 from pathlib import Path
@@ -13,11 +12,11 @@ import time
 
 class GridBlock:
     def __init__(self, x0: int, y0: int, block_size: int = 100,
-                 cells: Dict[c_coord, GridCell] = None):
+                 cells: Dict[tuple, GridCell] = None):
         self.x0 = x0
         self.y0 = y0
         self.block_size = block_size
-        self.cells: Dict[c_coord, GridCell] = cells if cells is not None else {}
+        self.cells: Dict[tuple, GridCell] = cells if cells is not None else {}
 
     def to_dict(self) -> dict:
         return {
@@ -34,29 +33,31 @@ class GridBlock:
         block_size = data["block_size"]
         raw_cells = data["cells"]
 
-        cell_dict: Dict[c_coord, GridCell] = {}
+        cell_dict: Dict[tuple, GridCell] = {}
         for raw in raw_cells:
             cell = GridCell.from_dict(raw)
             cell_dict[(cell.x, cell.y)] = cell
 
         return cls(x0, y0, block_size, cell_dict)
 
+    def close(self):
+        for cell in self.cells.values():
+            cell.close()
+        self.cells.clear()
 
-
-
-    def get_key(self) -> c_coord:
+    def get_key(self) -> tuple[int,int]:
         return (self.x0, self.y0)
 
-    def get_coord_key(self) -> c_coord:
-        return c_coord(self.x0, self.y0)
+    def get_coord_key(self) -> tuple[int,int]:
+        return (self.x0, self.y0)
 
-    def __getitem__(self, pos: c_coord) -> GridCell:
+    def __getitem__(self, pos: tuple[int,int]) -> GridCell:
         return self.cells[pos]
 
-    def __setitem__(self, pos: c_coord, cell: GridCell):
+    def __setitem__(self, pos: tuple[int,int], cell: GridCell):
         self.cells[pos] = cell
 
-    def __contains__(self, pos: c_coord) -> bool:
+    def __contains__(self, pos: tuple[int,int]) -> bool:
         return pos in self.cells
 
     def __len__(self) -> int:
@@ -66,8 +67,8 @@ class GridBlock:
         return iter(self.cells.items())
 
 class BlockThread(QThread):
-    succeeded = Signal(c_coord)
-    failed = Signal(c_coord)
+    succeeded = Signal(tuple)
+    failed = Signal(tuple)
     loading_block_started = Signal(float)
 
     def __init__(self, block: GridBlock):
@@ -86,8 +87,8 @@ class BlockThread(QThread):
             self.failed.emit(key)
 
 class BlockSaverThread(QThread):
-    succeeded = Signal(c_coord)
-    failed = Signal(c_coord)
+    succeeded = Signal(tuple)
+    failed = Signal(tuple)
 
     def __init__(self, block: GridBlock, folder: str):
         super().__init__()

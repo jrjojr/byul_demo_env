@@ -220,6 +220,8 @@ dstar_lite dstar_lite_new_full(map m, coord start,
 
     dstar_lite dsl = g_new0(dstar_lite_t, 1);
     dsl->m = m;
+    // g_print("[dsl->m assigned] %p\n", m);
+
     dsl->start = coord_copy(start);
     dsl->goal = coord_copy(start);
     
@@ -290,6 +292,82 @@ void dstar_lite_free(dstar_lite dsl) {
     if (dsl->real_route) route_free(dsl->real_route);
     g_free(dsl);
 }
+
+dstar_lite dstar_lite_copy(dstar_lite src) {
+    if (!src) return NULL;
+
+    dstar_lite copy = g_malloc0(sizeof(dstar_lite_t));
+    
+    // 맵과 좌표 복사
+    copy->m     = map_copy(src->m);
+    copy->start = coord_copy(src->start);
+    copy->goal  = coord_copy(src->goal);
+    copy->km    = src->km;
+
+    // 테이블 복사 (key: coord*, value: gfloat*)
+    copy->g_table = g_hash_table_copy_deep(
+        src->g_table,
+        (GHashFunc)coord_hash,
+        (GEqualFunc)coord_equal,
+        (GCopyFunc)coord_copy,
+        (GDestroyNotify)coord_free,
+        (GCopyFunc)g_memdup2,
+        (GDestroyNotify)g_free);
+
+    copy->rhs_table = g_hash_table_copy_deep(
+        src->rhs_table,
+        (GHashFunc)coord_hash,
+        (GEqualFunc)coord_equal,
+        (GCopyFunc)coord_copy,
+        (GDestroyNotify)coord_free,
+        (GCopyFunc)g_memdup2,
+        (GDestroyNotify)g_free);
+
+    // 우선순위 큐 복사 (주의: shallow copy로 충분한지에 따라 결정)
+    copy->frontier = dstar_lite_pqueue_copy(src->frontier);
+
+    // 콜백 함수와 유저 데이터는 그대로 유지
+    copy->cost_fn               = src->cost_fn;
+    copy->cost_fn_userdata      = src->cost_fn_userdata;
+    copy->is_blocked_fn         = src->is_blocked_fn;
+    copy->is_blocked_fn_userdata= src->is_blocked_fn_userdata;
+    copy->heuristic_fn          = src->heuristic_fn;
+    copy->heuristic_fn_userdata = src->heuristic_fn_userdata;
+    copy->move_fn               = src->move_fn;
+    copy->move_fn_userdata      = src->move_fn_userdata;
+    copy->changed_coords_fn     = src->changed_coords_fn;
+    copy->changed_coords_fn_userdata = src->changed_coords_fn_userdata;
+
+    // 경로 복사
+    copy->proto_route = route_copy(src->proto_route);
+    copy->real_route  = route_copy(src->real_route);
+
+    // 일반 설정 복사
+    copy->interval_msec           = src->interval_msec;
+    copy->real_loop_max_retry     = src->real_loop_max_retry;
+    copy->compute_max_retry       = src->compute_max_retry;
+    copy->reconstruct_max_retry   = src->reconstruct_max_retry;
+    copy->proto_compute_retry_count = src->proto_compute_retry_count;
+    copy->real_compute_retry_count  = src->real_compute_retry_count;
+    copy->real_loop_retry_count     = src->real_loop_retry_count;
+    copy->reconstruct_retry_count   = src->reconstruct_retry_count;
+    copy->force_quit             = src->force_quit;
+    copy->max_range              = src->max_range;
+    copy->debug_mode_enabled     = src->debug_mode_enabled;
+
+    // update_count_table 복사 (key: coord*, value: gint*)
+    copy->update_count_table = g_hash_table_copy_deep(
+        src->update_count_table,
+        (GHashFunc)coord_hash,
+        (GEqualFunc)coord_equal,
+        (GCopyFunc)coord_copy,
+        (GDestroyNotify)coord_free,
+        (GCopyFunc)g_memdup2,
+        (GDestroyNotify)g_free);
+
+    return copy;
+}
+
 
 coord dstar_lite_get_start(const dstar_lite dsl) {
     return dsl->start;
@@ -416,6 +494,10 @@ gint dstar_lite_get_update_count(dstar_lite dsl, const coord c) {
 
 const map dstar_lite_get_map(const dstar_lite dsl) {
     return dsl->m;
+}
+
+void    dstar_lite_set_map(const dstar_lite dsl, const map m) {
+    dsl->m = m;
 }
 
 const route dstar_lite_get_proto_route(const dstar_lite dsl) {

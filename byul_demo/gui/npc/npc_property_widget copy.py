@@ -17,8 +17,6 @@ class NpcPropertyWidget(QWidget):
         self.setLayout(self.layout)
 
         self._build_or_empty()
-
-
     
     def _build_or_empty(self):
         while self.form.rowCount():
@@ -34,15 +32,6 @@ class NpcPropertyWidget(QWidget):
 
         self.start_label = QLabel(f"({self.npc.start[0]}, {self.npc.start[1]})")
         self.form.addRow("📍 시작 위치:", self.start_label)
-        
-        self.goal_label = QLabel(f"({self.npc.goal[0]}, {self.npc.goal[1]})")
-        self.form.addRow("📍 목표 위치:", self.goal_label)        
-        
-        self.next_label = QLabel(f"(0, 0)")
-        self.form.addRow("📍 다음 위치:", self.next_label)
-
-        self.phantom_start_label = QLabel(f"(0, 0)")
-        self.form.addRow("📍 유령 시작 위치:", self.phantom_start_label)
 
         self.speed_spin = QDoubleSpinBox()
         self.speed_spin.setRange(0.1, 100)
@@ -86,6 +75,7 @@ class NpcPropertyWidget(QWidget):
         self.offset_y_spin.setValue(self.npc.draw_offset_y)
         self.form.addRow("Y 오프셋:", self.offset_y_spin)
 
+
         self.form.addRow(QLabel("<b>🏞️ 이동 가능 지형</b>"), QLabel(""))
 
         self.terrain_checkboxes = {}
@@ -95,29 +85,13 @@ class NpcPropertyWidget(QWidget):
             self.form.addRow(cb)
             self.terrain_checkboxes[terrain] = cb
 
+
         # self.layout.addLayout(self.form)
         # self.setLayout(self.layout)
-
-    def set_start_label(self):
-        self.start_label.setText(f"({self.npc.start[0]}, {self.npc.start[1]})")
-
-    def set_goal_label(self):
-        self.goal_label.setText(f"({self.npc.goal[0]}, {self.npc.goal[1]})")
-        
-    def set_phantom_start_label(self):
-        self.phantom_start_label.setText(f"({self.npc.phantom_start[0]}, {self.npc.phantom_start[1]})")
-
-    def set_next_label(self):
-        self.next_label.setText(f"({self.npc.next[0]}, {self.npc.next[1]})")
 
     def set_npc(self, npc: NPC):
         self.npc = npc
         self._build_or_empty()
-        if npc:
-            npc.start_changed_sig.connect(self.set_start_label)
-            npc.goal_changed_sig.connect(self.set_goal_label)
-            npc.anim_to_started_sig.connect(self.set_next_label)            
-            npc.anim_to_arrived_sig.connect(self.set_phantom_start_label)
 
     def bind_canvas(self, canvas: GridCanvas):
         self.set_npc(canvas.selected_npc)

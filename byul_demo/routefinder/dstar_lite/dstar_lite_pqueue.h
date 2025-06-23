@@ -20,6 +20,8 @@ BYUL_API dstar_lite_pqueue dstar_lite_pqueue_new();
 
 BYUL_API void dstar_lite_pqueue_free(dstar_lite_pqueue q);
 
+BYUL_API dstar_lite_pqueue dstar_lite_pqueue_copy(dstar_lite_pqueue src);
+
 BYUL_API void dstar_lite_pqueue_push(
     dstar_lite_pqueue q, const dstar_lite_key key, const coord c);
 

@@ -176,6 +176,8 @@ BYUL_API dstar_lite dstar_lite_new_full(map m, coord start,
 
 BYUL_API void dstar_lite_free(dstar_lite dsl);
 
+BYUL_API dstar_lite dstar_lite_copy(dstar_lite src);
+
 BYUL_API coord dstar_lite_get_start(const dstar_lite dsl);
 
 BYUL_API void  dstar_lite_set_start(dstar_lite dsl, const coord c);
@@ -240,6 +242,8 @@ BYUL_API gint         dstar_lite_get_update_count(
     dstar_lite dsl, const coord c);
 
 BYUL_API const map    dstar_lite_get_map(const dstar_lite dsl);
+BYUL_API void    dstar_lite_set_map(const dstar_lite dsl, const map m);
+
 
 BYUL_API const route dstar_lite_get_proto_route(const dstar_lite dsl);
 

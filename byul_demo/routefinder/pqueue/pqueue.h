@@ -25,6 +25,12 @@ struct s_pqueue_iter {
     pqueue pq;
 };
 
+typedef struct {
+    GQueue* queue;        // 내부 순회 큐
+} GTreeIter;
+
+BYUL_API void g_tree_iter_init(GTreeIter* iter, GTree* tree);
+
 typedef struct s_pqueue_iter pqueue_iter_t;
 typedef pqueue_iter_t* pqueue_iter;
 
@@ -37,6 +43,10 @@ BYUL_API pqueue pqueue_new_full(
 
 /// @brief 큐 해제
 BYUL_API void pqueue_free(pqueue pq);
+
+BYUL_API pqueue pqueue_copy(pqueue src, 
+    GCopyFunc value_copy_func, 
+    GDestroyNotify value_destroy_func);
 
 BYUL_API gboolean pqueue_find_min_key(pqueue pq, gpointer* out_key);
 

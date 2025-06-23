@@ -240,7 +240,7 @@ void route_append_nodup(route dest, const route src) {
 }
 
 void route_print(const route p) {
-    g_print("최종 경로 : ");
+    g_print("Final route: ");
     for (GList* l = route_get_coords(p); l; l = l->next) {
             coord c = (coord)l->data;
             if (l->next) {

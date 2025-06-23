@@ -191,8 +191,9 @@ class c_dstar_lite:
         return cls(raw_ptr=ptr)
     
     @classmethod
-    def from_values(cls, map:c_map, start:c_coord, debug_mode:bool=False):
-        ptr = C.dstar_lite_new_full(map.ptr(), start.ptr(), 
+    def from_values(cls, map:c_map, start:tuple, debug_mode:bool=False):
+        c = c_coord.from_tuple(start)
+        ptr = C.dstar_lite_new_full(map.ptr(), c.ptr(), 
                                     DSTAR_LITE_COST, 
                                     DSTAR_LITE_HEURISTIC, debug_mode)
         return cls(raw_ptr=ptr)    

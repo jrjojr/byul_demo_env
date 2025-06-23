@@ -26,6 +26,29 @@ void dstar_lite_pqueue_free(dstar_lite_pqueue q) {
     g_free(q);
 }
 
+dstar_lite_pqueue dstar_lite_pqueue_copy(dstar_lite_pqueue src) {
+    if (!src) return NULL;
+
+    dstar_lite_pqueue copy = g_malloc0(sizeof(struct s_dstar_lite_pqueue));
+
+    // 1. coord_to_key 해시테이블 복사 (coord* → float*)
+    copy->coord_to_key = g_hash_table_copy_deep(
+        src->coord_to_key,
+        (GHashFunc)coord_hash,
+        (GEqualFunc)coord_equal,
+        (GCopyFunc)coord_copy,
+        (GDestroyNotify)coord_free,
+        (GCopyFunc)g_memdup2,
+        (GDestroyNotify)g_free);
+
+    // 2. 우선순위 큐 복사 (coord 포함한 전체 복사)
+    copy->pq = pqueue_copy(src->pq, 
+        (GCopyFunc)coord_copy, 
+        (GDestroyNotify)coord_free);
+
+    return copy;
+}
+
 void dstar_lite_pqueue_push(
     dstar_lite_pqueue q, const dstar_lite_key key, const coord c) {
 

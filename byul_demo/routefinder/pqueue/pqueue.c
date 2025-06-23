@@ -55,6 +55,45 @@ gboolean pqueue_find_min_key(pqueue pq, gpointer* out_key) {
     return *out_key != NULL;
 }
 
+static gboolean _g_tree_iter_collect_cb(gpointer key, gpointer value, gpointer user_data) {
+    GQueue* q = (GQueue*)user_data;
+
+    GList* pair = g_list_prepend(NULL, value);
+    pair = g_list_prepend(pair, key);
+
+    g_queue_push_tail(q, pair);
+    return FALSE;  // 계속 순회
+}
+
+void g_tree_iter_init(GTreeIter* iter, GTree* tree) {
+    if (!iter || !tree) return;
+
+    iter->queue = g_queue_new();
+    g_tree_foreach(tree, _g_tree_iter_collect_cb, iter->queue);
+}
+
+gboolean g_tree_iter_next(GTreeIter* iter, gpointer* out_key, gpointer* out_value) {
+    if (!iter || g_queue_is_empty(iter->queue)) return FALSE;
+
+    GList* pair = (GList*)g_queue_pop_head(iter->queue);
+    if (!pair || !pair->next) return FALSE;
+
+    if (out_key) *out_key = pair->data;
+    if (out_value) *out_value = pair->next->data;
+
+    g_list_free(pair);
+    return TRUE;
+}
+
+void g_tree_iter_free(GTreeIter* iter) {
+    if (iter && iter->queue) {
+        g_queue_free_full(iter->queue, (GDestroyNotify)g_list_free);
+        iter->queue = NULL;
+    }
+}
+
+
+
 pqueue pqueue_new(void) {
     return pqueue_new_full(float_compare, NULL, g_free, g_free);
 }
@@ -80,6 +119,39 @@ void pqueue_free(pqueue pq) {
         g_tree_destroy(pq->tree);
     }
     g_free(pq);
+}
+
+pqueue pqueue_copy(pqueue src, GCopyFunc value_copy_func, GDestroyNotify value_destroy_func) {
+    if (!src) return NULL;
+
+    // 새 큐 생성
+    pqueue copy = g_malloc0(sizeof(pqueue_t));
+
+    copy->compare = src->compare;
+    copy->userdata = src->userdata;
+    copy->value_destroy = value_destroy_func;
+
+    // 새로운 트리 생성
+    copy->tree = g_tree_new_full(copy->compare, copy->userdata, NULL, (GDestroyNotify)g_queue_free);
+
+    // 트리 순회: key, GQueue* 복사
+    GTreeIter iter;
+    gpointer key, value;
+    g_tree_iter_init(&iter, src->tree);
+    while (g_tree_iter_next(&iter, &key, &value)) {
+        GQueue* src_queue = (GQueue*)value;
+        GQueue* new_queue = g_queue_new();
+
+        for (GList* l = src_queue->head; l != NULL; l = l->next) {
+            gpointer copied_value = value_copy_func ? 
+                value_copy_func(l->data, NULL) : l->data;
+            g_queue_push_tail(new_queue, copied_value);
+        }
+
+        g_tree_insert(copy->tree, key, new_queue);  // key는 그대로 사용 (정렬용)
+    }
+
+    return copy;
 }
 
 void pqueue_push(pqueue pq, gpointer key, gsize key_size,

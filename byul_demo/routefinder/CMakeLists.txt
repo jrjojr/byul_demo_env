@@ -47,7 +47,7 @@ file(MAKE_DIRECTORY ${${PROJECT_NAME}_BUILD_LIB_DIR})
 
 # 내부 헤더 복사 매크로
 macro(copy_headers module)
-    file(GLOB HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/${module}/*.h")
+    file(GLOB HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/${module}/*.h*")
     foreach(hdr ${HEADERS})
         get_filename_component(hname ${hdr} NAME)
         file(COPY ${hdr} DESTINATION ${${PROJECT_NAME}_BUILD_INTERNAL_DIR})
