@@ -2,9 +2,9 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QHBoxLayout,
     QFileDialog, QMessageBox, QSpinBox, QLabel
 )
-from ui.time_graph_widget import TimeGraphWidget  # 경로 조정 필요
+from gui.time_graph_widget import TimeGraphWidget  # 경로 조정 필요
 
-from grid.grid_canvas import GridCanvas
+from gui.grid_canvas import GridCanvas
 
 class TimeGraphPanel(QWidget):
     """

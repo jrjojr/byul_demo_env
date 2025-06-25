@@ -5,9 +5,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QIntValidator
 from PySide6.QtCore import Signal, Slot
 
-from grid.grid_canvas import GridCanvas
+from gui.grid_canvas import GridCanvas
 
-from npc.npc import NPC
+from world.world import World
+from world.npc.npc import NPC
 
 from utils.memory_usage import get_memory_usage_mb
 
@@ -98,24 +99,27 @@ class CanvasSettingWidget(QWidget):
         self.canvas = canvas
 
         # 앱 실행중에 절대 바뀌면 안되는거
-        self.label_block_size.setText(str(self.canvas.grid_map.block_size))
+        self.label_block_size.setText(
+            str(self.canvas.world.block_mgr.block_size))
 
         # ⬇️ 초기 상태 동기화
         self.on_grid_changed(canvas.grid_width, canvas.grid_height)
         self.on_center_changed(
-            canvas.grid_map.center_x, canvas.grid_map.center_y)
+            canvas.center_x, canvas.center_y)
+        self.field_center_x.setText(str(self.canvas.center_x))
+        self.field_center_y.setText(str(self.canvas.center_y))        
         
         self.field_cell_size.setText(str(canvas.cell_size))
         self.on_interval_msec_changed(canvas.interval_msec)
 
-        selected = canvas.selected_npc
+        selected = canvas.world.selected_npc
         if selected:
             self.on_npc_selected(selected)
         else:
             self.label_selected_npc.setText("-")
 
         self.label_total_npc_len.setText(
-            f"총 NPC 수: {len(canvas.grid_map_ctr.npc_mgr.npc_dict)}")
+            f"총 NPC 수: {len(canvas.world.npc_mgr.npc_dict)}")
         
         mem_mb = get_memory_usage_mb()
         mem_usage = f"메모리 사용량: {mem_mb:.1f} MB"
@@ -123,28 +127,28 @@ class CanvasSettingWidget(QWidget):
 
 
         self.canvas.grid_changed.connect(self.on_grid_changed)
-        self.canvas.grid_map.center_changed.connect(self.on_center_changed)
+        self.canvas.center_changed.connect(self.on_center_changed)
 
         self.canvas.cell_size_changed.connect(lambda val:
             self.field_cell_size.setText(str(val)))
         
-        self.canvas.grid_map_ctr.npc_added.connect(self.on_npc_added)
-        self.canvas.grid_map_ctr.npc_removed.connect(self.on_npc_removed)
+        self.canvas.world.npc_created.connect(self.on_npc_created)
+        self.canvas.world.npc_deleted.connect(self.on_npc_deleted)
 
-        self.canvas.npc_selected.connect(self.on_npc_selected)
+        self.canvas.world.npc_selected.connect(self.on_npc_selected)
         self.canvas.interval_msec_changed.connect(
             self.on_interval_msec_changed)
 
         self.field_center_x.editingFinished.connect(lambda:
-            self.canvas.grid_map.set_center(
+            self.canvas.set_center(
                 int(self.field_center_x.text()), 
-                self.canvas.grid_map.center_y
+                self.canvas.center_y
             )
         )
 
         self.field_center_y.editingFinished.connect(lambda:
-            self.canvas.grid_map.set_center(
-                self.canvas.grid_map.center_x, 
+            self.canvas.set_center(
+                self.canvas.center_x, 
                 int(self.field_center_y.text())
             )
         )        
@@ -169,8 +173,8 @@ class CanvasSettingWidget(QWidget):
 
     @Slot(int, int)
     def on_center_changed(self, x:int, y:int):
-        self.field_center_x.setText(str(self.canvas.grid_map.center_x))
-        self.field_center_y.setText(str(self.canvas.grid_map.center_y))
+        self.field_center_x.setText(str(self.canvas.center_x))
+        self.field_center_y.setText(str(self.canvas.center_y))
 
     @Slot(str)
     def set_combo_click_mode(self, mode_text: str):
@@ -183,8 +187,12 @@ class CanvasSettingWidget(QWidget):
 
     @Slot(NPC)
     def on_npc_selected(self, npc: NPC):
-        full_id = npc.id
-        short_id = full_id if len(full_id) <= 15 else full_id[:11] + "..."
+        if npc:
+            full_id = npc.id
+            short_id = full_id if len(full_id) <= 15 else full_id[:11] + "..."
+        else:
+            short_id = ''
+            full_id = ''
 
         self.label_selected_npc.setText(f"현재 선택된 npc : {short_id}")
         self.label_selected_npc.setToolTip(f"NPC ID: {full_id}")
@@ -200,9 +208,9 @@ class CanvasSettingWidget(QWidget):
             self.combo_interval_msec.setEditText(str(msec))  # editable=False면 표시만
 
     @Slot(str)
-    def on_npc_added(self, npc_id:str):
+    def on_npc_created(self, npc_id:str):
         # 총 NPC 수 표시
-        npc_count = len(self.canvas.grid_map_ctr.npc_mgr.npc_dict)
+        npc_count = len(self.canvas.world.npc_mgr.npc_dict)
         full_id = npc_id
         short_id = full_id if len(full_id) <= 15 else full_id[:11] + "..."
 
@@ -220,7 +228,7 @@ class CanvasSettingWidget(QWidget):
         self.label_memory_usage.setText(mem_usage)
 
     @Slot(str)
-    def on_npc_removed(self, npc_id: str):
+    def on_npc_deleted(self, npc_id: str):
         # 총 NPC 수 표시
         full_id = npc_id
         short_id = full_id if len(full_id) <= 15 else full_id[:11] + "..."
@@ -228,7 +236,7 @@ class CanvasSettingWidget(QWidget):
         self.label_total_npc_len.setText(f"현재 선택된 npc : {short_id}")
         self.label_total_npc_len.setToolTip(f"NPC ID: {full_id}")           
 
-        npc_count = len(self.canvas.grid_map_ctr.npc_mgr.npc_dict)
+        npc_count = len(self.canvas.world.npc_mgr.npc_dict)
         msg = f"""{short_id} 제거됨 
 총 NPC 수: {npc_count}
 """

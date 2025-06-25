@@ -9,19 +9,24 @@ from PySide6.QtCore import (
 )
 
 from grid.grid_cell import GridCell, CellStatus, CellFlag, TerrainType
-from grid.grid_map import GridMap
-from grid.grid_map_controller import GridMapController
+from world.village.village import Village
+from world.world import World
 
 from route import RouteDir
 import time
+from collections import deque
 from utils.log_to_panel import g_logger
 from utils.mouse_input_handler import MouseInputHandler
 
-from npc.npc import NPC
+from world.world import World
+from world.village.village import Village
+from world.npc.npc import NPC
 
 from pathlib import Path
 
 from utils.image_manager import ImageManager
+
+from utils.route_changing_detector import RouteChangingDetector
 
 class GridCanvas(QWidget):
     '''GridCanvas는 사용자와의 상호 작용을 담당하며,
@@ -37,27 +42,29 @@ class GridCanvas(QWidget):
     draw_cells_started = Signal(float)
     draw_cells_ended = Signal(float)
 
-    npc_selected = Signal(NPC)
     click_mode_changed = Signal(str)
 
     interval_msec_changed = Signal(int)
 
     tick_elapsed = Signal(float)
 
-    def __init__(self, block_size=100, interval_msec=3, min_px=30, parent=None):
+    def __init__(self, world:World, interval_msec=30, min_px=30, parent=None):
         super().__init__(parent)
         self.parent = parent
+        self.world = world
 
-        self.grid_map = GridMap(block_size)
-        self.grid_map_ctr = GridMapController(self.grid_map, parent=self)
+        self.grid_width = 11
+        self.grid_height = 11
+
+        self.center_x = 0
+        self.center_y = 0
+        self.set_center(0,0)
 
         # self.cell_size = 80
         self.set_cell_size(80)
         self.min_px = min_px
 
         self.min_size_for_text = 50
-        self.grid_width = 11
-        self.grid_height = 11
         self.setMinimumSize(500, 500)
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.StrongFocus)
@@ -79,9 +86,7 @@ class GridCanvas(QWidget):
         self.wheel_timer.setSingleShot(True)
         self.wheel_timer.timeout.connect(self.change_grid_from_window)
 
-        self.grid_changed.connect(self.grid_map.set_buffer_width_height)
-        self.grid_map.buffer_changed.connect(self.request_redraw)
-        # self.grid_map.load_block_succeeded.connect(self.request_redraw)
+        self.center_changed.connect(self.request_redraw)
 
         self.click_mode = "select_npc"
 
@@ -92,8 +97,14 @@ class GridCanvas(QWidget):
         self.mouse_handler.double_clicked.connect(self._on_dbl_clicked)
         self.last_mouse_pos = QPoint()
 
-        self.npc_selected.connect(self.on_npc_selected)
-        self.selected_npc = None
+        # move_center에서 사용한다 현재 진행방향을 확인하기 위해
+        self.route_detector = RouteChangingDetector()        
+
+        self._move_queue = deque()
+        self._move_timer = QTimer()
+        self._move_timer.setInterval(100)  # 이동 주기: 100ms (필요시 조절)
+        self._move_timer.timeout.connect(self._dequeue_move)
+        self._move_timer.start()        
 
     @Slot(int)
     def set_interval_msec(self, msec: int):
@@ -110,20 +121,32 @@ class GridCanvas(QWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        coord = (0, 0)
-        QTimer.singleShot(1000, lambda: self.spawn_npc_at(coord))
-        self.request_redraw()
+        QTimer.singleShot(1000, self.change_grid_from_window)
 
     def spawn_npc_at(self, coord:tuple):
         npc_id = NPC.generate_random_npc_id()
-        self.grid_map_ctr.add_npc(npc_id, coord)
-        npc = self.grid_map_ctr.get_npc(npc_id)
+        npc = self.world.create_npc(npc_id, coord)
         if npc is None:
-            g_logger.log_debug(f'add_npc({npc_id}) 실패했다')
+            g_logger.log_debug(f'create_npc({npc_id}) 실패했다')
 
-        if self.selected_npc is None:
-            self.selected_npc = npc
-            self.npc_selected.emit(npc)
+        if self.world.selected_npc is None:
+            self.world.selected_npc = npc
+
+        g_logger.log_always(f"NPC 추가됨: at ({coord[0]},{coord[1]})")            
+
+    def despawn_npc_at(self, coord:tuple):
+        cell = self.world.block_mgr.get_cell(coord)
+        if cell:
+            if cell.npc_ids:
+                npc_id = cell.npc_ids[0]
+                npc = self.world.npc_mgr.get_npc(npc_id)
+                if npc:
+                    if npc == self.world.selected_npc:
+                        self.world.selected_npc = None
+                        
+                    self.world.delete_npc(npc_id)
+                    g_logger.log_always(
+                        f"NPC 제거됨: {npc_id} at ({coord[0]},{coord[1]})")
        
     def enterEvent(self, event):
         if not self.hasFocus():
@@ -133,12 +156,76 @@ class GridCanvas(QWidget):
 
     def resizeEvent(self, event):
         self.change_grid_from_window()
-        self.request_redraw()
 
     def paintEvent(self, event):
         painter = QPainter(self)
         if self.cached_pixmap:
             painter.drawPixmap(0, 0, self.cached_pixmap)
+
+    def get_center(self)->tuple[int,int]:
+        return (self.center_x, self.center_y)
+    
+    def set_center(self, gx, gy):
+        # 좌표(gx, gy)를 센터로 이동한다.
+        g_logger.log_always(
+            f'좌표({gx}, {gy})를 센터로 설정한다.')
+        
+        self.center_x = gx
+        self.center_y = gy
+
+        # self.update_grid()
+
+        self.center_changed.emit(gx, gy)
+
+    def move_center(self, dx: int, dy: int, distance=1):
+        if dx == 0 and dy == 0:
+            return
+        self._move_queue.append((dx, dy, distance))
+
+    def _dequeue_move(self):
+        if not self._move_queue:
+            return
+
+        dx, dy, distance = self._move_queue.popleft()
+        self.real_move(dx, dy, distance)
+
+    def real_move(self, dx: int, dy: int, distance=1):
+        cx, cy = self.get_center()
+        new_x = cx + dx
+        new_y = cy + dy
+
+        g_logger.log_debug(
+            f'센터 이동 : 현재=({cx}, {cy}) '
+            f'→ 이동량=({dx}, {dy}) → 목표=({new_x}, {new_y})'
+        )
+
+        if self.route_detector.has_changed((cx, cy), (new_x, new_y)):
+            self._move_reason = "changed"
+        else:
+            self._move_reason = "continue"
+
+        self._target_step = 1
+        self.center_x = new_x
+        self.center_y = new_y
+
+        min_x = new_x - (self.grid_width // 2)
+        min_y = new_y - (self.grid_height // 2)
+
+        rect = QRect(min_x, min_y, self.grid_width, self.grid_height)
+
+        if not self.world.block_mgr.is_blocks_loaded_forward_for_rect(rect, dx, dy, distance):
+            self.world.block_mgr.load_blocks_forward_for_rect(rect, dx, dy, distance)
+
+        self.center_changed.emit(new_x, new_y)
+
+    def update_grid(self):
+           
+        x0 = self.center_x - (self.grid_width // 2)
+        y0 = self.center_y - (self.grid_height // 2)
+        rect = QRect(x0, y0, self.grid_width, self.grid_height)
+
+        if not self.world.block_mgr.is_blocks_loaded_for_rect(rect):
+            self.world.block_mgr.load_blocks_around_for_rect(rect)
 
     def _tick(self):
         now = time.time()
@@ -150,28 +237,29 @@ class GridCanvas(QWidget):
         self._last_tick_time = now
 
         self.move_from_keys(self._pressed_keys)
-        self.grid_map.update_buffer_cells()
 
-        center_x, center_y = self.grid_map.get_center()
-        min_x = center_x - (self.grid_width // 2)
-        min_y = center_y - (self.grid_height // 2)
+        min_x = self.center_x - (self.grid_width // 2)
+        min_y = self.center_y - (self.grid_height // 2)
         rect = QRect(min_x, min_y, self.grid_width, self.grid_height)
-        npcs = None
-        if self.grid_map_ctr.npc_mgr.npc_dict:
-            npcs = self.grid_map_ctr.find_npcs_in_rect(rect)
-            for npc in npcs:
-                npc.on_tick(elapsed_sec)
+        npcs = self.world.get_npcs_in_rect(rect)
+        for npc in npcs:
+            npc.on_tick(elapsed_sec, self.cell_size)
 
-        if self.needs_redraw:
-            self.draw_cells_and_npcs(npcs)
-            self.needs_redraw = False
+        self.update_grid()
+
+        # if self.needs_redraw:
+        #     # self.draw_cells_and_npcs(npcs)
+        #     self.draw_cells()
+        #     self.needs_redraw = False
+
+        self.draw_cells()        
 
         if g_logger.debug_mode:
             self.tick_elapsed.emit(elapsed_sec * 1000)
-
+        
         self.update()
 
-    def draw_cells_and_npcs(self, npcs=None):
+    def draw_cells(self):
         if g_logger.debug_mode:
             t0 = time.time()
             self.draw_cells_started.emit(t0)
@@ -187,16 +275,18 @@ class GridCanvas(QWidget):
         pen_black = QPen(Qt.black)
         brush_empty = QBrush(self.default_empty_cell_color)
 
-        center_x, center_y = self.grid_map.get_center()
-        min_x = center_x - (self.grid_width // 2)
-        min_y = center_y - (self.grid_height // 2)
+        min_x = self.center_x - (self.grid_width // 2)
+        min_y = self.center_y - (self.grid_height // 2)
 
         for y in range(self.grid_height):
             for x in range(self.grid_width):
                 gx = min_x + x
                 gy = min_y + y
+                # key = self.world.block_mgr.get_origin(gx, gy)
                 px, py = self.convert_pos_grid_to_win(x, y)
-                cell = self.grid_map.get_cell(gx, gy)
+
+                # ox, oy = self.world.block_mgr.get_origin(gx, gy)
+                cell = self.world.block_mgr.get_cell((gx, gy))
 
                 if cell is None:
                     painter.setBrush(brush_empty)
@@ -204,14 +294,38 @@ class GridCanvas(QWidget):
                     continue
 
                 image = None
-                if self.selected_npc:
+                npc = None
+                if cell.status == CellStatus.NPC:
+                    for npc_id in cell.npc_ids:
+                        if self.world.npc_mgr.has_npc(npc_id):
+                            npc = self.world.npc_mgr.get_npc(npc_id)
+                        else:
+                            npc = self.world.create_npc(npc_id, (gx, gy))
+                            pass
+                        if npc:
+                            if npc.anim_started:
+                                image = ImageManager.get_empty_image()
+                            else:
+                                image = npc.get_image()
+
+                            if npc.phantom_start:
+                                npc_phantom_start = npc.phantom_start
+                                win_pos_x, win_pos_y = self.get_win_pos_at_coord(npc_phantom_start)
+
+                            if win_pos_x and win_pos_y:
+                                npc.draw( painter, win_pos_x, win_pos_y, self.cell_size)   
+
+                elif cell.status == CellStatus.EMPTY:
+                    image = ImageManager.get_empty_image()
+
+                if self.world.selected_npc:
                     coord = (gx, gy)
                     
-                    if not cell.terrain in self.selected_npc.movable_terrain:
+                    if not cell.terrain in self.world.selected_npc.movable_terrain:
                         image = ImageManager.get_obstacle_for_npc_image()
 
                     if cell.has_flag(CellFlag.ROUTE):
-                        image = self.selected_npc.get_proto_route_image(coord)
+                        image = self.world.selected_npc.get_proto_route_image(coord)
 
                     if cell.has_flag(CellFlag.GOAL):
                         image = ImageManager.get_goal_image()
@@ -224,19 +338,16 @@ class GridCanvas(QWidget):
                     painter.setPen(pen_black)
                     painter.setFont(font)
                     painter.drawText(px, py, self.cell_size, self.cell_size, 
-                                     Qt.AlignCenter, cell.text())
+                                    Qt.AlignCenter, cell.text())
 
-        if npcs:
-            self.draw_npcs(painter, npcs)
-
-        if self.selected_npc:
-            if self.selected_npc.phantom_start:
-                npc_phantom_start = self.selected_npc.phantom_start
+        if self.world.selected_npc:
+            if self.world.selected_npc.phantom_start:
+                npc_phantom_start = self.world.selected_npc.phantom_start
                 win_pos_x, win_pos_y = self.get_win_pos_at_coord(npc_phantom_start)
                 if win_pos_x and win_pos_y:
                     self.draw_selected_npc(painter, win_pos_x, win_pos_y,
-                                            self.selected_npc.disp_dx, 
-                                            self.selected_npc.disp_dy)
+                                            self.world.selected_npc.disp_dx, 
+                                            self.world.selected_npc.disp_dy)
 
         if self.last_mouse_pos:
             self.draw_hover_cell(painter, self.last_mouse_pos, 120)
@@ -246,15 +357,7 @@ class GridCanvas(QWidget):
         if g_logger.debug_mode:
             t1 = time.time()
             elapsed = (t1 - t0) * 1000
-            self.draw_cells_elapsed.emit(elapsed)            
-
-    def draw_npcs(self, painter, npcs:list[NPC]):
-        for npc in npcs:
-            npc_phantom_start = npc.phantom_start
-            win_pos_x, win_pos_y = self.get_win_pos_at_coord(npc_phantom_start)
-
-            if win_pos_x and win_pos_y:
-                npc.draw( painter, win_pos_x, win_pos_y)        
+            self.draw_cells_elapsed.emit(elapsed)       
 
     # 나머지: 입력 처리, hover 표시, 클릭 처리 등은 원래 코드 유지
     def keyPressEvent(self, event):
@@ -268,7 +371,7 @@ class GridCanvas(QWidget):
                 self.last_mouse_pos.x(), self.last_mouse_pos.y())
             if cell:
                 c = (cell.x, cell.y)
-                self.grid_map_ctr.toggle_obstacle(c, self.selected_npc)
+                self.world.toggle_obstacle(c, self.world.selected_npc)
 
         # print(f"[KEY] {event.key()}, focus: {self.hasFocus()}")            
 
@@ -280,11 +383,22 @@ class GridCanvas(QWidget):
 
     def keyReleaseEvent(self, event):
         self._pressed_keys.discard(event.key())
+        # self._move_queue.clear()  # 🎯 큐 전부 제거             
+        self._preserve_queue_tail(1)  # 예: 마지막 2개만 남김           
         self.key_released.emit()        
+
+    def _preserve_queue_tail(self, keep_count: int):
+        # 현재 큐가 너무 작으면 그대로 둠
+        if len(self._move_queue) <= keep_count:
+            return
+        # 큐의 마지막 N개만 유지
+        self._move_queue = deque(list(self._move_queue)[-keep_count:])
+
 
     # 마우스 이동 시 위치 저장 후 업데이트
     def _on_mouse_moved(self, event: QMouseEvent):
         self.last_mouse_pos = event.position().toPoint()
+        self.request_redraw()
         # self.update()
 
     def focusOutEvent(self, event):
@@ -313,7 +427,7 @@ class GridCanvas(QWidget):
             if cell:
                 g_logger.log_always(
                     f"중간 클릭 at {pos.x()}, {pos.y()}, 셀 키 ({cell.x},{cell.y})")
-                self.grid_map.set_center(cell.x, cell.y)
+                self.set_center(cell.x, cell.y)
 
     def _on_dbl_clicked(self, event: QMouseEvent):
         if event.button() == Qt.LeftButton:
@@ -355,6 +469,7 @@ class GridCanvas(QWidget):
         self.grid_height = ((h - self.cell_size) // self.cell_size | 1)
 
         self.grid_changed.emit(self.grid_width, self.grid_height)
+        self.request_redraw()
 
     def draw_hover_cell(self, painter: QPainter, pos: QPoint, cell_size=80):
 
@@ -402,37 +517,37 @@ class GridCanvas(QWidget):
     def get_cell_at_mouse(self):
         pos = self.last_mouse_pos
         cx, cy = self.convert_pos_win_to_grid(pos.x(), pos.y())
-        center_x, center_y = self.grid_map.get_center()
+        center_x, center_y = self.get_center()
 
         if not (0 <= cx < self.grid_width and 0 <= cy < self.grid_height):
             return None  # 마우스가 그리드 바깥이면 None
 
         gx = center_x - self.grid_width // 2 + cx
         gy = center_y - self.grid_height // 2 + cy
-        return self.grid_map.get_cell(gx, gy)  # 셀이 존재하지 않으면 자동으로 None
+        return self.world.block_mgr.get_cell((gx, gy))  # 셀이 존재하지 않으면 자동으로 None
    
     def get_cell_at_win_pos(self, x, y):
         cx, cy = self.convert_pos_win_to_grid(x, y)
         cx = min(max(cx, 0), self.grid_width - 1)
         cy = min(max(cy, 0), self.grid_height - 1)
 
-        center_x, center_y = self.grid_map.get_center()
+        center_x, center_y = self.get_center()
         gx = center_x - self.grid_width // 2 + cx
         gy = center_y - self.grid_height // 2 + cy
 
-        return self.grid_map.get_cell(gx, gy)
+        return self.world.block_mgr.get_cell((gx, gy))
 
     def get_cell_at_grid(self, grid_x:int, grid_y:int):
-        center_x, center_y = self.grid_map.get_center()
+        center_x, center_y = self.get_center()
         if 0 <= grid_x < self.grid_width and 0 <= grid_y < self.grid_height:
             gx = center_x - self.grid_width // 2 + grid_x
             gy = center_y - self.grid_height // 2 + grid_y
-            return self.grid_map.get_cell(gx, gy)
+            return self.world.block_mgr.get_cell((gx, gy))
         return None
     
     def get_grid_at_cell(self, cell: GridCell):
         cx, cy = cell.x, cell.y
-        center_x, center_y = self.grid_map.get_center()
+        center_x, center_y = self.get_center()
 
         grid_x = cx - (center_x - self.grid_width // 2)
         grid_y = cy - (center_y - self.grid_height // 2)
@@ -445,7 +560,7 @@ class GridCanvas(QWidget):
 
     def get_grid_at_coord(self, coord:tuple):
         cx, cy = coord[0], coord[1]
-        center_x, center_y = self.grid_map.get_center()
+        center_x, center_y = self.get_center()
 
         grid_x = cx - (center_x - self.grid_width // 2)
         grid_y = cy - (center_y - self.grid_height // 2)
@@ -469,8 +584,8 @@ class GridCanvas(QWidget):
     @Slot(int)
     def set_cell_size(self, cell_size:int):
         self.cell_size = cell_size
-        for npc in self.grid_map_ctr.npc_mgr.npc_dict.values():
-            npc.set_cell_size(cell_size)
+        # for npc in self.world.npc_mgr.npc_dict.values():
+        #     npc.set_cell_size(cell_size)
 
         self.change_grid_from_window()
 
@@ -492,33 +607,21 @@ class GridCanvas(QWidget):
         if self.click_mode == "select_npc":
             npc = self.get_first_npc_in_cell(cell)
             if npc:
-                self.selected_npc = npc
-                self.npc_selected.emit(npc)
+                self.world.selected_npc = npc
                 g_logger.log_always(f"✅ 선택된 NPC: {npc.id}")
             else:
-                self.selected_npc = None                
+                self.world.selected_npc = None                
                 g_logger.log_always("⚠️ 해당 셀에 NPC가 없습니다.")
         
         elif self.click_mode == "spawn_npc_at":
             self.spawn_npc_at(coord)
-            g_logger.log_always(f"NPC 추가됨: at ({coord[0]},{coord[1]})")
 
         elif self.click_mode == "despawn_npc_at":
-            if cell.npc_ids:
-                npc_id = cell.npc_ids[0]  # 첫 NPC만 제거
-                npc = self.grid_map_ctr.npc_mgr.npc_dict[npc_id]
-                if npc:
-                    if npc == self.selected_npc:
-                        self.selected_npc = None
-                        
-                    self.grid_map_ctr.remove_npc(npc_id)
-                    self.selected_npc = None
-                    g_logger.log_always(
-                        f"NPC 제거됨: {npc_id} at ({coord[0]},{coord[1]})")
+            self.despawn_npc_at(coord)
 
         elif self.click_mode == "obstacle":
             g_logger.log_debug(f"장애물 추가: ({gx}, {gy})")            
-            self.grid_map_ctr.add_obstacle(coord)
+            self.world.add_obstacle(coord)
 
     def _handle_right_click(self, pos:QPoint):
         x = pos.x()
@@ -535,16 +638,16 @@ class GridCanvas(QWidget):
         coord = (gx, gy)
 
         if self.click_mode == "select_npc":
-            if self.selected_npc:
+            if self.world.selected_npc:
                 g_logger.log_always(f"🔴 목표 위치 설정: ({gx}, {gy})")
-                self.grid_map_ctr.set_goal(self.selected_npc, coord)
+                self.world.set_goal(self.world.selected_npc, coord)
             
             else:
                 g_logger.log_always("⚠️ 현재 선택된 NPC가 없습니다.")
 
         elif self.click_mode == "obstacle":
             g_logger.log_debug(f"장애물 제거: ({gx}, {gy})")
-            self.grid_map_ctr.remove_obstacle(coord)
+            self.world.remove_obstacle(coord)
 
     def _handle_shift_right_click(self, pos:QPoint):
         x = pos.x()
@@ -561,9 +664,9 @@ class GridCanvas(QWidget):
         coord = (gx, gy)
 
         if self.click_mode == "select_npc":
-            if self.selected_npc:
+            if self.world.selected_npc:
                 g_logger.log_always(f"🔴 목표 위치 추가: ({gx}, {gy})")
-                self.grid_map_ctr.append_goal(self.selected_npc, coord)
+                self.world.append_goal(self.world.selected_npc, coord)
             else:
                 g_logger.log_always("⚠️ 현재 선택된 NPC가 없습니다.")
 
@@ -584,20 +687,13 @@ class GridCanvas(QWidget):
             dy -= 1
         if Qt.Key_Down in pressed_keys:
             dy += 1
-        self.grid_map.move_center(dx, dy)
+        self.move_center(dx, dy)
     
     def get_first_npc_in_cell(self, cell: GridCell) -> NPC | None:
         if not cell.npc_ids:
             return None
         first_id = cell.npc_ids[0]
-        return self.grid_map_ctr.npc_mgr.npc_dict.get(first_id)
-
-    @Slot(NPC)
-    def on_npc_selected(self, npc:NPC):
-        npc_coord = npc.start
-        cell:GridCell = self.grid_map_ctr.get_cell(npc_coord)
-        if cell:
-            cell.add_flag(CellFlag.START)
+        return self.world.npc_mgr.npc_dict.get(first_id)
 
     def draw_selected_npc(self, painter, win_pos_x:int, win_pos_y:int, 
                           disp_dx:float, disp_dy:float):
@@ -612,6 +708,11 @@ class GridCanvas(QWidget):
         # painter.setPen(Qt.NoPen)
         # painter.drawRect(rect)
 
-        image = self.selected_npc.get_selected_npc_image()
+        image = self.world.selected_npc.get_selected_npc_image()
         painter.drawPixmap(
                 x, y, self.cell_size, self.cell_size, image)
+
+    def clear_route_flags(self):
+        for block in self.world.block_mgr.block_cache.values():
+            for cell in block.cells.values():
+                cell.remove_flag(CellFlag.ROUTE)

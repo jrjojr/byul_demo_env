@@ -12,13 +12,10 @@ from grid.grid_cell import GridCell
 from grid.dummy_block import DummyBlockThread
 import time
 
-from config import BYUL_DEMO_ENV_PATH
-
 from threading import Lock
 
 class GridBlockManager(QObject):
     # loading_block_completed = Signal()
-    to_cells_elapsed = Signal(float, int)
     
     load_block_succeeded = Signal(tuple)
 
@@ -35,20 +32,77 @@ class GridBlockManager(QObject):
         self._active_threads: dict[tuple, DummyBlockThread] = {}
 
         self.loading_queue: deque[tuple] = deque()
-        # 중복 제거용 큐는 같은 키도 추가한다.
+
+        # 중복 제거용 : 큐는 같은 키도 추가한다.
         # 집합으로 중복 값을 확인한다.
         self.loading_set: set[tuple] = set()
 
         self._pending_timer = False
 
-    def get_origin(self, x: int, y: int) -> tuple[int,int]:
+        self.on_after_block_loaded = None
+        self.on_before_block_evicted = None
+
+    def reset(self):
+        """모든 블록 상태, 캐시, 쓰레드, 큐를 초기화한다."""
+        with self._cache_lock:
+            # 블록 캐시 정리
+            for key, block in self.block_cache.items():
+                try:
+                    if self.on_before_block_evicted:
+                        self.on_before_block_evicted(key, block)
+                    block.close()
+                except Exception as e:
+                    g_logger.log_debug(f"[GridBlockManager] 블록({key}) close 중 예외: {e}")
+
+            self.block_cache.clear()
+
+        # 쓰레드 정리
+        for key, thread in list(self._active_threads.items()):
+            try:
+                thread.stop()  # DummyBlockThread가 stop() 지원하는 경우
+            except Exception as e:
+                g_logger.log_debug(f"[GridBlockManager] 쓰레드({key}) 중단 중 예외: {e}")
+        self._active_threads.clear()
+
+        # 대기 큐 및 중복 확인 세트 초기화
+        self.loading_queue.clear()
+        self.loading_set.clear()
+
+        # 타이머 플래그 초기화
+        self._pending_timer = False
+
+        g_logger.log_debug("[GridBlockManager] 상태 초기화 완료")
+
+    def get_origin(self, coord:tuple) -> tuple[int,int]:
         return (
-            (x // self.block_size) * self.block_size,
-            (y // self.block_size) * self.block_size
+            (coord[0] // self.block_size) * self.block_size,
+            (coord[1] // self.block_size) * self.block_size
         )
 
+    def get_cell(self, coord:tuple) -> GridCell:
+        """
+        지정 좌표의 셀을 반환한다.
+        블럭 캐시를 확인하여 해당 셀을 가져오고,
+        없으면 None
+        """
+        key = self.get_origin(coord)
+
+        block = self.block_cache.get(key)
+        if block:
+            dx = coord[0] - key[0]
+            dy = coord[1] - key[1]            
+            cell = block.cells.get((dx+key[0], dy+key[1]))
+            if cell:
+                return cell
+            
+        return None
+    
+    def set_cell(self, key:tuple, cell:GridCell):
+        block = self.block_cache[key]
+        block.cells[(cell.x, cell.y)] = cell
+
     def request_load_block(self, x: int, y: int, interval_msec=5):
-        key = self.get_origin(x, y)
+        key = self.get_origin((x, y))
 
         if key in self.block_cache or key in self.loading_set:
             return
@@ -66,30 +120,31 @@ class GridBlockManager(QObject):
         self._pending_timer = False
 
         while (self.loading_queue and
-               len(self._active_threads) < self.max_parallel):
+            len(self._active_threads) < self.max_parallel):
 
-            key= self.loading_queue.popleft()
+            key = self.loading_queue.popleft()
             thread = DummyBlockThread(key[0], key[1], self.block_size)
 
             thread.succeeded.connect(self._on_load_block_succeeded)
             thread.failed.connect(self._on_load_block_failed)
+            thread.finished.connect(lambda key=key: self._finalize_thread(key))
 
             self._active_threads[key] = thread
-            thread.start()            
+            thread.start()
 
-        # ❗️다음 예약이 필요한 경우
         if self.loading_queue and not self._pending_timer:
             self._pending_timer = True
             QTimer.singleShot(interval_msec, self._process_next_block)
 
-        # ✅ 완료 여부 알림
-        # if not self.loading_queue and not self._active_threads:
-        #     self.loading_block_completed.emit()
 
     def after_block_loaded(self, key: tuple, block: GridBlock):
+        if self.on_after_block_loaded:
+            self.on_after_block_loaded(key)
         pass
 
     def before_block_evicted(self, key: tuple, block: GridBlock):
+        if self.on_before_block_evicted:
+            self.on_before_block_evicted(key)
         pass
 
     def after_block_evicted(self, key: tuple):
@@ -105,59 +160,72 @@ class GridBlockManager(QObject):
 
         with self._cache_lock:
             if key in self.block_cache:
-                g_logger.log_debug(
-                    f"[load_block] ⚠️ 이미 처리된 key (중복 signal?): {key}")
-                self._finalize_thread(key)
-                return
+                g_logger.log_debug(f"[load_block] ⚠️ 이미 처리된 key (중복 signal?): {key}")
+                return  # ❗ finalize_thread는 finished 시그널로 처리됨
 
             thread = self._active_threads.get(key)
             if not thread:
                 g_logger.log_debug(f"[load_block] ❓ 쓰레드 누락: {key}")
                 return
-            
+
             self.__evict_if_needed(protect_key=key)
-
             self.block_cache[key] = thread.result
-
             self.after_block_loaded(key, thread.result)
 
-        self._finalize_thread(key)
         self.load_block_succeeded.emit(key)
 
         t1 = time.perf_counter()
-        g_logger.log_debug(
-            f"🎯 load_block_succeeded : {key} : 처리 시간: {(t1 - t0)*1000:.3f}ms")
+        g_logger.log_debug(f"🎯 load_block_succeeded : {key} : 처리 시간: {(t1 - t0)*1000:.3f}ms")
+
+    # def __evict_if_needed(self, 
+    #         protect_key: tuple | None = None, max_remove: int = 1):
+    #     removed = 0
+    #     while len(self.block_cache) > self.max_blocks and removed < max_remove:
+    #         evictable_keys = [k for k in self.block_cache if k != protect_key]
+    #         if not evictable_keys:
+    #             g_logger.log_debug(
+    #                 "[evict_block] 🚫 보호 대상 외에 제거할 key 없음")
+    #             break
+
+    #         old_key = evictable_keys[0]
+    #         old_block = self.block_cache.pop(old_key, None)
+    #         if old_block:
+    #             self.before_block_evicted(old_key, old_block)
+    #             old_block.close()
+    #             self.after_block_evicted(old_key)
+
+    #         removed += 1
 
     def __evict_if_needed(self, 
             protect_key: tuple | None = None, max_remove: int = 1):
         removed = 0
         while len(self.block_cache) > self.max_blocks and removed < max_remove:
-            evictable_keys = [k for k in self.block_cache if k != protect_key]
-            if not evictable_keys:
-                g_logger.log_debug(
-                    "[evict_block] 🚫 보호 대상 외에 제거할 key 없음")
+            for key in self.block_cache:
+                if key == protect_key:
+                    continue
+
+                old_block = self.block_cache.pop(key)
+                self.before_block_evicted(key, old_block)
+                old_block.close()
+                self.after_block_evicted(key)
+
+                removed += 1
+                break  # 한 번에 하나만 제거하고 while 다시 검사
+            else:
+                g_logger.log_debug("[evict_block] 🚫 보호 대상 외에 제거할 key 없음")
                 break
 
-            old_key = evictable_keys[0]
-            old_block = self.block_cache.pop(old_key, None)
-            if old_block:
-                self.before_block_evicted(old_key, old_block)
-                old_block.close()
-                self.after_block_evicted(old_key)
-
-            removed += 1
 
     def _finalize_thread(self, key: tuple, interval_msec=5):
         self.loading_set.discard(key)
 
         thread = self._active_threads.pop(key, None)
         if thread:
-            thread.quit()
-            thread.wait()
+            thread.deleteLater()  # ❗ 메모리 안전 정리만
 
-        if not self._pending_timer:
-            self._pending_timer = True
-            QTimer.singleShot(interval_msec, self._process_next_block)
+        # if not self._pending_timer:
+        #     self._pending_timer = True
+        #     QTimer.singleShot(interval_msec, self._process_next_block)
 
     def _on_load_block_failed(self, key: tuple):
         # 중복 처리 방어
@@ -170,7 +238,7 @@ class GridBlockManager(QObject):
         self._finalize_thread(key)
 
     def load_blocks_around(self, center_x, center_y, around_range=1):
-        base = self.get_origin(center_x, center_y)
+        base = self.get_origin((center_x, center_y))
         base_bx = base[0]
         base_by = base[1]
         for dy in range(-around_range, around_range + 1):
@@ -178,45 +246,6 @@ class GridBlockManager(QObject):
                 bx = base_bx + dx * self.block_size
                 by = base_by + dy * self.block_size
                 self.request_load_block(bx, by)
-
-    def to_cells(self, start_x=0, start_y=0, width=0, height=0):
-        if g_logger.debug_mode:
-            start = time.time()
-            
-        cells = {}
-
-        if width == 0 and height == 0:
-            # 전체 블럭 대상으로 처리
-            block_keys = list(self.block_cache.keys())
-            use_all_cells = True
-        else:
-            # 특정 영역의 블럭만
-            block_keys = self.get_blocks_in_rect(
-                start_x, start_y, width, height)
-            use_all_cells = False
-
-        for key in block_keys:
-            if key not in self.block_cache:
-                self.request_load_block(key[0], key[1])
-                continue
-
-            block = self.block_cache[key]
-            if use_all_cells:
-                cells.update(block.cells)
-            else:
-                for key, cell in block.cells.items():
-                    if start_x <= key[0] < start_x + width and \
-                        start_y <= key[1] < start_y + height:
-
-                        cells[key] = cell
-
-        if g_logger.debug_mode:
-            # g_logger.log_debug(f"[to_cells] 완료: {len(cells)}개, "
-            #             f"{(time.time() - start) * 1000:.3f}ms")
-            elapsed = (time.time() - start) * 1000
-            self.to_cells_elapsed.emit(elapsed, len(cells))
-
-        return cells
 
     def clear_block_cache(self):
         self.block_cache.clear()
@@ -238,10 +267,10 @@ class GridBlockManager(QObject):
         )
 
     def is_block_loaded_for(self, x, y):
-        return self.get_origin(x, y) in self.block_cache
+        return self.get_origin((x, y)) in self.block_cache
 
     def is_blocks_loaded_for_rect(self, rect: QRect):
-        keys = self.get_blocks_in_rect(rect.left(), rect.top(),
+        keys = self.get_block_keys_in_rect(rect.left(), rect.top(),
                                        rect.width(), rect.height())
         for key in keys:
             if key not in self.block_cache:
@@ -339,7 +368,7 @@ class GridBlockManager(QObject):
         # self._initial_block_keys = set()
 
         if around_range > 0:
-            base = self.get_origin(center_x, center_y)
+            base = self.get_origin((center_x, center_y))
 
             for dy in range(-around_range, around_range + 1):
                 for dx in range(-around_range, around_range + 1):
@@ -354,42 +383,25 @@ class GridBlockManager(QObject):
                     elif key not in self.loading_blocks:
                         self.request_load_block(bx, by)
     
-    def load_blocks_around_for_rect(self, rect:QRect, 
-                                    around_range=1, offset=0):
+    def load_blocks_around_for_rect(self, rect: QRect, 
+                                    around_range: int = 1, offset: int = 0):
         """
-        지정된 rect 주위의 4개 꼭짓점 블럭이 로딩되어 있는지 확인하고,
-        비어 있는 경우 해당 위치 주변 블럭을 로딩한다.
+        지정된 rect 영역과 그 주변(around_range + offset) 블럭들 중,
+        아직 로딩되지 않은 블럭을 로딩 요청한다.
         """
-        center_x = rect.left() + (rect.width() // 2)
-        center_y = rect.top() + (rect.height() // 2)
+        # 확장된 영역 계산
+        expanded_left = rect.left() - around_range - offset
+        expanded_top = rect.top() - around_range - offset
+        expanded_width = rect.width() + 2 * (around_range + offset)
+        expanded_height = rect.height() + 2 * (around_range + offset)
 
-        # g_logger.log_debug(
-        #     f'중심좌표({center_x},{center_y})이 '
-        #     f'포함된 사각형({rect.left()}, {rect.top()}, '
-        #     f'{rect.width()}, {rect.height()})의 블락과 주변블락을 로딩한다.'
-        # )        
-        self.request_load_block(center_x, center_y)
+        block_keys = self.get_block_keys_in_rect(
+            expanded_left, expanded_top, expanded_width, expanded_height
+        )
 
-        if around_range > 0:
-            min_x = rect.left() - offset
-            min_y = rect.top() - offset
-            max_x = rect.left() + rect.width() + 1 + offset
-            max_y = rect.top() + rect.height() + 1 + offset
-
-            corners = [
-                (min_x, min_y, "좌상단"),
-                (max_x, min_y, "우상단"),
-                (min_x, max_y, "좌하단"),
-                (max_x, max_y, "우하단")
-            ]
-
-            for x, y, label in corners:
-                # if not self.is_block_loaded_for(x, y):
-                # g_logger.log_debug(
-                #     f'{label}({x}, {y})을 포함하는 블락을 로딩한다.'
-                # )
-
-                self.request_load_block(x, y)                
+        for key in block_keys:
+            if key not in self.block_cache:
+                self.request_load_block(*key)
 
     def load_blocks_forward(self, x, y, dx, dy, distance=1):
         if dx == 0 and dy == 0:
@@ -399,7 +411,7 @@ class GridBlockManager(QObject):
         
         if distance > 0:
             # 기준 블록 좌표
-            base = self.get_origin(x, y)
+            base = self.get_origin((x, y))
             base_bx = base[0]
             base_by = base[1]
 
@@ -459,7 +471,7 @@ class GridBlockManager(QObject):
         bs = self.block_size
         visited = set()
 
-        base_keys = self.get_blocks_in_rect(
+        base_keys = self.get_block_keys_in_rect(
             rect.left(), rect.top(), rect.width(), rect.height())
 
         for key in base_keys:
@@ -486,23 +498,23 @@ class GridBlockManager(QObject):
                     ]
 
                 for tx, ty in targets:
-                    key = self.get_origin(tx, ty)
+                    key = self.get_origin((tx, ty))
                     if key not in visited:
                         visited.add(key)
                         self.request_load_block(tx, ty)
 
-    def get_blocks_in_rect(self, start_x, start_y, width, height):
+    def get_block_keys_in_rect(self, start_x, start_y, width, height):
         """
         주어진 범위를 포함하는 모든 블럭의 키(bx, by)를 집합으로 반환한다.
         """
         end_x = start_x + width - 1
         end_y = start_y + height - 1
 
-        start = self.get_origin(start_x, start_y)
+        start = self.get_origin((start_x, start_y))
         bx_start = start[0]
         by_start = start[1]
 
-        end = self.get_origin(end_x, end_y)
+        end = self.get_origin((end_x, end_y))
         bx_end = end[0]
         by_end = end[1]
 
@@ -514,7 +526,7 @@ class GridBlockManager(QObject):
 
         return result_keys
 
-    def get_blocks_to_target_rect(
+    def get_block_keys_to_target_rect(
         self, rect: QRect, dx: int, dy: int, target_step: int
     ) -> set[tuple]:
         """
@@ -528,7 +540,7 @@ class GridBlockManager(QObject):
         bs = self.block_size
         targets = set()
 
-        base_keys = self.get_blocks_in_rect(
+        base_keys = self.get_block_keys_in_rect(
             rect.left(), rect.top(), rect.width(), rect.height()
         )
 
@@ -551,22 +563,22 @@ class GridBlockManager(QObject):
                 ]
 
             for tx, ty in cand:
-                targets.add(self.get_origin(tx, ty))
+                targets.add(self.get_origin((tx, ty)))
 
         return targets
 
-    def get_loaded_blocks_in_rect(self, start_x, start_y, width, height):
+    def get_block_keys_in_rect_only_loaded(self, start_x, start_y, width, height):
         """
         주어진 범위에 걸친 블럭들 중, block_cache에 로드된 블럭 키만 집합으로 반환한다.
         """
         end_x = start_x + width - 1
         end_y = start_y + height - 1
 
-        start = self.get_origin(start_x, start_y)
+        start = self.get_origin((start_x, start_y))
         bx_start = start[0]
         by_start = start[1]
 
-        end = self.get_origin(end_x, end_y)
+        end = self.get_origin((end_x, end_y))
         bx_end = end[0]
         by_end = end[1]
 
@@ -585,7 +597,7 @@ class GridBlockManager(QObject):
         block_sizes = {}
         fixed_block_size = (self.block_size, self.block_size)
         for (x, y), cell in cells.items():
-            key = self.get_origin(x, y)
+            key = self.get_origin((x, y))
             if key not in blocks:
                 path = Path(grid_block_dir) / f"block_{key[0]}_{key[1]}.json"
 

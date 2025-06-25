@@ -1,11 +1,11 @@
 from PySide6.QtWidgets import QDockWidget, QTabWidget
 from PySide6.QtCore import Qt, Slot
 
-from grid.canvas_setting_widget import CanvasSettingWidget  # 외부 정의된 설정 위젯
-from grid.grid_canvas import GridCanvas
+from gui.canvas_setting_widget import CanvasSettingWidget  # 외부 정의된 설정 위젯
+from gui.grid_canvas import GridCanvas
+from gui.npc_property_widget import NpcPropertyWidget
 
-from npc.npc import NPC
-from npc.npc_property_widget import NpcPropertyWidget
+from world.npc.npc import NPC
 
 class SideDockingPanel(QDockWidget):
     def __init__(self, parent=None):
@@ -39,7 +39,7 @@ class SideDockingPanel(QDockWidget):
 
         self.check_auto_hide()
 
-        canvas.npc_selected.connect(self.on_npc_selected)
+        canvas.world.npc_selected.connect(self.on_npc_selected)
 
     # def on_tab_close_requested(self, index: int):
     #     widget = self.tabs.widget(index)

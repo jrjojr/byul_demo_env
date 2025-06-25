@@ -48,9 +48,6 @@ class GridBlock:
     def get_key(self) -> tuple[int,int]:
         return (self.x0, self.y0)
 
-    def get_coord_key(self) -> tuple[int,int]:
-        return (self.x0, self.y0)
-
     def __getitem__(self, pos: tuple[int,int]) -> GridCell:
         return self.cells[pos]
 
@@ -77,7 +74,7 @@ class BlockThread(QThread):
         self.result_dict = {}
 
     def run(self):
-        key = self.block.get_coord_key()
+        key = self.block.get_key()
         self.loading_block_started.emit(time.time())
         try:
             self.result_dict = self.block.cells
@@ -96,7 +93,7 @@ class BlockSaverThread(QThread):
         self.folder = Path(folder)
 
     def run(self):
-        key = self.block.get_coord_key()
+        key = self.block.get_key()
         try:
             self.folder.mkdir(parents=True, exist_ok=True)
             path = self.folder / f"block_{self.block.x0}_{self.block.y0}.json"

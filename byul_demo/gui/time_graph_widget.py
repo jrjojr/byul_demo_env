@@ -8,7 +8,9 @@ from utils.elapsed_msec_series import ElapsedSeries
 
 import pandas as pd
 
-from grid.grid_canvas import GridCanvas
+from gui.grid_canvas import GridCanvas
+
+from world.world import World
 
 
 class IndexLabelAxisItem(AxisItem):
@@ -167,15 +169,13 @@ class TimeGraphWidget(pg.PlotWidget):
         self.hover_text.setPos(mouse_point.x(), mouse_point.y())
         self.hover_text.setText(f"Step {x}\n{y:.3f} ms")
 
-    def bind_canvas(self, grid_canvas:GridCanvas):
+    def bind_canvas(self, canvas:GridCanvas):
         """GridCanvas에서 draw_cells, move_center 이벤트를 바인딩하고 시리즈 등록"""
         if self._canvas_bound:
             return
         self._canvas_bound = True
 
         # series_draw = ElapsedSeries("draw_cells_elapsed")
-        # series_move = ElapsedSeries("move_center_elapsed")
-        # series_to_cells = ElapsedSeries("to_cells")
         series_tick = ElapsedSeries("tick_elapsed")
         
         # update_buffer_cells_elapsed
@@ -183,12 +183,11 @@ class TimeGraphWidget(pg.PlotWidget):
 
         # grid_canvas.draw_cells_elapsed.connect(series_draw.add_elapsed)
         # grid_canvas.grid_map.move_center_elapsed.connect(series_move.add_elapsed)
-        # grid_canvas.grid_map.to_cells_elapsed.connect(series_to_cells.add_elapsed)
         # grid_canvas.grid_map.update_buffer_cells_elapsed.connect(series_update_buffer_cells.add_elapsed)
-        grid_canvas.tick_elapsed.connect(series_tick.add_elapsed)
+        canvas.tick_elapsed.connect(series_tick.add_elapsed)
 
         # self.add_series(series_draw)
         # self.add_series(series_move)
-        # self.add_series(series_to_cells)
+
         # self.add_series(series_update_buffer_cells)
         self.add_series(series_tick)

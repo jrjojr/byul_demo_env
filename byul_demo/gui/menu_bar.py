@@ -2,8 +2,8 @@ from PySide6.QtWidgets import (
     QMenuBar, QFileDialog, QMessageBox, QApplication
 )
 from PySide6.QtGui import QAction, QKeySequence
-from dialogs.goto_dialog import GotoDialog
-from ui.actions import Actions
+from gui.goto_dialog import GotoDialog
+from gui.actions import Actions
 
 class MenuBar(QMenuBar):
     def __init__(self, actions:Actions, parent):

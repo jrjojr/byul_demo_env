@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 # 🧠 최초 1회 기준 루트 설정
-BYUL_DEMO_ENV_PATH = Path(__file__).parents[2]
+BYUL_DEMO_ENV_PATH = Path(__file__).parents[1]
 BYUL_DEMO_PATH = BYUL_DEMO_ENV_PATH / 'byul_demo'
 WRAPPER_PATH = BYUL_DEMO_PATH / Path('wrapper/modules')
 GUI_PATH = BYUL_DEMO_PATH / 'gui'

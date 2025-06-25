@@ -1,12 +1,12 @@
 from PySide6.QtWidgets import QDockWidget, QTabWidget
 from PySide6.QtCore import Qt
 
-from ui.console_output import ConsoleOutputWidget
-from ui.time_graph_widget import TimeGraphWidget
-from ui.time_graph_panel import TimeGraphPanel
+from gui.console_output import ConsoleOutputWidget
+from gui.time_graph_widget import TimeGraphWidget
+from gui.time_graph_panel import TimeGraphPanel
 from utils.log_to_panel import g_logger
 
-from grid.grid_canvas import GridCanvas
+from gui.grid_canvas import GridCanvas
 
 class BottomDockingPanel(QDockWidget):
     def __init__(self, parent=None):

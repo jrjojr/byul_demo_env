@@ -19,7 +19,7 @@ from PySide6.QtCore import QPoint, QRect, Qt, QTimer, QObject, Signal, Slot
 from route import c_route, RouteDir, calc_direction
 from list import c_list
 
-from grid.grid_map import GridMap
+from world.village.village import Village
 from grid.grid_cell import TerrainType, GridCell, CellStatus
 
 from utils.log_to_panel import g_logger
@@ -45,12 +45,11 @@ class NPC(QObject):
 
     speed_kmh_changed = Signal(float)
 
-    # proto_route_found = Signal()
-    # real_route_found = Signal()
-
-    def __init__(self, npc_id: str, gmap:GridMap, start:tuple=None, 
-                 speed_kmh:float=4.0, start_delay_sec=0.5, route_capacity=100, 
-                 cell_size=100, grid_unit_m = 1.0, compute_max_retry = 1000, 
+    def __init__(self, npc_id: str, world, start:tuple=None, 
+                 max_range=100,
+                 speed_kmh:float=4.0, start_delay_sec=0.5, 
+                 route_capacity=100, 
+                 grid_unit_m = 1.0, compute_max_retry = 1000, 
                  image_path:Path=None, route_image_path:Path=None, 
                  parent=None):
         
@@ -58,25 +57,26 @@ class NPC(QObject):
         여러번 클릭시에 경로 찾기가 잠깐 멈춘다 다시 클릭해야 npc가 움직인다.
         '''
         super().__init__()
-
+        self.parent = parent
+        self.world = world
+        self.map = c_map()
         self.id = npc_id
         if start:
-            self.finder = c_dstar_lite.from_values(gmap.map, start)
+            self.finder = c_dstar_lite.from_values(self.map, start)
         else:
-            self.finder = c_dstar_lite.from_map(gmap.map)
+            self.finder = c_dstar_lite.from_map(self.map)
         
+        self.finder.max_range = max_range
         self.finder.compute_max_retry = compute_max_retry
         self.loop_once = False
 
-        self.movable_terrain = [TerrainType.ROAD]
+        self.movable_terrain = [TerrainType.ROAD, TerrainType.NORMAL]
 
         # 경로 및 이미지 캐시에서 로딩
         self.image_paths = ImageManager.get_npc_image_paths(image_path)
         self.images = ImageManager.get_npc_image_set(image_path)        
 
         self.route_images = ImageManager.get_route_image_set(route_image_path)
-
-        self.parent = parent
 
         self.direction = random.randint(
             RouteDir.RIGHT.value, RouteDir.DOWN_RIGHT.value)
@@ -94,9 +94,6 @@ class NPC(QObject):
         self._goal_q = Queue()
         self.goal_list:list[tuple[int,int]] = list()
 
-        # self.real_coord_list = list()
-        # self.proto_coord_list = list()
-
         self.real_route = c_route()
         self.proto_route = c_route()
         self.route_capacity = route_capacity
@@ -108,8 +105,6 @@ class NPC(QObject):
         self._next_q = Queue()
         
         self.grid_unit_m = grid_unit_m  # 1칸 = 1m
-
-        self.m_cell_size = cell_size
 
         self.speed_kmh = speed_kmh  # default speed
         self.start_delay_sec = start_delay_sec
@@ -143,8 +138,64 @@ class NPC(QObject):
         
         self.finding_active = False
 
-        self.real_queue = Queue()
-        self.proto_queue = Queue()
+        self._real_q = Queue()
+        self._proto_q = Queue()
+
+    def reset(self):
+        """NPC 상태를 초기화한다. (경로, 애니메이션, 큐 등)"""
+        # 탐색기 재초기화
+        self.map.clear()
+        if self.start:
+            self.finder.close()
+            self.finder = c_dstar_lite.from_values(self.map, self.start)
+        else:
+            self.finder.close()
+            self.finder = c_dstar_lite.from_map(self.map)
+
+        self.finder.max_range = self.max_range
+        self.finder.compute_max_retry = self.finder.compute_max_retry
+        self.finder.move_func = self._move_cb_c
+        self.finder.changed_coords_func = self._changed_coords_cb_c
+        self.finder.cost_func = self._cost_cb_c
+        # self.finder.is_blocked_func = self._is_blocked_cb_c
+
+        # 경로 초기화
+        self.real_route.clear_coords()
+        self.proto_route.clear_coords()
+        self.proto_route.clear_visited()
+        self.real_route.clear_visited()
+        self.goal_list.clear()
+
+        self._changed_q.shutdown()
+        self._goal_q.shutdown()
+        self._next_q.shutdown()
+
+        self._real_q.shutdown()
+        while not self._real_q.empty():
+            route = self._real_q.get()
+            route.close()  # 무조건 해제
+
+        # self._proto_q.shutdown()
+        while not self._proto_q.empty():
+            route = self._proto_q.get()
+            route.close()  # 무조건 해제
+
+        self.next = None
+
+        # 애니메이션 상태
+        self.anim_started = False
+        self.anim_dx_arrived = False
+        self.anim_dy_arrived = False
+        self.disp_dx = 0.0
+        self.disp_dy = 0.0
+
+        # 위치 추적 및 타이머
+        self.phantom_start = self.start
+        self.total_elapsed_sec = 0.0
+
+        # 스레드 상태
+        self.finding_thread = None
+        self.finding_active = False
 
     def close(self):
         '''NPC 종료 시 리소스를 정리한다'''
@@ -153,18 +204,30 @@ class NPC(QObject):
 
         self.phantom_start = None
 
+        self._changed_q.shutdown()
+        self._goal_q.shutdown()
+        self._next_q.shutdown()
+
+        while not self._real_q.empty():
+            route = self._real_q.get()
+            route.close()  # 무조건 해제
+
+        # self._proto_q.shutdown()
+        while not self._proto_q.empty():
+            route = self._proto_q.get()
+            route.close()  # 무조건 해제        
+
+
+        self.finder.close()
+        self.map.close()        
+        self.proto_route.close()
+        self.real_route.close()
+
         # 🔸 로깅
         g_logger.log_debug(f"[NPC.close] npc({self.id}) 종료 완료")
 
     def __del__(self):
         self.close()
-
-    def get_cell_size(self):
-        return self.m_cell_size
-    
-    @Slot(int)
-    def set_cell_size(self, size:int):
-        self.m_cell_size = size
 
     @property
     def start(self):
@@ -211,11 +274,6 @@ class NPC(QObject):
         self._goal_q.put(coord)
         
     def move_to(self, coord: tuple):
-        # 목표 큐도 비워서 루프를 자연스럽게 종료
-        # if not self._goal_q.empty():
-        #     with self._goal_q.mutex:
-        #         self._goal_q.queue.clear()
-
         if self.finding_thread and self.finding_thread.is_alive():
             g_logger.log_debug("🔁 현재 find 루프 종료 요청 중...")
             # 바로 요청하면 마우스 클릭으로 여러번 함수 호출할때
@@ -241,14 +299,14 @@ class NPC(QObject):
         # 시작 지연 msec에 따라 약간 지연 후에 on_tick에서 이동 시작한다.        
         self.append_goal(coord)
 
-    def anim_moving_to(self, next: tuple, elapsed_sec: float):
+    def anim_moving_to(self, next: tuple, elapsed_sec: float, cell_size:int):
         speed_mps = self.speed_kmh * 1000 / 3600.0
-        speed_pixel_per_sec = speed_mps * (self.m_cell_size / self.grid_unit_m)
+        speed_pixel_per_sec = speed_mps * (cell_size / self.grid_unit_m)
         delta = speed_pixel_per_sec * elapsed_sec
         epsilon = 1e-3
 
-        target_dx = (next[0] - self.phantom_start[0]) * self.m_cell_size
-        target_dy = (next[1] - self.phantom_start[1]) * self.m_cell_size
+        target_dx = (next[0] - self.phantom_start[0]) * cell_size
+        target_dy = (next[1] - self.phantom_start[1]) * cell_size
 
         delta_x = target_dx - self.disp_dx
         if abs(delta_x) <= delta + epsilon:
@@ -269,7 +327,7 @@ class NPC(QObject):
     def is_anim_arrived(self) -> bool:
         return self.anim_dx_arrived and self.anim_dy_arrived
     
-    def on_tick(self, elapsed_sec: float):
+    def on_tick(self, elapsed_sec: float, cell_size:int):
         if self.total_elapsed_sec >= self.start_delay_sec:
             if not self._goal_q.empty():
                 if not self.finding_thread or not self.finding_thread.is_alive():
@@ -302,7 +360,7 @@ start_delay_sec : {self.start_delay_sec}''')
             if new_dir != RouteDir.UNKNOWN:
                 self.direction = new_dir
 
-            self.anim_moving_to(self.next, elapsed_sec)
+            self.anim_moving_to(self.next, elapsed_sec, cell_size)
 
             if self.is_anim_arrived():
                 self.anim_to_arrived_sig.emit(self.next)
@@ -345,7 +403,7 @@ start_delay_sec : {self.start_delay_sec}''')
 
                     self.finder.find_proto()
                     route = self.finder.get_proto_route()
-                    self.proto_queue.put(route.copy())
+                    self._proto_q.put(route.copy())
                     if route.success:
                         g_logger.log_debug_threadsafe(f'proto route 찾기가 성공했다')
                     else:
@@ -363,7 +421,7 @@ start_delay_sec : {self.start_delay_sec}''')
 
                     self.finder.find_loop()
                     route = self.finder.get_proto_route()
-                    self.real_queue.put(route.copy())
+                    self._real_q.put(route.copy())
                     if route.success:
                         g_logger.log_debug_threadsafe(f'real route 찾기가 성공했다')
                     else:
@@ -462,7 +520,7 @@ start_delay_sec : {self.start_delay_sec}''')
         goal = c_coord(raw_ptr=goal_ptr)
 
         tg = goal.to_tuple()
-        cell = self.parent.get_cell(tg)
+        cell = self.world.block_mgr.get_cell(tg)
         if self.is_obstacle(cell):
             return ffi.cast("gfloat", float("inf"))
 
@@ -472,25 +530,26 @@ start_delay_sec : {self.start_delay_sec}''')
 
     def _is_blocked_cb(self, map:c_map, x, y, userdata):
         c = (x, y)
-        cell = self.parent.get_cell(c)
+        cell = self.world.block_mgr.get_cell(c)
         return self.is_obstacle(cell)
 
-    def draw(self, painter: QPainter, 
-                 start_win_pos_x:int, start_win_pos_y:int):
+    def draw(self, painter: QPainter,
+                 start_win_pos_x:int, start_win_pos_y:int, cell_size):
         '''실제 디바이스에 이미지를 그린다.
         '''
         x = start_win_pos_x + self.draw_offset_x + int(self.disp_dx)
         y = start_win_pos_y + self.draw_offset_y + int(self.disp_dy)
 
         # 배경: 반투명 검정
-        # rect = QRect(x, y, self.m_cell_size, self.m_cell_size)
+        # rect = QRect(x, y, cell_size, cell_size)
         # painter.setBrush(QColor(0, 0, 0, 127))
         # painter.setPen(Qt.NoPen)
         # painter.drawRect(rect)
 
         image = self.get_image()
+
         painter.drawPixmap(
-                x, y, self.m_cell_size, self.m_cell_size, image)
+                x, y, cell_size, cell_size, image)
         pass
 
     def get_image(self):
@@ -519,9 +578,9 @@ start_delay_sec : {self.start_delay_sec}''')
 
     def on_proto_route_found(self):
         try:
-            p: c_route = self.proto_queue.get_nowait()
+            p: c_route = self._proto_q.get_nowait()
         except Empty:
-            g_logger.log_debug('텅 비었다 self.proto_queue.get_nowait()')
+            g_logger.log_debug('텅 비었다 self._proto_q.get_nowait()')
             return
 
         try:
@@ -539,9 +598,9 @@ start_delay_sec : {self.start_delay_sec}''')
 
     def on_real_route_found(self):
         try:
-            p: c_route = self.real_queue.get_nowait()
+            p: c_route = self._real_q.get_nowait()
         except Empty:
-            g_logger.log_debug('텅 비었다 self.real_queue.get_nowait()')
+            g_logger.log_debug('텅 비었다 self._real_q.get_nowait()')
             return
 
         try:
@@ -559,10 +618,10 @@ start_delay_sec : {self.start_delay_sec}''')
             pass
 
     def clear_proto_route(self):
-        self.proto_coord_list.clear()
+        self.proto_route.clear_coords()
 
     def clear_real_route(self):
-        self.real_coord_list.clear()
+        self.real_route.clear_coords()
 
     def flush_goal_q(self):
         while not self._goal_q.empty():

@@ -4,15 +4,17 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtCore import QObject
 
-
-from dialogs.goto_dialog import GotoDialog
+from gui.goto_dialog import GotoDialog
 
 from utils.log_to_panel import g_logger
 
+from world.world import World
+
 class Actions(QObject):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, world=World, parent=None):
+        super().__init__()
         
+        self.world = world
         self.parent = parent
 
         load_action = QAction("&Load Grid Data", parent)
@@ -152,7 +154,7 @@ class Actions(QObject):
         
         if file_path:
             try:
-                self.parent.canvas.load_from_file(file_path)
+                self.parent.grid_canvas.load_from_file(file_path)
             except Exception as e:
                 QMessageBox.critical(self.parent, "Load Error", str(e))
 
@@ -162,33 +164,33 @@ class Actions(QObject):
         
         if file_path:
             try:
-                self.parent.canvas.save_to_file(file_path)
+                self.parent.grid_canvas.save_to_file(file_path)
             except Exception as e:
                 QMessageBox.critical(self.parent, "Save Error", str(e))
 
     def on_set_start_action_triggered(self):
-        self.parent.grid_ctr.set_start_from_selection()
+        self.world.set_start_from_selection()
 
     def on_append_goal_action_triggered(self):
-        self.parent.grid_ctr.append_goal_from_selection()
+        self.world.append_goal_from_selection()
 
     def on_add_obstacle_action_triggered(self):
-        self.parent.grid_ctr.add_obstacle_from_selection()
+        self.world.add_obstacle_from_selection()
 
     def on_remove_obstacle_action_triggered(self):
-        self.parent.grid_ctr.remove_obstacle_from_selection()
+        self.world.remove_obstacle_from_selection()
 
     def on_find_route_action_triggered(self):
-        self.parent.grid_ctr.find_route()
+        self.world.find_route()
     
     def on_clear_route_action_triggered(self):
-        self.parent.grid_ctr.clear_route()
+        self.parent.grid_canvas.clear_route_flags()
 
     def on_goto_action_triggered(self):
         dialog = GotoDialog()
         if dialog.exec():
             gx, gy = dialog.get_coords()
-            self.parent.grid_canvas.grid_map.set_center(gx, gy)
+            self.parent.grid_canvas.set_center(gx, gy)
 
     def on_side_panel_toggle_action_triggered(self, checked):
         self.parent.side_panel.setVisible(checked)
@@ -251,25 +253,25 @@ class Actions(QObject):
         setting_widget.set_combo_click_mode('despawn_npc_at')        
 
     def on_clear_route_action_triggered(self):
-        self.parent.grid_canvas.grid_map_ctr.clear_route()
+        self.parent.grid_canvas.clear_route_flags()
 
     def on_view_proto_route_action_triggered(self):
-        self.parent.grid_canvas.grid_map_ctr.to_proto_route_cells(
-            self.parent.grid_canvas.selected_npc)
+        self.world.apply_proto_route_to_cells(
+            self.world.selected_npc)
 
     def on_view_real_route_action_triggered(self):
-        self.parent.grid_canvas.grid_map_ctr.to_real_route_cells(
-            self.parent.grid_canvas.selected_npc)
+        self.world.apply_real_route_to_cells(
+            self.world.selected_npc)
 
     def on_clear_proto_route_action_triggered(self):
-        if self.parent.grid_canvas.selected_npc:
-            self.parent.grid_canvas.selected_npc.clear_proto_route()
+        if self.world.selected_npc:
+            self.world.selected_npc.clear_proto_route()
         else:
             g_logger.log_always(f'현재 선택된 npc가 없어여')
 
     def on_clear_real_route_action_triggered(self):
-        if self.parent.grid_canvas.selected_npc:
-            self.parent.grid_canvas.selected_npc.clear_real_route()
+        if self.world.selected_npc:
+            self.world.selected_npc.clear_real_route()
         else:
             g_logger.log_always(f'현재 선택된 npc가 없어여')            
 
