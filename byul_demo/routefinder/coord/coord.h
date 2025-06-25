@@ -35,13 +35,15 @@ BYUL_API gboolean coord_equal(const coord c1, const coord c2);
 // coord 깊은 복사
 BYUL_API coord coord_copy(const coord c);
 
-BYUL_API gint coord_compare(const coord c1, const coord c2);
-
 // BYUL_API gint coord_compare(gconstpointer a, gconstpointer b);
-BYUL_API gint coord_compare(const coord a, const coord b);
+BYUL_API gint coord_compare(const coord c1, const coord c2);
 
 // 맨하튼 거리
 BYUL_API gint coord_distance(const coord a, const coord b);
+
+// 각도를 double로 360도 얻는다.
+// (1,0)이 0도이고 반시계방향이다.
+BYUL_API gdouble coord_degree(const coord a, const coord b);
 
 // ------------------------------------------------------------------------end
 

@@ -40,6 +40,10 @@ if __name__ == '__main__':
     assert changed2
     assert angle > angle_threshold
 
+    deg = a.degree(c_coord(111110,0))
+    print (f'deg : {deg}')
+
+
     print("테스트 완료: OK")
 
 

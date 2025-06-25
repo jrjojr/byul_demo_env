@@ -1,5 +1,6 @@
 #include "internal/coord.h"
 #include <glib.h>
+#include <math.h>
 
 coord coord_new_full(gint x, gint y) {
     coord c = g_malloc0(sizeof(coord_t));
@@ -39,6 +40,23 @@ gint coord_compare(const coord c1, const coord c2) {
 
     return (d1 > d2) - (d1 < d2);  // 빠른 비교
 }
+
+gdouble coord_degree(const coord a, const coord b)
+{
+    gdouble dx = b->x - a->x;
+    gdouble dy = b->y - a->y;
+
+    // atan2는 y 먼저, x 나중
+    gdouble rad = atan2(dy, dx);
+    gdouble deg = rad * (180.0 / G_PI);
+
+    // 결과를 0~360 범위로 정규화
+    if (deg < 0.0)
+        deg += 360.0;
+
+    return deg;
+}
+
 
 coord coord_copy(const coord c) {
     if (!c) return NULL;

@@ -22,16 +22,15 @@ class TerrainType(Enum):
     WATER = 1
     MOUNTAIN = 2
     FOREST = 3
-    ROAD = 4
+    FORBIDDEN = 100
 
 class GridCell:
-    def __init__(self, x: int, y: int,
-                 status: CellStatus = CellStatus.EMPTY,
+    def __init__(self, x: int, y: int, 
                  terrain: TerrainType = TerrainType.NORMAL):
         self.x = x
         self.y = y
 
-        self.status: CellStatus = status
+        self.status: CellStatus = CellStatus.EMPTY
         self.flags: CellFlag = CellFlag.NONE
         self.npc_ids: list[str] = []
 
@@ -164,7 +163,7 @@ ids: {self.npc_ids}
         x: int, y: int,
         npc_chance: float = 0.05,
         terrain_ratio_normal: float = 0.5,
-        terrain_ratio_road: float = 0.2,
+        terrain_ratio_forbidden: float = 0.1,
         terrain_ratio_water: float = 0.1,
         terrain_ratio_forest: float = 0.1,
         terrain_ratio_mountain: float = 0.1,
@@ -183,10 +182,10 @@ ids: {self.npc_ids}
         # Terrain 결정 (비율 기반)
         terrain_weights = {
             TerrainType.NORMAL: terrain_ratio_normal,
-            TerrainType.ROAD: terrain_ratio_road,
             TerrainType.WATER: terrain_ratio_water,
             TerrainType.FOREST: terrain_ratio_forest,
             TerrainType.MOUNTAIN: terrain_ratio_mountain,
+            TerrainType.FORBIDDEN: terrain_ratio_forbidden,            
         }
         total_ratio = sum(terrain_weights.values())
         r = random.random()
@@ -199,7 +198,7 @@ ids: {self.npc_ids}
 
         # NPC 설정 (최초 한 번만)
         if random.random() < npc_chance:
-            if not cell.npc_ids:
+            if not cell.npc_ids and cell.terrain != TerrainType.FORBIDDEN:
                 npc_id = f"npc_{uuid.uuid4().hex}"
                 cell.npc_ids.append(npc_id)
                 cell.status = CellStatus.NPC

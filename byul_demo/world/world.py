@@ -252,7 +252,8 @@ class World(QObject):
         cell = self.block_mgr.get_cell(coord)
         if cell:
             if cell.terrain not in npc.movable_terrain:
-                npc.movable_terrain.append(cell.terrain)
+                if cell.terrain != TerrainType.FORBIDDEN:
+                    npc.movable_terrain.append(cell.terrain)
 
             cell.add_npc_id(npc.id)                
 

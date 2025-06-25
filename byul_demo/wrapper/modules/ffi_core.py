@@ -15,6 +15,8 @@ typedef const void* gconstpointer;
 typedef void* gpointer;
          
 typedef float gfloat;
+         
+typedef double gdouble;
 
 typedef struct _GQueue GQueue;
 

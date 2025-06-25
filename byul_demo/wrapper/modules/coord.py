@@ -32,6 +32,8 @@ ffi.cdef("""
      void     coord_set(coord c, int x, int y);
      void     coord_fetch(coord c, int* out_x, int* out_y);
      int coord_compare(const coord a, const coord b);
+         
+    gdouble coord_degree(const coord a, const coord b);         
 """)
 
 def coord_pack(c: Any) -> Any:
@@ -72,6 +74,10 @@ class c_coord:
 
     def copy(self):
         return c_coord(raw_ptr=C.coord_copy(self._c))
+    
+    def degree(self, other):
+        # gdouble coord_degree(const coord a, const coord b);
+        return C.coord_degree(self.ptr(), other.ptr())
 
     def __eq__(self, other):
         return C.coord_equal(self._c, other._c) != 0

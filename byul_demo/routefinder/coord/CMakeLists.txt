@@ -32,6 +32,7 @@ target_link_directories(${PROJECT_NAME} PRIVATE
 # 링크 라이브러리 설정
 target_link_libraries(${PROJECT_NAME} PRIVATE 
     ${GLIB_LIBRARIES}
+    m # math.h 모듈
 )
 
 # 컴파일러 플래그 추가

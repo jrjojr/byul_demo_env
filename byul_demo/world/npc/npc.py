@@ -70,7 +70,7 @@ class NPC(QObject):
         self.finder.compute_max_retry = compute_max_retry
         self.loop_once = False
 
-        self.movable_terrain = [TerrainType.ROAD, TerrainType.NORMAL]
+        self.movable_terrain = [TerrainType.NORMAL]
 
         # 경로 및 이미지 캐시에서 로딩
         self.image_paths = ImageManager.get_npc_image_paths(image_path)
@@ -630,16 +630,13 @@ start_delay_sec : {self.start_delay_sec}''')
         return self.goal_list
     
     def is_movable(self, cell:GridCell):
-        if cell.terrain in self.movable_terrain:
-            return True
-        
-        if cell.status == CellStatus.NPC:
-            return False
-        
-        return False
+        return not self.is_obstacle(cell)
     
     def is_obstacle(self, cell:GridCell):
         if cell.status == CellStatus.NPC:
+            return True
+        
+        if cell.terrain == TerrainType.FORBIDDEN:
             return True
 
         if not cell.terrain in self.movable_terrain:            

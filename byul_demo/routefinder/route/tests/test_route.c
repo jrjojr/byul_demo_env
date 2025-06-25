@@ -148,9 +148,9 @@ static void test_route_index_based_angle_analysis() {
     g_assert_false(route_has_changed_with_angle_by_index(
         p, 10, 11, 5.0f, &angle));
 
-    // coord_free(c1);
-    // coord_free(c2);
-    // coord_free(c3);
+    coord_free(c1);
+    coord_free(c2);
+    coord_free(c3);
     route_free(p);
 }
 
@@ -177,9 +177,9 @@ static void test_route_insert_remove(void) {
     g_assert_cmpint(route_length(r), ==, 1);
     g_assert(coord_equal(g_list_nth_data(r->coords, 0), c1));
 
-    // coord_free(c1);
-    // coord_free(c2);
-    // coord_free(c3);
+    coord_free(c1);
+    coord_free(c2);
+    coord_free(c3);
     route_free(r);
 }
 
@@ -194,15 +194,18 @@ static void test_route_find_contains(void) {
     g_assert_false(route_contains(r, c2));
     g_assert_cmpint(route_find(r, c2), ==, -1);
 
-    // coord_free(c1);
-    // coord_free(c2);
+    coord_free(c1);
+    coord_free(c2);
     route_free(r);
 }
 
 static void test_route_slice(void) {
     route r = route_new();
-    for (int i = 0; i < 5; ++i)
-        route_insert(r, i, coord_new_full(i, i));
+    for (int i = 0; i < 5; ++i) {
+        coord c = coord_new_full(i, i);
+        route_insert(r, i, c);
+        coord_free(c);
+    }
 
     route_slice(r, 1, 4);  // [1, 2, 3]
     g_assert_cmpint(route_length(r), ==, 3);
