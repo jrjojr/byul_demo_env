@@ -82,6 +82,10 @@ class NpcPropertyWidget(QWidget):
         self.offset_y_spin.setValue(self.npc.draw_offset_y)
         self.form.addRow("Y 오프셋:", self.offset_y_spin)
 
+        self.form.addRow(QLabel("<b>🏞️ 적합한 지형</b>"), QLabel(""))
+        self.native_terrain_label = QLabel(f'{self.npc.native_terrain.name}')
+        self.form.addRow(self.native_terrain_label)
+
         self.form.addRow(QLabel("<b>🏞️ 이동 가능 지형</b>"), QLabel(""))
 
         self.terrain_checkboxes = {}

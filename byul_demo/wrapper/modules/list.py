@@ -9,7 +9,7 @@ gl_ptr = cl.ptr()  # 이걸 GList*로 넘기면 됨
 
 '''
 
-from ffi_core import ffi, C
+from ffi_core import ffi, C, C_glib
 
 from pathlib import Path
 import os
@@ -36,25 +36,29 @@ class c_list:
     def __init__(self):
         self._ptr = ffi.NULL
 
+    def __iter__(self):
+        for i in range(self.length()):
+            yield self.nth_data(i)
+
     def append(self, data):
-        self._ptr = C.g_list_append(self._ptr, data)
+        self._ptr = C_glib.g_list_append(self._ptr, data)
 
     def prepend(self, data):
-        self._ptr = C.g_list_prepend(self._ptr, data)
+        self._ptr = C_glib.g_list_prepend(self._ptr, data)
 
     def reverse(self):
-        self._ptr = C.g_list_reverse(self._ptr)
+        self._ptr = C_glib.g_list_reverse(self._ptr)
 
     def free(self):
         if self._ptr != ffi.NULL:
-            C.g_list_free(self._ptr)
+            C_glib.g_list_free(self._ptr)
             self._ptr = ffi.NULL
 
     def length(self):
-        return int(C.g_list_length(self._ptr))
+        return int(C_glib.g_list_length(self._ptr))
 
     def nth_data(self, index):
-        return C.g_list_nth_data(self._ptr, index)
+        return C_glib.g_list_nth_data(self._ptr, index)
 
     def to_list(self):
         """Python list로 변환 (주의: 내부 포인터를 복사하지 않음)"""

@@ -59,12 +59,14 @@ class NPC(QObject):
         super().__init__()
         self.parent = parent
         self.world = world
-        self.map = c_map()
         self.id = npc_id
+        self.native_terrain = TerrainType.NORMAL
+        self.influence_range = 0
+
         if start:
-            self.finder = c_dstar_lite.from_values(self.map, start)
+            self.finder = c_dstar_lite.from_values(self.world.map, start)
         else:
-            self.finder = c_dstar_lite.from_map(self.map)
+            self.finder = c_dstar_lite.from_map(self.world.map)
         
         self.finder.max_range = max_range
         self.finder.compute_max_retry = compute_max_retry
@@ -144,13 +146,12 @@ class NPC(QObject):
     def reset(self):
         """NPC 상태를 초기화한다. (경로, 애니메이션, 큐 등)"""
         # 탐색기 재초기화
-        self.map.clear()
         if self.start:
             self.finder.close()
-            self.finder = c_dstar_lite.from_values(self.map, self.start)
+            self.finder = c_dstar_lite.from_values(self.world.map, self.start)
         else:
             self.finder.close()
-            self.finder = c_dstar_lite.from_map(self.map)
+            self.finder = c_dstar_lite.from_map(self.world.map)
 
         self.finder.max_range = self.max_range
         self.finder.compute_max_retry = self.finder.compute_max_retry
@@ -217,9 +218,7 @@ class NPC(QObject):
             route = self._proto_q.get()
             route.close()  # 무조건 해제        
 
-
         self.finder.close()
-        self.map.close()        
         self.proto_route.close()
         self.real_route.close()
 

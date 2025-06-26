@@ -349,3 +349,153 @@ GList* map_clone_neighbors_all_range(const map m,
     g_hash_table_destroy(seen);
     return result;
 }
+
+coord map_clone_neighbor_at_degree(
+    const map m, gint x, gint y, gdouble degree) {
+    if (!m) return NULL;
+
+    static const gint dx8[] = { 1,  1, 0, -1, -1, -1,  0, 1 };
+    static const gint dy8[] = { 0, -1, -1, -1,  0,  1,  1, 1 };
+
+    gint count = (m->mode == MAP_NEIGHBOR_8) ? 8 : 4;
+    gint closest_i = -1;
+    gdouble min_diff = 360.0;
+
+    coord self = coord_new_full(x, y);
+
+    for (gint i = 0; i < count; ++i) {
+        gint nx = x + dx8[i];
+        gint ny = y + dy8[i];
+
+        if (!map_is_inside(m, nx, ny))
+            continue;
+
+        coord neighbor = coord_new_full(nx, ny);
+        gdouble dir_deg = coord_degree(self, neighbor);
+
+        gdouble diff = fabs(degree - dir_deg);
+        if (diff > 180.0)
+            diff = 360.0 - diff;
+
+        if (diff < min_diff) {
+            min_diff = diff;
+            closest_i = i;
+        }
+
+        coord_free(neighbor); // 메모리 누수 방지
+    }
+
+    coord_free(self);
+
+    if (closest_i == -1)
+        return NULL;
+
+    gint final_x = x + dx8[closest_i];
+    gint final_y = y + dy8[closest_i];
+
+    return coord_new_full(final_x, final_y);
+}
+
+GList* map_clone_neighbors_at_degree_range(
+    const map m,
+    coord center, coord goal,
+    gdouble start_deg, gdouble end_deg,
+    gint range
+) {
+    if (!m || !center || !goal || range < 0) return NULL;
+
+    // 기준 방향 계산 (center → goal)
+    gdouble center_deg = coord_degree(center, goal);
+
+    // 각도 정규화 범위
+    gdouble deg_min = center_deg + start_deg;
+    gdouble deg_max = center_deg + end_deg;
+
+    while (deg_min < 0) deg_min += 360.0;
+    while (deg_max < 0) deg_max += 360.0;
+    while (deg_min >= 360.0) deg_min -= 360.0;
+    while (deg_max >= 360.0) deg_max -= 360.0;
+
+    gboolean wraps = deg_min > deg_max;
+
+    GList* result = NULL;
+    GHashTable* seen = g_hash_table_new_full(
+        (GHashFunc)coord_hash,
+        (GEqualFunc)coord_equal,
+        (GDestroyNotify)coord_free,
+        NULL
+    );
+
+    gint x = coord_get_x(center);
+    gint y = coord_get_y(center);
+
+    for (gint dx = -range; dx <= range; dx++) {
+        for (gint dy = -range; dy <= range; dy++) {
+            if (dx == 0 && dy == 0) continue;
+
+            gint cx = x + dx;
+            gint cy = y + dy;
+
+            if (!map_is_inside(m, cx, cy))
+                continue;
+
+            coord target = coord_new_full(cx, cy);
+            gdouble deg = coord_degree(center, target);
+
+            gboolean in_range = FALSE;
+            if (!wraps)
+                in_range = (deg >= deg_min && deg <= deg_max);
+            else
+                in_range = (deg >= deg_min || deg <= deg_max);
+
+            if (in_range && !g_hash_table_contains(seen, target)) {
+                g_hash_table_add(seen, coord_copy(target));
+            }
+
+            coord_free(target);
+        }
+    }
+
+    // GHashTable → GList 변환
+    GHashTableIter iter;
+    gpointer value;
+    g_hash_table_iter_init(&iter, seen);
+    while (g_hash_table_iter_next(&iter, &value, NULL)) {
+        result = g_list_prepend(result, coord_copy((coord)value));
+    }
+
+    g_hash_table_destroy(seen);
+    return result;
+}
+
+coord map_clone_neighbor_at_goal(
+    const map m, const coord center, const coord goal) {
+
+    if (!m || !center || !goal) return NULL;
+
+    GList* neighbors = map_clone_neighbors_all(m,
+        coord_get_x(center), coord_get_y(center));
+    
+    if (!neighbors) return NULL;
+
+    gdouble target_deg = coord_degree(center, goal);
+
+    coord best = NULL;
+    gdouble min_diff = 360.0;
+
+    for (GList* l = neighbors; l; l = l->next) {
+        coord n = (coord)l->data;
+        gdouble d = coord_degree(center, n);
+        gdouble diff = fabs(target_deg - d);
+        if (diff > 180.0) diff = 360.0 - diff;
+
+        if (diff < min_diff) {
+            min_diff = diff;
+            if (best) coord_free(best);
+            best = coord_copy(n);
+        }
+    }
+
+    g_list_free_full(neighbors, (GDestroyNotify)coord_free);
+    return best;
+}

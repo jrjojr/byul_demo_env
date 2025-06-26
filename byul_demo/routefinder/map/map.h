@@ -174,6 +174,63 @@ BYUL_API GList* map_clone_neighbors_all(const map m, gint x, gint y);
 BYUL_API GList* map_clone_neighbors_all_range(map m, 
     gint x, gint y, gint range);
 
+/**
+ * @brief 주어진 좌표 (x, y)에서 특정 각도 방향으로 가장 가까운 이웃을 반환합니다.
+ *
+ * @param m         대상 맵 객체
+ * @param x         기준 좌표의 X값
+ * @param y         기준 좌표의 Y값
+ * @param degree    기준 각도 (0~360도), 0도는 오른쪽, 반시계 방향
+ * @return          기준 좌표의 이웃 중, 주어진 각도에 가장 가까운 방향의 좌표. 
+ *                  유효하지 않으면 NULL 반환.
+ *
+ * @note
+ * 맵의 모드(MAP_NEIGHBOR_4 또는 MAP_NEIGHBOR_8)에 따라 가능한 방향이 달라집니다.
+ * 반환된 coord는 사용 후 반드시 coord_free()로 해제해야 합니다.
+ */
+BYUL_API coord map_clone_neighbor_at_degree(
+    const map m, gint x, gint y, gdouble degree);
+
+/**
+ * @brief 기준 좌표를 중심으로, 목표 좌표 방향을 기준으로 부채꼴 범위 내의 모든 좌표를 반환합니다.
+ *
+ * @param m             대상 맵 객체
+ * @param center        기준 좌표 (시작점)
+ * @param goal          기준 방향을 정하기 위한 목표 좌표 (center → goal 방향이 기준선)
+ * @param start_deg     기준선으로부터 시작 각도 (예: -30.0)
+ * @param end_deg       기준선으로부터 끝 각도 (예: +30.0)
+ * @param range         탐색 반경 (한 변 길이)
+ * @return              부채꼴 영역 안에 들어오는 좌표 리스트 (GList of coord). 
+ *                      리스트와 내부 coord는 사용 후 반드시 해제해야 합니다.
+ *
+ * @note
+ * 이 함수는 상대 방향 기준 cone 탐색입니다. 중심 좌표 → 목표 좌표 방향이 중심선이 되며,
+ * 그 주변 각도 범위 내에 있는 모든 좌표를 포함합니다.
+ */
+BYUL_API GList* map_clone_neighbors_at_degree_range(
+    const map m,
+    const coord center, const coord goal,
+    gdouble start_deg, gdouble end_deg,
+    gint range
+);
+
+/**
+ * @brief center에서 goal 방향으로 향하는 가장 가까운 이웃 좌표를 반환합니다.
+ *
+ * @param m         대상 맵 객체
+ * @param center    현재 위치
+ * @param goal      목표 위치
+ * @return          center의 이웃 중, goal 방향에 가장 가까운 좌표.
+ *                  유효하지 않으면 NULL 반환.
+ *
+ * @note
+ * 이 함수는 goal 방향으로 한 칸 전진하려는 상황에서 가장 적절한 이웃을 선택합니다.
+ * 경로 탐색의 단위 이동 또는 시선 방향 추적 등에 활용됩니다.
+ * 반환된 coord는 사용 후 반드시 coord_free()로 해제해야 합니다.
+ */
+BYUL_API coord map_clone_neighbor_at_goal(
+    const map m, const coord center, const coord goal);
+
 #ifdef __cplusplus
 }
 #endif

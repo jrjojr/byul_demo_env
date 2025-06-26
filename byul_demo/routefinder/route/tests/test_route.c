@@ -107,9 +107,15 @@ void test_route_direction_and_angle() {
     gfloat angle;
     gboolean changed = route_has_changed_with_angle(
         p, from, to2, 10.0f, &angle);
-
-    g_assert_true(changed);
+    
+        g_assert_true(changed);
     g_assert_cmpfloat(angle, >=, 89.0f);
+
+    gdouble deg = coord_degree(from, to2);
+    g_assert_cmpfloat(deg, >=, 89.0);
+    
+
+
 
     coord_free(vec1);
     coord_free(from);

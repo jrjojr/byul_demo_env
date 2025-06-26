@@ -7,6 +7,7 @@ from world.village.village import Village
 from grid.grid_block_manager import GridBlockManager
 
 from coord import c_coord
+from map import c_map
 
 from world.npc.npc import NPC
 from world.npc.npc_manager import NPCManager
@@ -26,6 +27,7 @@ class World(QObject):
         self.parent = parent
         self.selected_village = None
         self.selected_npc = None
+        self.map = c_map()
 
         self.block_mgr = GridBlockManager(block_size)
         self.npc_mgr = NPCManager(self)
@@ -44,8 +46,6 @@ class World(QObject):
 
         self.m_selected_npc = None
         self.selected_npc = npc
-
-
 
         self.pending_spawn_batches: deque[list[tuple[str, tuple]]] = deque()
         self._block_load_queue: deque[tuple] = deque()
@@ -67,8 +67,14 @@ class World(QObject):
         self.npc_selected.emit(npc)
 
     def reset(self):
+        self.map.clear()
         self.block_mgr.reset()
         self.npc_mgr.reset()
+
+    def close(self):
+        # self.block_mgr.close()
+        # self.npc_mgr.close()
+        self.map.close()
 
     def create_village(self, name: str, 
                     center_x:int, center_y:int, width: int, height:int):
@@ -239,7 +245,6 @@ class World(QObject):
 
         g_logger.log_debug(f"[clear_proto_route_flags] npc({npc.id})의 경로 깃발 제거 완료")
 
-
     def place_npc_to_cell(self, npc: NPC, coord:tuple):
         # npc가 기존에 있던 셀에서 제거한다.
         key = self.block_mgr.get_origin(npc.start)
@@ -254,8 +259,9 @@ class World(QObject):
             if cell.terrain not in npc.movable_terrain:
                 if cell.terrain != TerrainType.FORBIDDEN:
                     npc.movable_terrain.append(cell.terrain)
+                    npc.native_terrain = cell.terrain
 
-            cell.add_npc_id(npc.id)                
+            cell.add_npc_id(npc.id)
 
             # 경로 제거
             if cell.has_flag(CellFlag.ROUTE):
@@ -273,31 +279,6 @@ class World(QObject):
         self.place_npc_to_cell(npc, coord)
 
         pass
-
-    # def find_npcs_in_rect(self, rect: QRect) -> list[NPC]:
-    #     result = []
-    #     seen = set()
-
-    #     x0 = rect.left()
-    #     x1 = rect.right()
-    #     y0 = rect.top()
-    #     y1 = rect.bottom()
-    #     for x in range(x0, x1):
-    #         for y in range(y0, y1):
-    #             cell = self.block_mgr.get_cell((x, y))
-    #             if not cell or not cell.npc_ids:
-    #                 continue
-
-    #             for npc_id in cell.npc_ids:
-    #                 if npc_id in seen:
-    #                     continue  # 중복 방지
-    #                 seen.add(npc_id)
-
-    #                 npc = self.npc_mgr.npc_dict.get(npc_id)
-    #                 if npc:
-    #                     result.append(npc)
-
-    #     return result
 
     def get_npcs_in_rect(self, rect: QRect) -> set[NPC]:
         """

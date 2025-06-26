@@ -5,6 +5,8 @@ import os
 import platform
 import sys
 
+from ctypes.util import find_library
+
 ffi = FFI()
 
 ffi.cdef("""
@@ -36,28 +38,49 @@ typedef gint            (*GCompareFunc)         (gconstpointer  a,
 typedef struct s_flud* flud;
 """)
 
-# === 플랫폼별 DLL/SO 파일 경로 자동 처리 ===
+# --- 플랫폼 구분 및 libroutefinder 로딩 ---
 system = platform.system()
 root = Path.home() / "byul_demo"
 
 if system == "Windows":
-    lib_name = "libroutefinder.dll"
-    lib_path = root / "bin" / lib_name
-    os.add_dll_directory(str(lib_path.parent))  # 필수
-    os.add_dll_directory(str(Path("C:/msys64/clang64/bin")))
+    routefinder_name = "libroutefinder.dll"
+    routefinder_path = root / "bin" / routefinder_name
+
+    glib_path = "C:/msys64/clang64/bin/libglib-2.0-0.dll"    
+
+    os.add_dll_directory(str(routefinder_path.parent))  # 필수
+    os.add_dll_directory("C:/msys64/clang64/bin")        # GLib DLL 탐색
+
 elif system == "Linux":
-    lib_name = "libroutefinder.so"
-    lib_path = root / "lib" / lib_name
-elif system == "Darwin":  # macOS
-    lib_name = "libroutefinder.dylib"
-    lib_path = root / "lib" / lib_name
+    routefinder_name = "libroutefinder.so"
+    routefinder_path = root / "lib" / routefinder_name
+
+    glib_path = find_library("glib-2.0")    
+
+elif system == "Darwin":
+    routefinder_name = "libroutefinder.dylib"
+    routefinder_path = root / "lib" / routefinder_name
+
+    glib_path = find_library("glib-2.0")    
+
 else:
     raise RuntimeError(f"❌ 지원되지 않는 플랫폼: {system}")
 
-# === 로딩 시도 및 오류 메시지 출력 ===
+# --- libroutefinder 로드 ---
 try:
-    C = ffi.dlopen(str(lib_path))
+    C = ffi.dlopen(str(routefinder_path))
 except OSError as e:
-    print(f"❌ 라이브러리 로딩 실패: {lib_path}")
+    print(f"❌ [libroutefinder] 로딩 실패: {routefinder_path}")
     print(f"→ {e}")
-    raise RuntimeError("플랫폼에 맞는 바이너리 경로 또는 파일명을 확인하세요.")
+    raise RuntimeError("libroutefinder 바이너리 확인 필요")
+
+# --- GLib 로딩 ---
+if not glib_path:
+    raise RuntimeError("GLib (glib-2.0) 라이브러리를 찾을 수 없습니다.")
+
+try:
+    C_glib = ffi.dlopen(glib_path)
+except OSError as e:
+    print(f"❌ [GLib] 로딩 실패: {glib_path}")
+    print(f"→ {e}")
+    raise RuntimeError("GLib DLL 또는 환경 설정을 확인하세요.")

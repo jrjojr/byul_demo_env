@@ -199,9 +199,10 @@ ids: {self.npc_ids}
         # NPC 설정 (최초 한 번만)
         if random.random() < npc_chance:
             if not cell.npc_ids and cell.terrain != TerrainType.FORBIDDEN:
-                npc_id = f"npc_{uuid.uuid4().hex}"
-                cell.npc_ids.append(npc_id)
-                cell.status = CellStatus.NPC
+                if not (cell.x == 0 and cell.y == 0):
+                    npc_id = f"npc_{uuid.uuid4().hex}"
+                    cell.npc_ids.append(npc_id)
+                    cell.status = CellStatus.NPC
         else:
             cell.status = CellStatus.EMPTY            
 

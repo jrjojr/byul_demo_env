@@ -4,6 +4,8 @@ import os
 from typing import Any
 
 from dict import c_dict
+from coord import c_coord
+from list import c_list
 
 ffi.cdef("""
     typedef struct s_map* map;
@@ -45,6 +47,20 @@ ffi.cdef("""
      // int8 map_get_tile_height(const map m, int x, int y);
      // unsigned int8 map_get_tile_flags(const map m, int x, int y);
      // unsigned int8 map_get_tile_extra(const map m, int x, int y);
+         
+coord map_clone_neighbor_at_degree(
+    const map m, gint x, gint y, gdouble degree);
+
+GList* map_clone_neighbors_at_degree_range(
+    const map m,
+    const coord center, const coord goal,
+    gdouble start_deg, gdouble end_deg,
+    gint range
+);
+
+coord map_clone_neighbor_at_goal(
+    const map m, const coord center, const coord goal);
+
 """)
 
 MAP_NEIGHBOR_4 = 0
@@ -134,3 +150,32 @@ class c_map:
         if ptr == ffi.NULL:
             return None
         return c_dict.from_ptr(ptr)
+
+    def clone_neighbor_at_degree(self, x:int, y:int, degree:float):
+        # coord map_clone_neighbor_at_degree(
+        #     const map m, gint x, gint y, gdouble degree);
+        return c_coord(raw_ptr=C.map_clone_neighbor_at_degree(
+            self.ptr(), x, y, degree
+            )
+        )
+
+    def clone_neighbors_at_degree_range(self, center:c_coord, goal:c_coord,
+        start_deg:float, end_deg:float, range:int):
+        # GList* map_clone_neighbors_at_degree_range(
+        #     const map m,
+        #     const coord center, const coord goal,
+        #     gdouble start_deg, gdouble end_deg,
+        #     gint range
+        # );
+        return c_list._from_ptr(C.map_clone_neighbors_at_degree_range(
+            self.ptr(), center.ptr(), goal.ptr(), start_deg, end_deg, range
+            )
+        )
+
+    def clone_neighbor_at_goal(self, center:c_coord, goal:c_coord):
+        # coord map_clone_neighbor_at_goal(
+        #     const map m, const coord center, const coord goal);
+        return c_coord(raw_ptr=C.map_clone_neighbor_at_goal(
+            self.ptr(), center.ptr(), goal.ptr()
+            )
+        )
