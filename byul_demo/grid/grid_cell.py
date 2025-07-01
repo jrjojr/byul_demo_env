@@ -20,8 +20,8 @@ class CellFlag(Flag):
 class TerrainType(Enum):
     NORMAL = 0
     WATER = 1
-    MOUNTAIN = 2
-    FOREST = 3
+    FOREST = 2
+    MOUNTAIN = 3    
     FORBIDDEN = 100
 
 class GridCell:
@@ -163,10 +163,10 @@ ids: {self.npc_ids}
         x: int, y: int,
         npc_chance: float = 0.05,
         terrain_ratio_normal: float = 0.5,
-        terrain_ratio_forbidden: float = 0.1,
-        terrain_ratio_water: float = 0.1,
+        terrain_ratio_water: float = 0.2,
         terrain_ratio_forest: float = 0.1,
         terrain_ratio_mountain: float = 0.1,
+        terrain_ratio_forbidden: float = 0.1,        
         item_chance: float = 0.2,
         effect_chance: float = 0.1,
         event_chance: float = 0.05
@@ -191,6 +191,9 @@ ids: {self.npc_ids}
         r = random.random()
         acc = 0.0
         for terrain, ratio in terrain_weights.items():
+            if terrain == TerrainType.FORBIDDEN:
+                if cell.x == 0 and cell.y == 0:
+                    break
             acc += ratio / total_ratio
             if r <= acc:
                 cell.terrain = terrain

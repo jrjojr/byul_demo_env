@@ -22,12 +22,16 @@ class World(QObject):
     village_selected = Signal(Village)
     npc_selected = Signal(NPC)
 
-    def __init__(self, block_size=100, parent=None):
+    grid_unit_m_changed = Signal(float)
+
+    def __init__(self, block_size=100, grid_unit_m=1.0, parent=None):
         super().__init__()
         self.parent = parent
         self.selected_village = None
         self.selected_npc = None
         self.map = c_map()
+        self.grid_unit_m = grid_unit_m
+        self.set_grid_unit_m(grid_unit_m)
 
         self.block_mgr = GridBlockManager(block_size)
         self.npc_mgr = NPCManager(self)
@@ -40,7 +44,7 @@ class World(QObject):
         village = self.create_village("first_village", 0, 0, 4000, 4000)
 
         # 기본 NPC 생성
-        npc = self.create_npc('first_npc', (0, 0))
+        npc = self.spawn_npc('first_npc', (0, 0))
 
         self.selected_village = village
 
@@ -56,6 +60,11 @@ class World(QObject):
         self._block_evict_queue: deque[tuple] = deque()
         self._evicting_scheduled = False
         self._despawning_scheduled = False
+
+    @Slot(float)
+    def set_grid_unit_m(self, grid_unit_m:float):
+        self.grid_unit_m = grid_unit_m
+        self.grid_unit_m_changed.emit(grid_unit_m)
 
     @property
     def selected_npc(self):
@@ -85,19 +94,16 @@ class World(QObject):
     def add_obstacle(self, coord: tuple, npc:NPC):
         cell = self.block_mgr.get_cell(coord)
         if cell and npc:
-            # 1. NPC가 모든 지형을 갈 수 있다면 → 장애물 개념 없음
             if not npc.movable_terrain:
-                cell.terrain = TerrainType.MOUNTAIN
+                cell.terrain = TerrainType.FORBIDDEN
                 g_logger.log_always(
-                    f"[SET OBSTACLE] {coord} → {npc.id}는 "
-                    f"모든 terrain을 이동 가능함 "
-                    f"그래서 가장 어려운 MOUNTAIN으로 설정한다."
+                    f"[SET OBSTACLE] {coord} : {npc.id}가 "
+                    f"{cell.terrain.name}으로 설정했다."
                 )
                 return
 
             # 2. 현재 terrain이 NPC 기준 이동 가능하다면 → 바꿔야 함
             if cell.terrain in npc.movable_terrain:
-                # NPC가 못 가는 terrain 중 하나로 교체 (기본은 MOUNTAIN)
                 for terrain in TerrainType:
                     if terrain not in npc.movable_terrain:
                         cell.terrain = terrain
@@ -115,22 +121,13 @@ class World(QObject):
     def remove_obstacle(self, coord: tuple, npc:NPC):
         cell = self.block_mgr.get_cell(coord)
         if cell and npc:
-            if not npc.movable_terrain:
-                cell.terrain = TerrainType.NORMAL
-                g_logger.log_always(
-                    f"[REMOVE OBSTACLE] {coord} → {npc.id}는 "
-                    f"모든 terrain 이동 가능 → terrain=NORMAL로 초기화"
-                )
-                return
-
-            if npc.movable_terrain:
-                old_terrain = cell.terrain
-                new_terrain = npc.movable_terrain[0]
-                cell.terrain = new_terrain
-                g_logger.log_always(
-                    f"[REMOVE OBSTACLE] {coord} → {npc.id} 기준 장애물 제거 "
-                    f"({old_terrain.name} → {new_terrain.name})"
-                )
+            old_terrain = cell.terrain
+            new_terrain = npc.native_terrain
+            cell.terrain = new_terrain
+            g_logger.log_always(
+                f"[REMOVE OBSTACLE] {coord} → {npc.id} 기준 장애물 제거 "
+                f"({old_terrain.name} → {new_terrain.name})"
+            )
 
     def toggle_obstacle(self, coord: tuple, npc:NPC):
         cell = self.block_mgr.get_cell(coord)
@@ -303,9 +300,9 @@ class World(QObject):
 
         return result
 
-    def create_npc(self, npc_id, start:tuple):
+    def spawn_npc(self, npc_id, start:tuple):
         if not self.npc_mgr.has_npc(npc_id):
-            self.npc_mgr.add_npc(npc_id, start)
+            self.npc_mgr.create_npc(npc_id, start)
         
         npc = self.npc_mgr.get_npc(npc_id)
 
@@ -417,7 +414,7 @@ class World(QObject):
             count = 0
             while pending_npcs and count < batch_size:
                 npc_id, coord = pending_npcs.pop(0)
-                self.create_npc(npc_id, coord)
+                self.spawn_npc(npc_id, coord)
                 count += 1
 
             if pending_npcs:

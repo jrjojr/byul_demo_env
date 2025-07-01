@@ -125,9 +125,9 @@ class GridCanvas(QWidget):
 
     def spawn_npc_at(self, coord:tuple):
         npc_id = NPC.generate_random_npc_id()
-        npc = self.world.create_npc(npc_id, coord)
+        npc = self.world.spawn_npc(npc_id, coord)
         if npc is None:
-            g_logger.log_debug(f'create_npc({npc_id}) 실패했다')
+            g_logger.log_debug(f'spawn_npc({npc_id}) 실패했다')
 
         if self.world.selected_npc is None:
             self.world.selected_npc = npc
@@ -300,7 +300,7 @@ class GridCanvas(QWidget):
                         if self.world.npc_mgr.has_npc(npc_id):
                             npc = self.world.npc_mgr.get_npc(npc_id)
                         else:
-                            npc = self.world.create_npc(npc_id, (gx, gy))
+                            npc = self.world.spawn_npc(npc_id, (gx, gy))
                             pass
                         if npc:
                             if npc.anim_started:

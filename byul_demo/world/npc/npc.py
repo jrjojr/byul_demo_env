@@ -44,12 +44,17 @@ class NPC(QObject):
     goal_changed_sig = Signal(tuple)
 
     speed_kmh_changed = Signal(float)
+    start_delay_sec_changed = Signal(float)
+    compute_max_retry_changed = Signal(int)
+    route_capacity_changed = Signal(int)
+
+    disp_dx_changed = Signal(float)
+    disp_dy_changed = Signal(float)
 
     def __init__(self, npc_id: str, world, start:tuple=None, 
-                 max_range=100,
                  speed_kmh:float=4.0, start_delay_sec=0.5, 
                  route_capacity=100, 
-                 grid_unit_m = 1.0, compute_max_retry = 1000, 
+                 compute_max_retry = 1000, 
                  image_path:Path=None, route_image_path:Path=None, 
                  parent=None):
         
@@ -68,8 +73,12 @@ class NPC(QObject):
         else:
             self.finder = c_dstar_lite.from_map(self.world.map)
         
-        self.finder.max_range = max_range
-        self.finder.compute_max_retry = compute_max_retry
+        self.compute_max_retry = compute_max_retry
+        self.set_compute_max_retry(compute_max_retry)
+
+        self.route_capacity = route_capacity
+        self.set_route_capacity(route_capacity)
+
         self.loop_once = False
 
         self.movable_terrain = [TerrainType.NORMAL]
@@ -86,7 +95,9 @@ class NPC(QObject):
         self._changed_q = Queue()
 
         self.disp_dx = 0.0
+        self.set_disp_dx(0.0)
         self.disp_dy = 0.0
+        self.set_disp_dy(0.0)
 
         self.draw_offset_x = 0
         self.draw_offset_y = 0
@@ -98,7 +109,6 @@ class NPC(QObject):
 
         self.real_route = c_route()
         self.proto_route = c_route()
-        self.route_capacity = route_capacity
 
         self.phantom_start = self.start
         self.anim_started = False
@@ -106,10 +116,10 @@ class NPC(QObject):
         self.next = None
         self._next_q = Queue()
         
-        self.grid_unit_m = grid_unit_m  # 1칸 = 1m
-
         self.speed_kmh = speed_kmh  # default speed
         self.start_delay_sec = start_delay_sec
+        self.set_start_delay_sec(start_delay_sec)
+
         self.total_elapsed_sec = 0.0
 
         # self.finder.move_func = MOVE_TO
@@ -142,6 +152,36 @@ class NPC(QObject):
 
         self._real_q = Queue()
         self._proto_q = Queue()
+
+    @Slot(float)
+    def set_disp_dx(self, dx:float):
+        self.disp_dx = dx
+        self.disp_dx_changed.emit(dx)
+
+    @Slot(float)
+    def set_disp_dy(self, dy:float):
+        self.disp_dy = dy
+        self.disp_dy_changed.emit(dy)
+
+    @Slot(int)
+    def set_route_capacity(self, capacity:int):
+        self.route_capacity = capacity
+        self.route_capacity_changed.emit(capacity)
+
+    @Slot(int)
+    def set_compute_max_retry(self, max_retry:int):
+        self.compute_max_retry = max_retry
+        self.finder.compute_max_retry = max_retry
+        self.compute_max_retry_changed.emit(max_retry)
+
+    @Slot(float)
+    def set_speed_kmh(self, speed_kmh:float):
+        self.speed_kmh = speed_kmh
+
+    @Slot(float)
+    def set_start_delay_sec(self, delay_sec:float):
+        self.start_delay_sec = delay_sec
+        self.start_delay_sec_changed.emit(delay_sec)
 
     def reset(self):
         """NPC 상태를 초기화한다. (경로, 애니메이션, 큐 등)"""
@@ -189,6 +229,8 @@ class NPC(QObject):
         self.anim_dy_arrived = False
         self.disp_dx = 0.0
         self.disp_dy = 0.0
+        self.disp_dx_changed.emit(0.0)
+        self.disp_dy_changed.emit(0.0)
 
         # 위치 추적 및 타이머
         self.phantom_start = self.start
@@ -262,7 +304,7 @@ class NPC(QObject):
         speed_mps = self.m_speed_kmh * 1000 / 3600.0
         if speed_mps == 0:
             return float('inf')  # 속도가 0이면 무한대 시간 필요
-        return int((self.grid_unit_m / speed_mps) * 1000)
+        return int((self.world.grid_unit_m / speed_mps) * 1000)
 
     @Slot(int, int)
     def set_start_from_int(self, x:int, y:int):
@@ -300,7 +342,7 @@ class NPC(QObject):
 
     def anim_moving_to(self, next: tuple, elapsed_sec: float, cell_size:int):
         speed_mps = self.speed_kmh * 1000 / 3600.0
-        speed_pixel_per_sec = speed_mps * (cell_size / self.grid_unit_m)
+        speed_pixel_per_sec = speed_mps * (cell_size / self.world.grid_unit_m)
         delta = speed_pixel_per_sec * elapsed_sec
         epsilon = 1e-3
 
@@ -311,17 +353,21 @@ class NPC(QObject):
         if abs(delta_x) <= delta + epsilon:
             self.disp_dx = target_dx
             self.anim_dx_arrived = True
+            self.disp_dx_changed.emit(target_dx)
         else:
             self.disp_dx += delta if delta_x > 0 else -delta
             self.anim_dx_arrived = False
+            self.disp_dx_changed.emit(self.disp_dx)
 
         delta_y = target_dy - self.disp_dy
         if abs(delta_y) <= delta + epsilon:
             self.disp_dy = target_dy
             self.anim_dy_arrived = True
+            self.disp_dy_changed.emit(target_dy)
         else:
             self.disp_dy += delta if delta_y > 0 else -delta
             self.anim_dy_arrived = False
+            self.disp_dy_changed.emit(self.disp_dy)
 
     def is_anim_arrived(self) -> bool:
         return self.anim_dx_arrived and self.anim_dy_arrived
@@ -368,6 +414,8 @@ start_delay_sec : {self.start_delay_sec}''')
 
                 self.disp_dx = 0
                 self.disp_dy = 0
+                self.disp_dx_changed.emit(0)
+                self.disp_dy_changed.emit(0)
                 self.anim_dx_arrived = False
                 self.anim_dy_arrived = False
                 self.anim_started = False
