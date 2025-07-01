@@ -1,8 +1,8 @@
-# 🌟 Byul's World DEMO 0.1 – NPC Pathfinding Simulator
+# 🌟 Byul's World DEMO 0.1 – Pathfinding Simulator
 
 **Byul's World DEMO 0.1** is a lightweight real-time simulator
-where multiple NPCs set their own goals and navigate a 2D grid map.
-It visually demonstrates how NPCs follow their paths dynamically.
+where multiple Motiles set their own goals and navigate a 2D grid map.
+It visually demonstrates how Motiles follow their paths dynamically.
 
 The pathfinding algorithm is based on `D* Lite`,
 implemented in C and wrapped using CFFI for direct control in Python.
@@ -17,9 +17,9 @@ implemented in C and wrapped using CFFI for direct control in Python.
 | ------------------ | ----------------------------------------------------- |
 | D\* Lite Algorithm | Real-time pathfinding using C-based logic             |
 | GridMap System     | Dynamic map structure with 100x100 cell blocks        |
-| Multiple NPCs      | Create and switch between multiple NPCs               |
+| Multiple Motiles      | Create and switch between multiple Motiles               |
 | Goal Queueing      | Shift + Right Click to set multiple goals in sequence |
-| Obstacle Toggle    | Spacebar toggles NPC-specific obstacles at cursor     |
+| Obstacle Toggle    | Spacebar toggles Motile-specific obstacles at cursor     |
 | Intuitive Controls | Fully mouse-driven control system                     |
 
 ---
@@ -28,10 +28,10 @@ implemented in C and wrapped using CFFI for direct control in Python.
 
 | Action              | Description                                 |
 | ------------------- | ------------------------------------------- |
-| Left Click          | Select NPC (green glow indicates selection) |
+| Left Click          | Select Motile (green glow indicates selection) |
 | Right Click         | Set immediate goal (clears previous goals)  |
 | Shift + Right Click | Add goal to queue (sequential movement)     |
-| Spacebar            | Toggle NPC-specific obstacle at cursor      |
+| Spacebar            | Toggle Motile-specific obstacle at cursor      |
 | ESC                 | Exit fullscreen mode                        |
 | Mouse Wheel         | Adjust cell size (min pixel to full window) |
 | Middle Click        | Center view on mouse position               |
@@ -46,7 +46,7 @@ implemented in C and wrapped using CFFI for direct control in Python.
 * **GridCanvas** – Grid display and mouse input
 * **MouseInputHandler** – Dedicated mouse event processor
 * **GridMap** – Terrain and cell state manager
-* **NPC** – Goal and pathfinding logic
+* **Motile** – Goal and pathfinding logic
 * **BottomDockingPanel** – Logs and performance visualization
 * **Toolbar / MenuBar** – Configuration, reset, fullscreen toggle
 
@@ -64,7 +64,7 @@ implemented in C and wrapped using CFFI for direct control in Python.
 ## 🔮 Upcoming Features
 
 * Enhanced path visualization
-* NPC interaction (collision, cooperation)
+* Motile interaction (collision, cooperation)
 * Smoother animations
 * Memory-based AI routines
 * Map editor and persistence
@@ -74,7 +74,7 @@ implemented in C and wrapped using CFFI for direct control in Python.
 ## 💬 Developer Note
 
 This project is an experiment to create a world
-where NPCs live with purpose, memory, and routine.
+where Motiles live with purpose, memory, and routine.
 What started as a simple pathfinding simulator
 will grow into a living village simulation.
 

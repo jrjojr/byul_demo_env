@@ -19,7 +19,7 @@ class GridBlockManager(QObject):
     
     load_block_succeeded = Signal(tuple)
 
-    def __init__(self, block_size=100, max_blocks = 18, max_parallel = 2):
+    def __init__(self, block_size=100, max_blocks = 8, max_parallel = 2):
         super().__init__()
 
         self.block_size = block_size
