@@ -1152,9 +1152,9 @@ void dstar_lite_find_loop(const dstar_lite dsl) {
                     dstar_lite_update_vertex(dsl, s);
                 }
             }
-            if (changed_coords) {
-                g_list_free_full(changed_coords, (GDestroyNotify)coord_free);
-            }
+            // if (changed_coords) {
+            //     g_list_free_full(changed_coords, (GDestroyNotify)coord_free);
+            // }
             dstar_lite_compute_shortest_route(dsl);
         }
         loop++;

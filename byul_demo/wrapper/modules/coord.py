@@ -2,6 +2,7 @@
 
 
 from ffi_core import ffi, C
+import weakref
 from pathlib import Path
 import os
 from typing import Any
@@ -44,17 +45,16 @@ def coord_unpack(packed: Any) -> Any:
 
 class c_coord:
     def __init__(self, x=0, y=0, raw_ptr=None):
-        if raw_ptr:
+        if raw_ptr is not None:
             self._c = raw_ptr
-        # if raw_ptr:
-        #     # raw_ptr의 값을 읽어서 새 coord를 만든다 (복사, not 공유)
-        #     copied_x = C.coord_get_x(raw_ptr)
-        #     copied_y = C.coord_get_y(raw_ptr)
-        #     self._c = C.coord_new_full(copied_x, copied_y)
-        elif x is not None and y is not None:
-            self._c = C.coord_new_full(x, y)
+            self._own = False
+            self._finalizer = None
         else:
-            self._c = C.coord_new()
+            self._c = C.coord_new_full(x, y)
+            if not self._c:
+                raise MemoryError("coord allocation failed")
+            self._own = True
+            self._finalizer = weakref.finalize(self, C.coord_free, self._c)
 
     @property
     def x(self):
@@ -73,42 +73,40 @@ class c_coord:
         C.coord_set_y(self._c, value)
 
     def copy(self):
-        return c_coord(raw_ptr=C.coord_copy(self._c))
-    
+        c= c_coord(raw_ptr=C.coord_copy(self._c))
+        c._own = True
+        c._finalizer = weakref.finalize(c, C.coord_free, c.ptr())
+        return c
+
     def degree(self, other):
-        # gdouble coord_degree(const coord a, const coord b);
-        return C.coord_degree(self.ptr(), other.ptr())
+        return C.coord_degree(self._c, other._c)
 
     def __eq__(self, other):
         return C.coord_equal(self._c, other._c) != 0
 
     def __lt__(self, other):
-            return C.coord_compare(self._c, other._c) < 0
-    
+        return C.coord_compare(self._c, other._c) < 0
+
     def __ge__(self, other):
-            return C.coord_compare(self._c, other._c) >= 0
+        return C.coord_compare(self._c, other._c) >= 0
 
     def __hash__(self):
         return C.coord_hash(self._c)
-    
+
     def __del__(self):
-        # self.close()
-        pass
+        if self._own and self._finalizer and self._finalizer.alive:
+            self._finalizer()
 
     def close(self):
-        if self._c:
-            C.coord_free(self._c)
-            self._c = None        
+        if self._own and self._finalizer and self._finalizer.alive:
+            self._finalizer()
 
     def __enter__(self):
-        # with문이 시작될 때 호출
-        return self  # 보통 self를 반환함
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # with문이 끝났을 때 호출됨
-        # 여기서 자원 정리를 직접 수행
-        self.close()    
-    
+        self.close()
+
     def __add__(self, other):
         return c_coord(self.x + other.x, self.y + other.y)
 
@@ -117,16 +115,16 @@ class c_coord:
 
     def __str__(self):
         return f"c_coord(x={self.x}, y={self.y})"
-    
+
     def __repr__(self):
-        return f"c_coord(x={self.x}, y={self.y})"    
-    
+        return str(self)
+
     def to_tuple(self):
         return (self.x, self.y)
-    
+
     def ptr(self):
         return self._c
-    
+
     @staticmethod
-    def from_tuple(t: tuple[int, int]):
+    def from_tuple(t: tuple):
         return c_coord(*t)

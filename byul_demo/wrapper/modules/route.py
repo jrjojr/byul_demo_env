@@ -316,10 +316,9 @@ class c_route:
         node = head
         while node != ffi.NULL:
             coord_ptr = ffi.cast("coord", node.data)
-            yield c_coord(raw_ptr=coord_ptr)
-            # x = C.coord_get_x(coord_ptr)
-            # y = C.coord_get_y(coord_ptr)
-            # yield c_coord(x, y)
+            x = C.coord_get_x(coord_ptr)
+            y = C.coord_get_y(coord_ptr)
+            yield c_coord(x, y)
             node = node.next
 
     def to_list(self):

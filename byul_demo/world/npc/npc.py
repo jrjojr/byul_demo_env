@@ -93,8 +93,6 @@ class NPC(QObject):
         self.direction = random.randint(
             RouteDir.RIGHT.value, RouteDir.DOWN_RIGHT.value)
         
-        self._changed_q = Queue()
-
         self.disp_dx = 0.0
         self.set_disp_dx(0.0)
         self.disp_dy = 0.0
@@ -105,11 +103,8 @@ class NPC(QObject):
         self.anim_dx_arrived = False
         self.anim_dy_arrived = False
 
-        # self._goal_q = Queue()
         self.goal_list:list[tuple[int,int]] = list()
 
-        # self.real_route = c_route()
-        # self.proto_route = c_route()
         self.real_list = list()
         self.proto_list = list()
 
@@ -117,7 +112,6 @@ class NPC(QObject):
         self.anim_started = False
 
         self.next = None
-        # self._next_q = Queue()
         self.next_history = list()
         
         self.speed_kmh = speed_kmh  # default speed
@@ -133,7 +127,7 @@ class NPC(QObject):
 
         # self.finder.changed_coords_func = CHANGE_COORDS
         self._changed_coords_cb_c = ffi.callback(
-            "GList*(void*)", self._changed_coords_cb)
+            "GList*(void*)", self.world.changed_coords_cb)
         self.finder.changed_coords_func = self._changed_coords_cb_c
 
         self._cost_cb_c = ffi.callback(
@@ -280,6 +274,7 @@ class NPC(QObject):
     @start.setter
     def start(self, coord:tuple):
         self.finder.start = c_coord.from_tuple(coord)
+        # self.world.add_changed_coord(coord)
         self.start_changed_sig.emit(coord)
 
     @property
@@ -289,6 +284,7 @@ class NPC(QObject):
     @goal.setter
     def goal(self, coord: tuple):
         self.finder.goal = c_coord.from_tuple(coord)
+        # self.world.add_changed_coord(coord)
         self.goal_changed_sig.emit(coord)
 
     @property
@@ -393,14 +389,6 @@ start_delay_sec : {self.start_delay_sec}''')
 
         # 현재 목표가 없으면 큐에서 꺼내서 대기 목표 설정
         if not self.next and not self.anim_started:
-            # try:
-                # next = self._next_q.get_nowait()
-                # next = self.next_history.pop(0)
-                # self.next = next
-                # self.anim_started = True
-                # self.anim_to_started_sig.emit(self.next)
-            # except Empty:
-                # next = None
             if len(self.next_history) > 0:
                 next = self.next_history.pop(0)
                 self.next = next
@@ -408,7 +396,6 @@ start_delay_sec : {self.start_delay_sec}''')
                 self.anim_to_started_sig.emit(self.next)
             else:
                 next = None
-
 
         if self.next:
             ps = c_coord.from_tuple(self.phantom_start)
@@ -433,7 +420,6 @@ start_delay_sec : {self.start_delay_sec}''')
                 self.anim_started = False
                 self.next = None  # 다음 tick에서 새 목표 pop
 
-
     def find_loop(self):
         '''쓰레드에서 실행된다.'''
         try:
@@ -442,11 +428,11 @@ start_delay_sec : {self.start_delay_sec}''')
                 try:
                     if self.loop_once:
                         # 가장 마지막에 추가된 목표만 사용한다.
-                        # while not self._goal_q.empty():
-                        #     g = self._goal_q.get_nowait()
                         g = self.goal_list.pop()
                         
                         self.goal = g
+                        # self.world.add_changed_coord(g)
+
                         self.loop_once = False
 
                         self.goal_list.clear()
@@ -456,18 +442,22 @@ start_delay_sec : {self.start_delay_sec}''')
                             prev_goal = self.start
 
                         if prev_goal == self.start:
-                            # g = self._goal_q.get(timeout=1)  # 최대 1초 대기
-                            # g = self._goal_q.get_nowait()
+                            if len(self.goal_list) <= 0:
+                                break
+
                             g = self.goal_list.pop(0)
                             self.goal = g
+                            # self.world.add_changed_coord(g)
                             self.start = prev_goal
+                            self.world.add_changed_coord(prev_goal)
                         else:
                             if prev_goal != self.goal:
                                 prev_goal = self.goal
 
                     self.finder.find_proto()
                     route = self.finder.get_proto_route()
-                    self._proto_q.put(route.copy())
+                    self.proto_list.append(route.to_list())
+
                     if route.success:
                         g_logger.log_debug_threadsafe(f'proto route 찾기가 성공했다')
                     else:
@@ -484,9 +474,9 @@ start_delay_sec : {self.start_delay_sec}''')
         ''')
 
                     self.finder.find_loop()
-                    route = self.finder.get_proto_route()
-                    self._real_q.put(route.copy())
-                    if route.success:
+                    route1 = self.finder.get_real_route()
+                    self.real_list.append(route1.to_list())
+                    if route1.success:
                         g_logger.log_debug_threadsafe(f'real route 찾기가 성공했다')
                     else:
                         g_logger.log_debug_threadsafe(f'real route 찾기가 실패했다')
@@ -543,44 +533,15 @@ start_delay_sec : {self.start_delay_sec}''')
             c = c_coord(raw_ptr=coord_c).to_tuple()
 
             g_logger.log_debug_threadsafe(f"[MOVE_CB] 받은 이동 좌표: {c}")
-            # print(f"[MOVE_CB] 받은 이동 좌표: {c}")
-
-            # 🔹 이동 큐에 좌표 추가 (thread-safe) 복사해서 추가해야 한다.
-            # a = copy.deepcopy(c)
-            # self._next_q.put( c)
             self.next_history.append(c)
 
         except Exception as e:
             g_logger.log_debug_threadsafe(f"[MOVE_CB] 예외 발생: {e}")
 
-    def add_changed_coord(self, coord_c: tuple):
-        self._changed_q.put(coord_c)
-
-    def clear_changed_coords(self):
-        try:
-            while not self._changed_q.empty():
-                dummy = self._changed_q.get_nowait()
-        except Empty:
-            g_logger.log_debug('모두 비웠다 changed_coords를...')
-            pass
-
-    def _changed_coords_cb(self, userdata):
-        g_logger.log_debug_threadsafe('_changed_coords_cb 호출됨')
-
-        c_list_obj = c_list()
-
-        while not self._changed_q.empty():
-            tu = self._changed_q.get(1)
-            c = c_coord.from_tuple(tu)
-            c_list_obj.append(c)
-
-        return c_list_obj.ptr()
-
     def _cost_cb(self, map_ptr, start_ptr, goal_ptr, userdata):
         if not map_ptr or not start_ptr or not goal_ptr:
             return ffi.cast("gfloat", float("inf"))
 
-        map = c_map(raw_ptr=map_ptr)
         start = c_coord(raw_ptr=start_ptr)
         goal = c_coord(raw_ptr=goal_ptr)
 
@@ -591,6 +552,8 @@ start_delay_sec : {self.start_delay_sec}''')
 
         dx = start.x - goal.x
         dy = start.y - goal.y
+        start.close()
+        goal.close()
         return ffi.cast("gfloat", math.hypot(dx, dy))
 
     def _is_blocked_cb(self, map:c_map, x, y, userdata):
@@ -625,15 +588,49 @@ start_delay_sec : {self.start_delay_sec}''')
     
     def get_proto_route_image(self, coord):
         c = c_coord.from_tuple(coord)
-        cur_idx = self.proto_route.find(c)
-        direction = self.proto_route.get_direction_by_index(cur_idx)
-        return self.route_images[direction]
-    
+
+        for sublist in self.proto_list:  # sublist: list of c_coord
+            try:
+                cur_idx = sublist.index(c)
+            except ValueError:
+                continue  # 현재 coord_list에는 없음, 다음 coord_list로
+
+            if cur_idx + 1 < len(sublist):
+                start = c
+                end = sublist[cur_idx + 1]
+            elif cur_idx - 1 >= 0:
+                start = sublist[cur_idx - 1]
+                end = c
+            else:
+                return None  # 단일 좌표인 경우
+
+            direction = calc_direction(start, end)
+            return self.route_images[direction]
+
+        return None  # 모든 coord_list에 coord가 없을 경우
+        
     def get_real_route_image(self, coord):
         c = c_coord.from_tuple(coord)
-        cur_idx = self.real_route.find(c)
-        direction = self.real_route.get_direction_by_index(cur_idx)
-        return self.route_images[direction]    
+
+        for sublist in self.real_list:  # sublist: list of c_coord
+            try:
+                cur_idx = sublist.index(c)
+            except ValueError:
+                continue  # 현재 coord_list에는 없음, 다음 coord_list로
+
+            if cur_idx + 1 < len(sublist):
+                start = c
+                end = sublist[cur_idx + 1]
+            elif cur_idx - 1 >= 0:
+                start = sublist[cur_idx - 1]
+                end = c
+            else:
+                return None  # 단일 좌표인 경우
+
+            direction = calc_direction(start, end)
+            return self.route_images[direction]
+
+        return None  # 모든 coord_list에 coord가 없을 경우    
 
     def load_image_paths(self, image_path:Path):
         self.image_paths = ImageManager.get_npc_image_paths(image_path)
@@ -642,58 +639,48 @@ start_delay_sec : {self.start_delay_sec}''')
         self.images = ImageManager.get_npc_image_set(image_path)                
 
     def on_proto_route_found(self):
-        try:
-            p: c_route = self._proto_q.get_nowait()
-        except Empty:
-            g_logger.log_debug('텅 비었다 self._proto_q.get_nowait()')
+        new_items: list = self.proto_list
+
+        if not new_items:
+            g_logger.log_debug('proto_list is empty')
             return
 
-        try:
-            self.proto_route.append_nodup(p)
-            len_full = len(self.proto_route)
-            if len_full > self.route_capacity:
-                self.proto_route.slice(
-                    len_full - self.route_capacity,
-                    len_full)
-            g_logger.log_debug(
-                f'len(self.proto_route): {len(self.proto_route)}')
+        # 중복 없이 추가
+        for item in new_items:
+            if item not in self.proto_list:
+                self.proto_list.append(item)
 
-        finally:
-            pass
+        # 길이 초과 시 마지막 N개만 유지
+        if len(self.proto_list) > self.route_capacity:
+            self.proto_list[:] = self.proto_list[-self.route_capacity:]
+
+        g_logger.log_debug(f'len(proto_list): {len(self.proto_list)}')
 
     def on_real_route_found(self):
-        try:
-            p: c_route = self._real_q.get_nowait()
-        except Empty:
-            g_logger.log_debug('텅 비었다 self._real_q.get_nowait()')
+        new_items: list = self.real_list
+
+        if not new_items:
+            g_logger.log_debug('real_list is empty')
             return
 
-        try:
-            self.real_route.append_nodup(p)
-            len_full = len(self.real_route)
-            if len_full > self.route_capacity:
-                self.real_route.slice(
-                    len_full - self.route_capacity,
-                    len_full)
-            g_logger.log_debug(
-                f'len(self.real_coord_list): {len(self.real_route)}')                
+        # 중복 없이 추가
+        for item in new_items:
+            if item not in self.real_list:
+                self.real_list.append(item)
 
-        finally:
+        # 길이 초과 시 마지막 N개만 유지
+        if len(self.real_list) > self.route_capacity:
+            self.real_list[:] = self.real_list[-self.route_capacity:]
 
-            pass
+        g_logger.log_debug(f'len(real_list): {len(self.real_list)}')
+
 
     def clear_proto_route(self):
-        self.proto_route.clear_coords()
+        self.proto_list.clear()
 
     def clear_real_route(self):
-        self.real_route.clear_coords()
+        self.real_list.clear()
 
-    def flush_goal_q(self):
-        while not self._goal_q.empty():
-            ct = self._goal_q.get(1)
-            self.goal_list.append(ct)
-        return self.goal_list
-    
     def is_movable(self, cell:GridCell):
         return not self.is_obstacle(cell)
     

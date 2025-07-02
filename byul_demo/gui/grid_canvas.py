@@ -48,6 +48,8 @@ class GridCanvas(QWidget):
 
     tick_elapsed = Signal(float)
 
+
+
     def __init__(self, world:World, interval_msec=30, min_px=30, parent=None):
         super().__init__(parent)
         self.parent = parent
@@ -105,6 +107,9 @@ class GridCanvas(QWidget):
         self._move_timer.setInterval(100)  # 이동 주기: 100ms (필요시 조절)
         self._move_timer.timeout.connect(self._dequeue_move)
         self._move_timer.start()        
+
+
+
 
     @Slot(int)
     def set_interval_msec(self, msec: int):

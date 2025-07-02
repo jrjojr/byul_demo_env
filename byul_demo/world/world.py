@@ -15,6 +15,9 @@ from world.npc.npc_manager import NPCManager
 from utils.log_to_panel import g_logger
 import time
 
+from queue import Queue, Empty
+from list import c_list
+
 FIRST_NPC_ID = 'first_npc'
 FIRST_VILLAGE_ID = 'first_village'
 
@@ -22,8 +25,7 @@ class World(QObject):
     npc_created = Signal(str)
     npc_deleted = Signal(str)
 
-    village_selected = Signal(Village)
-    npc_selected = Signal(NPC)
+    npc_selected = Signal(NPC)    
 
     grid_unit_m_changed = Signal(float)
 
@@ -31,7 +33,7 @@ class World(QObject):
         super().__init__()
         self.parent = parent
         self.selected_village = None
-        self.selected_npc = None
+
         self.map = c_map()
         self.grid_unit_m = grid_unit_m
         self.set_grid_unit_m(grid_unit_m)
@@ -47,13 +49,12 @@ class World(QObject):
         village = self.create_village(FIRST_VILLAGE_ID, 0, 0, 4000, 4000)
 
         # 기본 NPC 생성
+        self.m_selected_npc = None        
         npc = self.spawn_npc(FIRST_NPC_ID, (0, 0))
 
+
         self.selected_village = village
-
-        self.m_selected_npc = None
-        self.selected_npc = npc
-
+        
         self.pending_spawn_batches: deque[list[tuple[str, tuple]]] = deque()
         self._block_load_queue: deque[tuple] = deque()
         self._loading_scheduled = False
@@ -64,10 +65,7 @@ class World(QObject):
         self._evicting_scheduled = False
         self._despawning_scheduled = False
 
-    @Slot(float)
-    def set_grid_unit_m(self, grid_unit_m:float):
-        self.grid_unit_m = grid_unit_m
-        self.grid_unit_m_changed.emit(grid_unit_m)
+        self._changed_q = Queue()        
 
     @property
     def selected_npc(self):
@@ -77,6 +75,12 @@ class World(QObject):
     def selected_npc(self, npc:NPC):
         self.m_selected_npc = npc
         self.npc_selected.emit(npc)
+
+    @Slot(float)
+    def set_grid_unit_m(self, grid_unit_m:float):
+        self.grid_unit_m = grid_unit_m
+        self.grid_unit_m_changed.emit(grid_unit_m)
+
 
     def reset(self):
         self.map.clear()
@@ -99,6 +103,7 @@ class World(QObject):
         if cell and npc:
             if not npc.movable_terrain:
                 cell.terrain = TerrainType.FORBIDDEN
+                self.add_changed_coord((cell.x, cell.y))
                 g_logger.log_always(
                     f"[SET OBSTACLE] {coord} : {npc.id}가 "
                     f"{cell.terrain.name}으로 설정했다."
@@ -110,6 +115,7 @@ class World(QObject):
                 for terrain in TerrainType:
                     if terrain not in npc.movable_terrain:
                         cell.terrain = terrain
+                        self.add_changed_coord((cell.x, cell.y))
                         g_logger.log_always(
                             f"[SET OBSTACLE] {coord} → terrain = "
                             f"{terrain.name} (not movable by {npc.id})"
@@ -127,6 +133,7 @@ class World(QObject):
             old_terrain = cell.terrain
             new_terrain = npc.native_terrain
             cell.terrain = new_terrain
+            self.add_changed_coord((cell.x, cell.y))            
             g_logger.log_always(
                 f"[REMOVE OBSTACLE] {coord} → {npc.id} 기준 장애물 제거 "
                 f"({old_terrain.name} → {new_terrain.name})"
@@ -162,7 +169,6 @@ class World(QObject):
         if new_cell and npc.is_movable(new_cell):
             old_cell = self.block_mgr.get_cell(npc.goal)
             old_cell.remove_flag(CellFlag.GOAL)
-            # for c in npc.flush_goal_q():
             for c in npc.goal_list:
                 old_cell = self.block_mgr.get_cell(c)
                 if old_cell:
@@ -183,7 +189,6 @@ class World(QObject):
     def find_route(self, npc: NPC):
         if g_logger.debug_mode:
             t0 = time.time()
-        # npc.start_finding()
         npc.find()
         if g_logger.debug_mode:
             t1 = time.time()
@@ -191,60 +196,45 @@ class World(QObject):
             g_logger.log_debug(f'elapsed : {elapsed:.3f} msec')
 
     @Slot(NPC)
-    def apply_real_route_to_cells(self, npc:NPC):
-        if not npc._real_q.empty():
-            g_logger.log_debug('real_coord_큐에 쌓인 경로를 가져온다.')
-            npc.on_real_route_found()
-
-        route = npc.real_route
-        for i in range(len(route)):
-            c = route.get_coord_at(i)
-            ct = c_coord.to_tuple(c)
-            if (cell := self.block_mgr.get_cell(ct)):
-                cell.add_flag(CellFlag.ROUTE)
-        pass
+    def apply_real_route_to_cells(self, npc: NPC):
+        for coord_list in npc.real_list:
+            for coord in coord_list:
+                ct = coord.to_tuple()
+                if (cell := self.block_mgr.get_cell(ct)):
+                    cell.add_flag(CellFlag.ROUTE)
 
     def clear_real_route_flags(self, npc: NPC):
         """
-        NPC의 real_route에 따라 설정된 셀들의 ROUTE 플래그를 제거한다.
+        NPC의 real_list에 따라 설정된 셀들의 ROUTE 플래그를 제거한다.
         """
-        route = npc.real_route
-        for i in range(len(route)):
-            c = route.get_coord_at(i)
-            ct = c.to_tuple()
+        for coord in npc.real_list:
+            ct = coord.to_tuple()
             cell = self.block_mgr.get_cell(ct)
             if cell:
                 cell.remove_flag(CellFlag.ROUTE)
 
-        g_logger.log_debug(f"[clear_real_route_flags] npc({npc.id})의 경로 깃발 제거 완료")
+        g_logger.log_debug(f"[clear_real_route_flags] npc({npc.id})의 경로 깃발 제거 완료")        
 
     @Slot(NPC)
     def apply_proto_route_to_cells(self, npc: NPC):
-        if not npc._proto_q.empty():
-            g_logger.log_debug('to_proto_큐에 쌓인 경로를 가져온다.')            
-            npc.on_proto_route_found()
-
-        route = npc.proto_route
-        for i in range(len(route)):
-            c = route.get_coord_at(i)
-            ct = c.to_tuple()
-            if (cell := self.block_mgr.get_cell(ct)):
-                cell.add_flag(CellFlag.ROUTE)
-        pass        
+        for coord_list in npc.proto_list:
+            for coord in coord_list:
+                ct = coord.to_tuple()
+                if (cell := self.block_mgr.get_cell(ct)):
+                    cell.add_flag(CellFlag.ROUTE)
 
     def clear_proto_route_flags(self, npc: NPC):
         """
-        NPC의 proto_route에 따라 설정된 셀들의 ROUTE 플래그를 제거한다.
+        NPC의 proto_list에 따라 설정된 셀들의 ROUTE 플래그를 제거한다.
         """
-        route = npc.proto_route
-        for i in range(len(route)):
-            c = route.get_coord_at(i)
-            ct = c.to_tuple()
+        for coord in npc.proto_list:
+            ct = coord.to_tuple()
             cell = self.block_mgr.get_cell(ct)
             if cell:
                 cell.remove_flag(CellFlag.ROUTE)
 
         g_logger.log_debug(f"[clear_proto_route_flags] npc({npc.id})의 경로 깃발 제거 완료")
+
 
     def place_npc_to_cell(self, npc: NPC, coord:tuple):
         # npc가 기존에 있던 셀에서 제거한다.
@@ -472,3 +462,26 @@ class World(QObject):
             self._schedule_despawn(interval_msec)
 
         run_batch()
+
+    def add_changed_coord(self, coord_c: tuple):
+        self._changed_q.put(coord_c)
+
+    def clear_changed_coords(self):
+        try:
+            while not self._changed_q.empty():
+                dummy = self._changed_q.get_nowait()
+        except Empty:
+            g_logger.log_debug('모두 비웠다 changed_coords를...')
+            pass
+
+    def changed_coords_cb(self, userdata):
+        g_logger.log_debug_threadsafe('_changed_coords_cb 호출됨')
+
+        c_list_obj = c_list()
+
+        while not self._changed_q.empty():
+            tu = self._changed_q.get_nowait()
+            c = c_coord.from_tuple(tu)
+            c._own = False
+            c_list_obj.append(c.ptr())
+        return c_list_obj.ptr()
