@@ -15,6 +15,9 @@ from world.npc.npc_manager import NPCManager
 from utils.log_to_panel import g_logger
 import time
 
+FIRST_NPC_ID = 'first_npc'
+FIRST_VILLAGE_ID = 'first_village'
+
 class World(QObject):
     npc_created = Signal(str)
     npc_deleted = Signal(str)
@@ -41,10 +44,10 @@ class World(QObject):
         self.villages: dict[str, Village] = {}
 
         # 기본 마을 생성
-        village = self.create_village("first_village", 0, 0, 4000, 4000)
+        village = self.create_village(FIRST_VILLAGE_ID, 0, 0, 4000, 4000)
 
         # 기본 NPC 생성
-        npc = self.spawn_npc('first_npc', (0, 0))
+        npc = self.spawn_npc(FIRST_NPC_ID, (0, 0))
 
         self.selected_village = village
 
@@ -307,7 +310,8 @@ class World(QObject):
         npc = self.npc_mgr.get_npc(npc_id)
 
         if self.selected_npc is None:
-            self.selected_npc = npc
+            if npc.id == FIRST_NPC_ID:
+                self.selected_npc = npc
 
         npc.anim_to_arrived_sig.connect(lambda coord, n=npc: 
             self.place_npc_to_cell(n, coord))
