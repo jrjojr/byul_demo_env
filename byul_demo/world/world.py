@@ -162,7 +162,8 @@ class World(QObject):
         if new_cell and npc.is_movable(new_cell):
             old_cell = self.block_mgr.get_cell(npc.goal)
             old_cell.remove_flag(CellFlag.GOAL)
-            for c in npc.flush_goal_q():
+            # for c in npc.flush_goal_q():
+            for c in npc.goal_list:
                 old_cell = self.block_mgr.get_cell(c)
                 if old_cell:
                     old_cell.remove_flag(CellFlag.GOAL)

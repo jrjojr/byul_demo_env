@@ -67,6 +67,7 @@ class NPC(QObject):
         self.id = npc_id
         self.native_terrain = TerrainType.NORMAL
         self.influence_range = 0
+        self.max_range = 10
 
         if start:
             self.finder = c_dstar_lite.from_values(self.world.map, start)
@@ -104,17 +105,20 @@ class NPC(QObject):
         self.anim_dx_arrived = False
         self.anim_dy_arrived = False
 
-        self._goal_q = Queue()
+        # self._goal_q = Queue()
         self.goal_list:list[tuple[int,int]] = list()
 
-        self.real_route = c_route()
-        self.proto_route = c_route()
+        # self.real_route = c_route()
+        # self.proto_route = c_route()
+        self.real_list = list()
+        self.proto_list = list()
 
         self.phantom_start = self.start
         self.anim_started = False
 
         self.next = None
-        self._next_q = Queue()
+        # self._next_q = Queue()
+        self.next_history = list()
         
         self.speed_kmh = speed_kmh  # default speed
         self.start_delay_sec = start_delay_sec
@@ -201,25 +205,24 @@ class NPC(QObject):
         # self.finder.is_blocked_func = self._is_blocked_cb_c
 
         # 경로 초기화
-        self.real_route.clear_coords()
-        self.proto_route.clear_coords()
-        self.proto_route.clear_visited()
-        self.real_route.clear_visited()
+        # self.real_route.clear_coords()
+        # self.proto_route.clear_coords()
+        # self.proto_route.clear_visited()
+        # self.real_route.clear_visited()
         self.goal_list.clear()
 
-        self._changed_q.shutdown()
-        self._goal_q.shutdown()
-        self._next_q.shutdown()
-
-        self._real_q.shutdown()
-        while not self._real_q.empty():
-            route = self._real_q.get()
-            route.close()  # 무조건 해제
+        # self._changed_q.shutdown()
+        # self._goal_q.shutdown()
+        # self._next_q.shutdown()
+        # self._real_q.shutdown()
+        # while not self._real_q.empty():
+        #     route = self._real_q.get()
+        #     route.close()  # 무조건 해제
 
         # self._proto_q.shutdown()
-        while not self._proto_q.empty():
-            route = self._proto_q.get()
-            route.close()  # 무조건 해제
+        # while not self._proto_q.empty():
+        #     route = self._proto_q.get()
+        #     route.close()  # 무조건 해제
 
         self.next = None
 
@@ -247,22 +250,22 @@ class NPC(QObject):
 
         self.phantom_start = None
 
-        self._changed_q.shutdown()
-        self._goal_q.shutdown()
-        self._next_q.shutdown()
+        # self._changed_q.shutdown()
+        # self._goal_q.shutdown()
+        # self._next_q.shutdown()
 
-        while not self._real_q.empty():
-            route = self._real_q.get()
-            route.close()  # 무조건 해제
+        # while not self._real_q.empty():
+        #     route = self._real_q.get()
+        #     route.close()  # 무조건 해제
 
-        # self._proto_q.shutdown()
-        while not self._proto_q.empty():
-            route = self._proto_q.get()
-            route.close()  # 무조건 해제        
+        # # self._proto_q.shutdown()
+        # while not self._proto_q.empty():
+        #     route = self._proto_q.get()
+        #     route.close()  # 무조건 해제        
 
         self.finder.close()
-        self.proto_route.close()
-        self.real_route.close()
+        # self.proto_route.close()
+        # self.real_route.close()
 
         # 🔸 로깅
         g_logger.log_debug(f"[NPC.close] npc({self.id}) 종료 완료")
@@ -312,7 +315,8 @@ class NPC(QObject):
         self.start = s
 
     def append_goal(self, coord:tuple):
-        self._goal_q.put(coord)
+        # self._goal_q.put(coord)
+        self.goal_list.append(coord)
         
     def move_to(self, coord: tuple):
         if self.finding_thread and self.finding_thread.is_alive():
@@ -327,8 +331,8 @@ class NPC(QObject):
             self.finding_active = False
 
         self.goal = coord
-        c = c_coord.from_tuple(coord)
-        self.finder.update_vertex(c)
+        # c = c_coord.from_tuple(coord)
+        # self.finder.update_vertex(c)
 
         # 목표 모드가 한번만 설정하는것이다.
         # append_goal은 기본적으로 클릭할때마다 목표를 추가한다
@@ -374,7 +378,8 @@ class NPC(QObject):
     
     def on_tick(self, elapsed_sec: float, cell_size:int):
         if self.total_elapsed_sec >= self.start_delay_sec:
-            if not self._goal_q.empty():
+            # if not self._goal_q.empty():
+            if len(self.goal_list) > 0:
                 if not self.finding_thread or not self.finding_thread.is_alive():
                     g_logger.log_debug(f'''지금 find()가 실행되었다
 가장 중요한 finder.is_quit_forced는 {self.finder.is_quit_forced()}
@@ -388,15 +393,22 @@ start_delay_sec : {self.start_delay_sec}''')
 
         # 현재 목표가 없으면 큐에서 꺼내서 대기 목표 설정
         if not self.next and not self.anim_started:
-            try:
-                next = self._next_q.get_nowait()
-            except Empty:
-                next = None
-
-            if next is not None:
+            # try:
+                # next = self._next_q.get_nowait()
+                # next = self.next_history.pop(0)
+                # self.next = next
+                # self.anim_started = True
+                # self.anim_to_started_sig.emit(self.next)
+            # except Empty:
+                # next = None
+            if len(self.next_history) > 0:
+                next = self.next_history.pop(0)
                 self.next = next
                 self.anim_started = True
                 self.anim_to_started_sig.emit(self.next)
+            else:
+                next = None
+
 
         if self.next:
             ps = c_coord.from_tuple(self.phantom_start)
@@ -430,18 +442,23 @@ start_delay_sec : {self.start_delay_sec}''')
                 try:
                     if self.loop_once:
                         # 가장 마지막에 추가된 목표만 사용한다.
-                        while not self._goal_q.empty():
-                            g = self._goal_q.get_nowait()
+                        # while not self._goal_q.empty():
+                        #     g = self._goal_q.get_nowait()
+                        g = self.goal_list.pop()
                         
                         self.goal = g
                         self.loop_once = False
+
+                        self.goal_list.clear()
+
                     else:
                         if prev_goal is None:
                             prev_goal = self.start
 
                         if prev_goal == self.start:
                             # g = self._goal_q.get(timeout=1)  # 최대 1초 대기
-                            g = self._goal_q.get_nowait()
+                            # g = self._goal_q.get_nowait()
+                            g = self.goal_list.pop(0)
                             self.goal = g
                             self.start = prev_goal
                         else:
@@ -530,7 +547,8 @@ start_delay_sec : {self.start_delay_sec}''')
 
             # 🔹 이동 큐에 좌표 추가 (thread-safe) 복사해서 추가해야 한다.
             # a = copy.deepcopy(c)
-            self._next_q.put( c)
+            # self._next_q.put( c)
+            self.next_history.append(c)
 
         except Exception as e:
             g_logger.log_debug_threadsafe(f"[MOVE_CB] 예외 발생: {e}")
