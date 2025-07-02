@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # 프로젝트 이름과 언어 설정
-project(coord_radar C)
+project(coord_finder C)
 
 # glib 포함 디렉토리 추가
 find_package(PkgConfig REQUIRED)

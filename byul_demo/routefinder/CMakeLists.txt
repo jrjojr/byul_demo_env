@@ -54,6 +54,16 @@ macro(copy_headers module)
     endforeach()
 endmacro()
 
+# 내부 algo 헤더 복사 매크로
+macro(copy_algo_headers module)
+    file(GLOB HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/${module}/modules/*.h")
+    message(STATUS "GLOB HEADERS from ${module}/modules/: ${HEADERS}")
+    foreach(hdr ${HEADERS})
+        get_filename_component(hname ${hdr} NAME)
+        file(COPY ${hdr} DESTINATION ${${PROJECT_NAME}_BUILD_INTERNAL_DIR})
+    endforeach()
+endmacro()
+
 # 내부 모듈 추가
 add_subdirectory(core)
 add_subdirectory(coord)
@@ -61,7 +71,8 @@ add_subdirectory(map)
 add_subdirectory(route)
 add_subdirectory(pqueue)
 add_subdirectory(dstar_lite)
-add_subdirectory(coord_radar)
+add_subdirectory(coord_finder)
+add_subdirectory(algo)
 
 # 각 모듈 헤더 복사
 copy_headers(core)
@@ -70,7 +81,10 @@ copy_headers(map)
 copy_headers(route)
 copy_headers(pqueue)
 copy_headers(dstar_lite)
-copy_headers(coord_radar)
+copy_headers(coord_finder)
+
+copy_headers(algo)
+copy_algo_headers(algo)
 
 # routefinder.h 복사
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.h 
@@ -103,7 +117,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     map 
     route 
     dstar_lite
-    coord_radar
+    coord_finder
+    algo
     -Wl,--no-whole-archive
 )
 

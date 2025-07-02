@@ -103,17 +103,23 @@ class NpcPropertyWidget(QWidget):
         # self.setLayout(self.layout)
 
     def set_start_label(self):
+        if not self.npc:
+            return
         self.start_label.setText(f"({self.npc.start[0]}, {self.npc.start[1]})")
 
     def set_goal_label(self):
         self.goal_label.setText(f"({self.npc.goal[0]}, {self.npc.goal[1]})")
         
     def set_phantom_start_label(self):
+        if not self.npc:
+            return 
         if self.npc.phantom_start:
             self.phantom_start_label.setText(
                 f"({self.npc.phantom_start[0]}, {self.npc.phantom_start[1]})")
 
     def set_next_label(self):
+        if not self.npc:
+            return
         if self.npc.next:
             self.next_label.setText(
                 f"({self.npc.next[0]}, {self.npc.next[1]})")

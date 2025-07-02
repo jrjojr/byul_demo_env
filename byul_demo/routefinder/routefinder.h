@@ -12,7 +12,7 @@
 #include "internal/coord.h"
 #include "internal/route.h"
 #include "internal/dstar_lite.h"
-#include "internal/coord_radar.h"
+#include "internal/coord_finder.h"
 
 #ifdef __cplusplus
 extern "C" {

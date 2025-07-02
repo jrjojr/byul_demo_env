@@ -55,6 +55,8 @@ class NPC(QObject):
                  speed_kmh:float=4.0, start_delay_sec=0.5, 
                  route_capacity=100, 
                  compute_max_retry = 1000, 
+                 influence_range = 0,
+                 max_range = 10,
                  image_path:Path=None, route_image_path:Path=None, 
                  parent=None):
         
@@ -66,8 +68,8 @@ class NPC(QObject):
         self.world = world
         self.id = npc_id
         self.native_terrain = TerrainType.NORMAL
-        self.influence_range = 0
-        self.max_range = 10
+        self.influence_range = influence_range
+        self.max_range = max_range
 
         if start:
             self.finder = c_dstar_lite.from_values(self.world.map, start)
@@ -409,6 +411,7 @@ start_delay_sec : {self.start_delay_sec}''')
             if self.is_anim_arrived():
                 self.anim_to_arrived_sig.emit(self.next)
                 self.start = self.next
+                self.world.add_changed_coord(self.next)
                 self.phantom_start = self.start
 
                 self.disp_dx = 0
@@ -538,6 +541,24 @@ start_delay_sec : {self.start_delay_sec}''')
         except Exception as e:
             g_logger.log_debug_threadsafe(f"[MOVE_CB] 예외 발생: {e}")
 
+    # def _cost_cb(self, map_ptr, start_ptr, goal_ptr, userdata):
+    #     if not map_ptr or not start_ptr or not goal_ptr:
+    #         return ffi.cast("gfloat", float("inf"))
+
+    #     start = c_coord(raw_ptr=start_ptr)
+    #     goal = c_coord(raw_ptr=goal_ptr)
+
+    #     tg = goal.to_tuple()
+    #     cell = self.world.block_mgr.get_cell(tg)
+    #     if self.is_obstacle(cell):
+    #         return ffi.cast("gfloat", float("inf"))
+
+    #     dx = start.x - goal.x
+    #     dy = start.y - goal.y
+    #     start.close()
+    #     goal.close()
+    #     return ffi.cast("gfloat", math.hypot(dx, dy))
+    
     def _cost_cb(self, map_ptr, start_ptr, goal_ptr, userdata):
         if not map_ptr or not start_ptr or not goal_ptr:
             return ffi.cast("gfloat", float("inf"))
@@ -547,7 +568,10 @@ start_delay_sec : {self.start_delay_sec}''')
 
         tg = goal.to_tuple()
         cell = self.world.block_mgr.get_cell(tg)
-        if self.is_obstacle(cell):
+
+        if cell is None or self.is_obstacle(cell):
+            start.close()
+            goal.close()
             return ffi.cast("gfloat", float("inf"))
 
         dx = start.x - goal.x

@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Set the project name
-project(test_coord_radar C)
+project(test_coord_finder C)
 
 # Link the test executable with the external flud library and glib
 find_package(PkgConfig REQUIRED)
@@ -56,13 +56,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_link_directories(${PROJECT_NAME} PRIVATE 
     ${GLIB_LIBRARY_DIRS}
     ${CMAKE_BINARY_DIR}/lib
-    ${CMAKE_BINARY_DIR}/routefinder/coord_radar
+    ${CMAKE_BINARY_DIR}/routefinder/coord_finder
     )
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE 
     ${GLIB_LIBRARIES}
-    coord_radar
+    coord_finder
     m
     )
 

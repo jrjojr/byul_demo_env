@@ -10,6 +10,9 @@ from ctypes.util import find_library
 ffi = FFI()
 
 ffi.cdef("""
+#define TRUE 1
+#define FALSE 0
+         
 typedef int gint;
 typedef int guint;
 typedef int gboolean;

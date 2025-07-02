@@ -1,7 +1,7 @@
 #include <glib.h>
 #include <stdio.h>
 
-#include "internal/coord_radar.h"
+#include "internal/coord_finder.h"
 
 static gboolean test_map[10][10];
 
@@ -57,8 +57,8 @@ static void test_find_goal_astar(void) {
 int main(int argc, char *argv[]) {
     g_test_init(&argc, &argv, NULL);
 
-    g_test_add_func("/coord_radar/bfs", test_find_goal_bfs);
-    g_test_add_func("/coord_radar/astar", test_find_goal_astar);
+    g_test_add_func("/coord_finder/bfs", test_find_goal_bfs);
+    g_test_add_func("/coord_finder/astar", test_find_goal_astar);
 
     return g_test_run();
 }
