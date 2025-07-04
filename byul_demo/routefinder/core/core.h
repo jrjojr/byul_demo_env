@@ -1,8 +1,10 @@
 #ifndef CORE_H
 #define CORE_H
 
-#include <glib.h>
-#include <math.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "byul_config.h"
 
 #ifdef __cplusplus
@@ -12,74 +14,47 @@ extern "C" {
 /// @brief float 비교를 위한 epsilon
 #define FLOAT_EPSILON 1e-5f
 
-/// @brief float 정확도 비교 함수
-BYUL_API gboolean equal_float(gfloat a, gfloat b);
+// ---------------------- float 비교 정확도 ----------------------
 
-/// @brief float 비교 함수 (우선순위용)
-// typedef gint (*GCompareDataFunc) (
-//     gconstpointer a, gconstpointer b, gpointer userdata);
-BYUL_API gint compare_float(
-    gconstpointer a, gconstpointer b, gpointer userdata);
+BYUL_API bool float_equal(float a, float b);
+BYUL_API int  float_compare(float a, float b, void* userdata);
+BYUL_API int  int_compare(int a, int b, void* userdata);
 
-BYUL_API gint compare_int(
-    gconstpointer a, gconstpointer b, gpointer userdata);
+// ---------------------- hashset_t 타입 정의 ----------------------
 
-BYUL_API GHashTable* hashset_new(void);
+typedef void* hashkey;
+typedef void* valueptr;
 
-BYUL_API void hashset_free(GHashTable* set);
+/// @brief 사용자 정의 순회 콜백
+typedef void (*hashset_func)(hashkey item, valueptr userdata);
 
-/// 원소 추가
-BYUL_API gboolean hashset_add(GHashTable* set, gpointer item);
+/// @brief opaque 포인터: C++ 구현체를 감싼 구조
+typedef struct s_hashset hashset_t;
 
-/// 원소 포함 여부
-BYUL_API gboolean hashset_contains(GHashTable* set, gconstpointer item);
+BYUL_API hashset_t* hashset_new();
+BYUL_API void     hashset_free(hashset_t* hs);
 
-/// 원소 제거
-BYUL_API gboolean hashset_remove(GHashTable* set, gconstpointer item);
+BYUL_API bool     hashset_add(hashset_t* hs, hashkey item);
+BYUL_API bool     hashset_contains(const hashset_t* hs, hashkey item);
+BYUL_API bool     hashset_remove(hashset_t* hs, hashkey item);
 
-/// 집합 크기
-BYUL_API guint hashset_size(GHashTable* set);
+BYUL_API size_t   hashset_size(const hashset_t* hs);
+BYUL_API void     hashset_clear(hashset_t* hs);
 
-/// 모든 원소 제거
-BYUL_API void hashset_clear(GHashTable* set);
+BYUL_API hashkey  hashset_peek(hashset_t* hs);
+BYUL_API hashkey  hashset_pop(hashset_t* hs);
 
-/// 하나 꺼내기 (peek)
-BYUL_API gpointer hashset_peek(GHashTable* set);
+BYUL_API void     hashset_foreach(hashset_t* hs, 
+    hashset_func fn, valueptr userdata);
 
-/// 하나 꺼내서 제거 (pop)
-BYUL_API gpointer hashset_pop(GHashTable* set);
+BYUL_API hashset_t* hashset_copy(const hashset_t* original);
+BYUL_API bool     hashset_equal(const hashset_t* a, const hashset_t* b);
+BYUL_API uint32_t hashset_hash(const hashkey key);
 
-/// foreach 순회
-BYUL_API void hashset_foreach(GHashTable* set, GHFunc func, gpointer userdata);
-
-/// 해시셋 복제
-BYUL_API GHashTable* hashset_copy(GHashTable* original);
-
-BYUL_API gboolean hashset_equal(gconstpointer a, gconstpointer b);
-
-BYUL_API guint hashset_hash(gconstpointer key);
-
-/// 합집합 생성
-BYUL_API GHashTable* hashset_union(GHashTable* a, GHashTable* b);
-
-/// 교집합 생성
-BYUL_API GHashTable* hashset_intersect(GHashTable* a, GHashTable* b);
-
-/// 차집합 (a - b)
-BYUL_API GHashTable* hashset_difference(GHashTable* a, GHashTable* b);
-
-// 해시테이블의 깊은복사이다
-BYUL_API GHashTable* g_hash_table_copy_deep(
-    const GHashTable *src,
-    GHashFunc hash_func,
-    GEqualFunc equal_func,
-
-    GCopyFunc key_copy_func,
-    GDestroyNotify key_destroy_func,
-    
-    GCopyFunc value_copy_func,
-    GDestroyNotify value_destroy_func
-);
+BYUL_API hashset_t* hashset_union(const hashset_t* a, const hashset_t* b);
+BYUL_API hashset_t* hashset_intersect(const hashset_t* a, const hashset_t* b);
+BYUL_API hashset_t* hashset_difference(
+    const hashset_t* a, const hashset_t* b);
 
 #ifdef __cplusplus
 }

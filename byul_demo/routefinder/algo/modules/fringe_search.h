@@ -44,7 +44,7 @@ extern "C" {
  */
 BYUL_API route_t* find_fringe_search(const map_t* m, 
     const coord_t* start, const coord_t* goal,
-    cost_func cost_fn, heuristic_func heuristic_fn, gfloat delta_epsilon,
+    cost_func cost_fn, heuristic_func heuristic_fn, float delta_epsilon,
     int max_retry, bool visited_logging);
 
 #ifdef __cplusplus

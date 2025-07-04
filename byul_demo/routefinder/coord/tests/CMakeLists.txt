@@ -35,4 +35,4 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE BYUL_STATIC)
 
 # ------------------- CTest -------------------
 enable_testing()
-add_test(NAME doctest_all COMMAND ${PROJECT_NAME})
+add_test(NAME ${PROJECT_NAME} COMMAND ${PROJECT_NAME})

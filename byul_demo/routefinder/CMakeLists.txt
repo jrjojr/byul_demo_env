@@ -71,7 +71,7 @@ add_subdirectory(map)
 add_subdirectory(route)
 add_subdirectory(cost_coord_pq)
 add_subdirectory(algo)
-# add_subdirectory(dstar_lite)
+add_subdirectory(dstar_lite)
 # add_subdirectory(coord_finder)
 
 
@@ -85,7 +85,7 @@ copy_headers(cost_coord_pq)
 copy_headers(algo)
 copy_algo_headers(algo)
 
-# copy_headers(dstar_lite)
+copy_headers(dstar_lite)
 # copy_headers(coord_finder)
 
 
@@ -96,7 +96,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.h
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # 라이브러리 생성
-add_library(${PROJECT_NAME} SHARED ${PROJECT_NAME}.c)
+add_library(${PROJECT_NAME} SHARED ${PROJECT_NAME}.cpp)
 
 # include 경로 설정
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -114,7 +114,7 @@ target_link_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_BINARY_DIR}/map
     ${CMAKE_BINARY_DIR}/route
     ${CMAKE_BINARY_DIR}/dstar_lite
-    ${CMAKE_BINARY_DIR}/coord_finder
+    # ${CMAKE_BINARY_DIR}/coord_finder
     ${CMAKE_BINARY_DIR}/algo
     ${CMAKE_BINARY_DIR}/cost_coord_pq
 )
@@ -128,7 +128,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     route 
     cost_coord_pq
     dstar_lite
-    coord_finder
+    # coord_finder
     algo
     -Wl,--no-whole-archive
 )
@@ -176,4 +176,4 @@ install(FILES ${CMAKE_BINARY_DIR}/routefinder.pc DESTINATION
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE BYUL_EXPORTS)
 
-add_subdirectory(tests)
+# add_subdirectory(tests)

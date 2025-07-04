@@ -14,29 +14,31 @@
 #include <float.h>
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <thread>
 
-static gint auto_max_range(const coord_t* start, const coord_t* goal) {
-    gint dx = abs(goal->x - start->x);
-    gint dy = abs(goal->y - start->y);
+static int auto_max_range(const coord_t* start, const coord_t* goal) {
+    int dx = abs(goal->x - start->x);
+    int dy = abs(goal->y - start->y);
     return dx + dy;
 }
 
-static gint auto_compute_max_retry(const coord_t* start, const coord_t* goal) {
-    gint dx = abs(goal->x - start->x);
-    gint dy = abs(goal->y - start->y);
-    gint r = dx * dy;
+static int auto_compute_max_retry(const coord_t* start, const coord_t* goal) {
+    int dx = abs(goal->x - start->x);
+    int dy = abs(goal->y - start->y);
+    int r = dx * dy;
     return r ? r : 100;
 }
 
-static gint auto_reconstruct_max_retry(const coord_t* start, const coord_t* goal) {
-    gint dx = abs(goal->x - start->x);
-    gint dy = abs(goal->y - start->y);
-    gint r = dx * 2 + dy * 2;
+static int auto_reconstruct_max_retry(const coord_t* start, const coord_t* goal) {
+    int dx = abs(goal->x - start->x);
+    int dy = abs(goal->y - start->y);
+    int r = dx * 2 + dy * 2;
     return r ? r : 40;
 }
 
-gfloat dstar_lite_cost(
-    const map_t* m, const coord_t* start, const coord_t* goal, gpointer userdata) {
+float dstar_lite_cost(
+    const map_t* m, const coord_t* start, const coord_t* goal, void* userdata) {
 
     if (!m || !start || !goal)
         return FLT_MAX;
@@ -44,183 +46,182 @@ gfloat dstar_lite_cost(
     if (map_is_blocked(m, goal->x, goal->y))
         return FLT_MAX;
 
-    gfloat dx = (gfloat)(start->x - goal->x);
-    gfloat dy = (gfloat)(start->y - goal->y);
+    float dx = (float)(start->x - goal->x);
+    float dy = (float)(start->y - goal->y);
     return hypotf(dx, dy);  // ✅ 더 안전한 방식
 }
 
-dsl_cost_func dstar_lite_get_cost_func(const dstar_lite dsl) {
+dsl_cost_func dstar_lite_get_cost_func(const dstar_lite_t* dsl) {
     return dsl->cost_fn;
 }
 
-void dstar_lite_set_cost_func(dstar_lite dsl, dsl_cost_func fn) {
+void dstar_lite_set_cost_func(dstar_lite_t* dsl, dsl_cost_func fn) {
     if (!dsl) return;
     dsl->cost_fn = fn;
 }
 
-gpointer dstar_lite_get_cost_func_userdata(const dstar_lite dsl) {
+void* dstar_lite_get_cost_func_userdata(const dstar_lite_t* dsl) {
     return dsl->cost_fn_userdata;
 }
 
-void dstar_lite_set_cost_func_userdata(dstar_lite dsl, gpointer userdata) {
+void dstar_lite_set_cost_func_userdata(dstar_lite_t* dsl, void* userdata) {
     if (!dsl) return;
     dsl->cost_fn_userdata = userdata;
 }
 
-gboolean dstar_lite_is_blocked(
-    dstar_lite dsl, gint x, gint y, gpointer userdata) {
+bool dstar_lite_is_blocked(
+    dstar_lite_t* dsl, int x, int y, void* userdata) {
         
-    if (!dsl || !dsl->is_blocked_fn) return FALSE;
+    if (!dsl || !dsl->is_blocked_fn) return false;
     return map_is_blocked(dsl->m, x, y);
 }
 
-dsl_is_blocked_func dstar_lite_get_is_blocked_func(dstar_lite dsl) {
+dsl_is_blocked_func dstar_lite_get_is_blocked_func(dstar_lite_t* dsl) {
     if (!dsl) return NULL;
     return dsl->is_blocked_fn;
 }
 
 void dstar_lite_set_is_blocked_func(
-    dstar_lite dsl, dsl_is_blocked_func fn) {
+    dstar_lite_t* dsl, dsl_is_blocked_func fn) {
     if (!dsl) return;
     dsl->is_blocked_fn = fn;
 }
 
-gpointer dstar_lite_get_is_blocked_func_userdata(dstar_lite dsl) {
+void* dstar_lite_get_is_blocked_func_userdata(dstar_lite_t* dsl) {
     if (!dsl) return NULL;
     return dsl->is_blocked_fn_userdata;
 }
 
 void dstar_lite_set_is_blocked_func_userdata(
-    dstar_lite dsl, gpointer userdata) {
+    dstar_lite_t* dsl, void* userdata) {
     if (!dsl) return;
     dsl->is_blocked_fn_userdata = userdata;
 }
 
-gfloat dstar_lite_heuristic(
-    const coord_t* start, const coord_t* goal, gpointer userdata) {
+float dstar_lite_heuristic(
+    const coord_t* start, const coord_t* goal, void* userdata) {
 
     if (!start || !goal)
         return FLT_MAX;
 
-    gfloat dx = (gfloat)(start->x - goal->x);
-    gfloat dy = (gfloat)(start->y - goal->y);
+    float dx = (float)(start->x - goal->x);
+    float dy = (float)(start->y - goal->y);
     return hypotf(dx, dy);  // ✅ 더 정확하고 안정적
 }
 
-dsl_heuristic_func dstar_lite_get_heuristic_func(const dstar_lite dsl) {
+dsl_heuristic_func dstar_lite_get_heuristic_func(const dstar_lite_t* dsl) {
     return dsl->heuristic_fn;
 }
 
-void dstar_lite_set_heuristic_func(dstar_lite dsl, dsl_heuristic_func func) {
+void dstar_lite_set_heuristic_func(dstar_lite_t* dsl, dsl_heuristic_func func) {
     dsl->heuristic_fn = func;
 }
 
-gpointer dstar_lite_get_heuristic_func_userdata(const dstar_lite dsl) {
+void* dstar_lite_get_heuristic_func_userdata(const dstar_lite_t* dsl) {
     return dsl->heuristic_fn_userdata;
 }
 
-void dstar_lite_set_heuristic_func_userdata(dstar_lite dsl, gpointer userdata) {
+void dstar_lite_set_heuristic_func_userdata(dstar_lite_t* dsl, void* userdata) {
     dsl->heuristic_fn_userdata = userdata;
 }
 
-void move_to(const coord_t* c, gpointer userdata) {
-    g_print("move to (%d, %d) in finder.\n", c->x, c->y);
+void move_to(const coord_t* c, void* userdata) {
+    printf("move to (%d, %d) in finder.\n", c->x, c->y);
     // coord_free(c);
 }
 
-move_func dstar_lite_get_move_func(const dstar_lite dsl) {
+move_func dstar_lite_get_move_func(const dstar_lite_t* dsl) {
     if (!dsl) return NULL;
     return dsl->move_fn;
 }
 
-void dstar_lite_set_move_func(dstar_lite dsl, move_func fn) {
+void dstar_lite_set_move_func(dstar_lite_t* dsl, move_func fn) {
     if (!dsl) return;
     dsl->move_fn = fn;    
 }
 
-gpointer dstar_lite_get_move_func_userdata(const dstar_lite dsl) {
+void* dstar_lite_get_move_func_userdata(const dstar_lite_t* dsl) {
     if (!dsl) return NULL;
     return dsl->move_fn_userdata;
 }
 
 void dstar_lite_set_move_func_userdata(
-    dstar_lite dsl, gpointer userdata) {
+    dstar_lite_t* dsl, void* userdata) {
     
     if (!dsl) return;
     dsl->move_fn_userdata = userdata;
 }
 
-GList* get_changed_coords(gpointer userdata) {
+coord_list_t* get_changed_coords(void* userdata) {
     if (!userdata) {
         // g_warning("changed_coords: userdata is NULL");
-        g_print("changed_coords: userdata is NULL\n");
+        printf("changed_coords: userdata is NULL\n");
         return NULL;
     }
 
-    GList* original = (GList*)userdata;
-    GList* copy = NULL;
+    coord_list_t* original = (coord_list_t*)userdata;
+    coord_list_t* copy = NULL;
 
-    for (GList* l = original; l != NULL; l = l->next) {
-        coord_t* original_c = (coord_t*)l->data;
-        coord_t* copied_c = coord_copy(original_c);
-        // coord_t* copied_c = original_c;
-        copy = g_list_append(copy, copied_c);
+    int len = coord_list_length(original);
+    for (int i =0 ; i < len; i++){
+        const coord_t* c = coord_list_get(original, i);
+        coord_list_push_back(copy, coord_copy(c));
     }
 
-    g_print("changed_coords: %d changed coords copied and returned.\n",
-        g_list_length(copy));
+    printf("changed_coords: %d changed coords copied and returned.\n",
+        coord_list_length(copy));
     return copy;
 }
 
 changed_coords_func dstar_lite_get_changed_coords_func(
-    const dstar_lite dsl) {
+    const dstar_lite_t* dsl) {
 
     if (!dsl) return NULL;
     return dsl->changed_coords_fn;
 }
 
 void dstar_lite_set_changed_coords_func(
-    dstar_lite dsl, changed_coords_func fn) {
+    dstar_lite_t* dsl, changed_coords_func fn) {
 
     if (!dsl) return;
     dsl->changed_coords_fn = fn;
 }
 
-gpointer dstar_lite_get_changed_coords_func_userdata(
-    const dstar_lite dsl) {
+void* dstar_lite_get_changed_coords_func_userdata(
+    const dstar_lite_t* dsl) {
 
     if (!dsl) return NULL;
     return dsl->changed_coords_fn_userdata;
 }
 
 void dstar_lite_set_changed_coords_func_userdata(
-    dstar_lite dsl, gpointer userdata) {
+    dstar_lite_t* dsl, void* userdata) {
 
     if (!dsl) return;
     dsl->changed_coords_fn_userdata = userdata;
 }
 
-dstar_lite dstar_lite_new(map_t* m) {
+dstar_lite_t* dstar_lite_new(map_t* m) {
     if (!m) return NULL;
 
     coord_t* c = coord_new();
-    dstar_lite dsl = dstar_lite_new_full(m, c,
+    dstar_lite_t* dsl = dstar_lite_new_full(m, c,
         dstar_lite_cost, dstar_lite_heuristic,        
-        FALSE);
+        false);
     coord_free(c);
 
     return dsl;
 }
 
-dstar_lite dstar_lite_new_full(map_t* m, coord_t* start,
+dstar_lite_t* dstar_lite_new_full(map_t* m, coord_t* start,
     dsl_cost_func cost_fn, dsl_heuristic_func heuristic_fn,
-    gboolean debug_mode_enabled) {
+    bool debug_mode_enabled) {
 
     if (!m) return NULL;
 
-    dstar_lite dsl = g_new0(dstar_lite_t, 1);
+    dstar_lite_t* dsl = new dstar_lite_t;
     dsl->m = m;
-    // g_print("[dsl->m assigned] %p\n", m);
+    // printf("[dsl->m assigned] %p\n", m);
 
     dsl->start = coord_copy(start);
     dsl->goal = coord_copy(start);
@@ -238,24 +239,12 @@ dstar_lite dstar_lite_new_full(map_t* m, coord_t* start,
 
     dsl->debug_mode_enabled = debug_mode_enabled;
 
-    dsl->g_table = g_hash_table_new_full(
-        (GHashFunc) coord_hash, 
-        (GEqualFunc) coord_equal, 
-        (GDestroyNotify) coord_free, 
-        g_free
-    );
-    dsl->rhs_table = g_hash_table_new_full(
-        (GHashFunc) coord_hash, 
-        (GEqualFunc) coord_equal, 
-        (GDestroyNotify) coord_free, 
-        g_free
-    );
-    dsl->update_count_table = g_hash_table_new_full(
-        (GHashFunc) coord_hash, 
-        (GEqualFunc) coord_equal, 
-        (GDestroyNotify) coord_free, 
-        g_free
-    );
+    dsl->g_table = coord_hash_new();
+
+    dsl->rhs_table = coord_hash_new();
+
+    dsl->update_count_table = coord_hash_new();
+
     dsl->frontier = dstar_lite_pqueue_new();
 
     dsl->interval_msec = 0;
@@ -268,7 +257,7 @@ dstar_lite dstar_lite_new_full(map_t* m, coord_t* start,
     dsl->changed_coords_fn = NULL;
     dsl->changed_coords_fn_userdata = NULL;
 
-    dsl->force_quit = FALSE;
+    dsl->force_quit = false;
 
     dsl->proto_compute_retry_count = 0;
     dsl->real_compute_retry_count = 0;
@@ -280,23 +269,23 @@ dstar_lite dstar_lite_new_full(map_t* m, coord_t* start,
     return dsl;
 }
 
-void dstar_lite_free(dstar_lite dsl) {
+void dstar_lite_free(dstar_lite_t* dsl) {
     if (!dsl) return;
     coord_free(dsl->start);
     coord_free(dsl->goal);
-    g_hash_table_destroy(dsl->g_table);
-    g_hash_table_destroy(dsl->rhs_table);
-    g_hash_table_destroy(dsl->update_count_table);
+    coord_hash_free(dsl->g_table);
+    coord_hash_free(dsl->rhs_table);
+    coord_hash_free(dsl->update_count_table);
     dstar_lite_pqueue_free(dsl->frontier);
     if (dsl->proto_route) route_free(dsl->proto_route);
     if (dsl->real_route) route_free(dsl->real_route);
-    g_free(dsl);
+    delete dsl;
 }
 
-dstar_lite dstar_lite_copy(dstar_lite src) {
+dstar_lite_t* dstar_lite_copy(dstar_lite_t* src) {
     if (!src) return NULL;
 
-    dstar_lite copy = g_malloc0(sizeof(dstar_lite_t));
+    dstar_lite_t* copy = new dstar_lite_t();
     
     // 맵과 좌표 복사
     copy->m     = map_copy(src->m);
@@ -304,24 +293,10 @@ dstar_lite dstar_lite_copy(dstar_lite src) {
     copy->goal  = coord_copy(src->goal);
     copy->km    = src->km;
 
-    // 테이블 복사 (key: coord_t**, value: gfloat*)
-    copy->g_table = g_hash_table_copy_deep(
-        src->g_table,
-        (GHashFunc)coord_hash,
-        (GEqualFunc)coord_equal,
-        (GCopyFunc)coord_copy,
-        (GDestroyNotify)coord_free,
-        (GCopyFunc)g_memdup2,
-        (GDestroyNotify)g_free);
+    // 테이블 복사 (key: coord_t**, value: float*)
+    copy->g_table = coord_hash_copy(src->g_table);
 
-    copy->rhs_table = g_hash_table_copy_deep(
-        src->rhs_table,
-        (GHashFunc)coord_hash,
-        (GEqualFunc)coord_equal,
-        (GCopyFunc)coord_copy,
-        (GDestroyNotify)coord_free,
-        (GCopyFunc)g_memdup2,
-        (GDestroyNotify)g_free);
+    copy->rhs_table = coord_hash_copy(src->rhs_table);
 
     // 우선순위 큐 복사 (주의: shallow copy로 충분한지에 따라 결정)
     copy->frontier = dstar_lite_pqueue_copy(src->frontier);
@@ -355,183 +330,160 @@ dstar_lite dstar_lite_copy(dstar_lite src) {
     copy->max_range              = src->max_range;
     copy->debug_mode_enabled     = src->debug_mode_enabled;
 
-    // update_count_table 복사 (key: coord_t**, value: gint*)
-    copy->update_count_table = g_hash_table_copy_deep(
-        src->update_count_table,
-        (GHashFunc)coord_hash,
-        (GEqualFunc)coord_equal,
-        (GCopyFunc)coord_copy,
-        (GDestroyNotify)coord_free,
-        (GCopyFunc)g_memdup2,
-        (GDestroyNotify)g_free);
+    // update_count_table 복사 (key: coord_t**, value: int*)
+    copy->update_count_table = coord_hash_copy(src->update_count_table);
 
     return copy;
 }
 
-
-coord_t* dstar_lite_get_start(const dstar_lite dsl) {
+coord_t* dstar_lite_get_start(const dstar_lite_t* dsl) {
     return dsl->start;
 }
 
-void dstar_lite_set_start(dstar_lite dsl, const coord_t* c) {
+void dstar_lite_set_start(dstar_lite_t* dsl, const coord_t* c) {
     // dsl->start = c;
     coord_set(dsl->start, c->x, c->y);
 }
 
-coord_t* dstar_lite_get_goal(const dstar_lite dsl) {
+coord_t* dstar_lite_get_goal(const dstar_lite_t* dsl) {
     return dsl->goal;
 }
 
-void dstar_lite_set_goal(dstar_lite dsl, const coord_t* c) {
+void dstar_lite_set_goal(dstar_lite_t* dsl, const coord_t* c) {
     // dsl->goal = c;
     coord_set(dsl->goal, c->x, c->y);
 }
 
-GHashTable* dstar_lite_get_g_table(const dstar_lite dsl) {
+coord_hash_t* dstar_lite_get_g_table(const dstar_lite_t* dsl) {
     return dsl->g_table;
 }
 
-GHashTable* dstar_lite_get_rhs_table(const dstar_lite dsl) {
+coord_hash_t* dstar_lite_get_rhs_table(const dstar_lite_t* dsl) {
     return dsl->rhs_table;
 }
 
-dstar_lite_pqueue dstar_lite_get_frontier(const dstar_lite dsl) {
+dstar_lite_pqueue_t* dstar_lite_get_frontier(const dstar_lite_t* dsl) {
     return dsl->frontier;
 }
 
-void dstar_lite_set_frontier(dstar_lite dsl, dstar_lite_pqueue frontier) {
+void dstar_lite_set_frontier(dstar_lite_t* dsl, dstar_lite_pqueue_t* frontier) {
     if (dsl->frontier) dstar_lite_pqueue_free(dsl->frontier);
     dsl->frontier = frontier;
 }
 
-gfloat dstar_lite_get_km(const dstar_lite dsl) {
+float dstar_lite_get_km(const dstar_lite_t* dsl) {
     return dsl->km;
 }
 
-void dstar_lite_set_km(dstar_lite dsl, gfloat km) {
+void dstar_lite_set_km(dstar_lite_t* dsl, float km) {
     dsl->km = km;
 }
 
-gint dstar_lite_get_max_range(const dstar_lite dsl) {
+int dstar_lite_get_max_range(const dstar_lite_t* dsl) {
     return dsl->max_range;
 }
 
-void dstar_lite_set_max_range(dstar_lite dsl, gint value) {
+void dstar_lite_set_max_range(dstar_lite_t* dsl, int value) {
     dsl->max_range = value;
 }
 
 
-gint dstar_lite_get_real_loop_max_retry(const dstar_lite dsl) {
+int dstar_lite_get_real_loop_max_retry(const dstar_lite_t* dsl) {
     return dsl->real_loop_max_retry;
 }
-void dstar_lite_set_real_loop_max_retry(dstar_lite dsl, gint value) {
+void dstar_lite_set_real_loop_max_retry(dstar_lite_t* dsl, int value) {
     dsl->real_loop_max_retry = value;
 }
-gint dstar_lite_real_loop_retry_count(dstar_lite dsl) {
+int dstar_lite_real_loop_retry_count(dstar_lite_t* dsl) {
     return dsl->real_loop_retry_count;
 }
 
-gint dstar_lite_get_compute_max_retry(const dstar_lite dsl) {
+int dstar_lite_get_compute_max_retry(const dstar_lite_t* dsl) {
     return dsl->compute_max_retry;
 }
 void dstar_lite_set_compute_max_retry(
-    const dstar_lite dsl, gint v) {
+    dstar_lite_t* dsl, int v) {
         
     dsl->compute_max_retry = v;
 }
 
-gint dstar_lite_proto_compute_retry_count(dstar_lite dsl) {
+int dstar_lite_proto_compute_retry_count(dstar_lite_t* dsl) {
     return dsl->proto_compute_retry_count;
 }
-gint dstar_lite_real_compute_retry_count(dstar_lite dsl) {
+int dstar_lite_real_compute_retry_count(dstar_lite_t* dsl) {
     return dsl->real_compute_retry_count;
 }
 
-gint dstar_lite_get_reconstruct_max_retry(const dstar_lite dsl) {
+int dstar_lite_get_reconstruct_max_retry(const dstar_lite_t* dsl) {
     return dsl->reconstruct_max_retry;
 }
 
 void dstar_lite_set_reconstruct_max_retry(
-    const dstar_lite dsl, gint v) {
+    dstar_lite_t* dsl, int v) {
     dsl->reconstruct_max_retry = v;
 }
 
-gint dstar_lite_reconstruct_retry_count(dstar_lite dsl) {
+int dstar_lite_reconstruct_retry_count(dstar_lite_t* dsl) {
     return dsl->reconstruct_retry_count;
 }
 
-gboolean dstar_lite_get_debug_mode_enabled(const dstar_lite dsl) {
+bool dstar_lite_get_debug_mode_enabled(const dstar_lite_t* dsl) {
     return dsl->debug_mode_enabled;
 }
 
-void dstar_lite_set_debug_mode_enabled(dstar_lite dsl, gboolean enabled) {
+void dstar_lite_set_debug_mode_enabled(dstar_lite_t* dsl, bool enabled) {
     dsl->debug_mode_enabled = enabled;
 }
 
-GHashTable* dstar_lite_get_update_count_table(const dstar_lite dsl) {
+coord_hash_t* dstar_lite_get_update_count_table(const dstar_lite_t* dsl) {
     return dsl->update_count_table;
 }
 
-void dstar_lite_add_update_count(dstar_lite dsl, const coord_t* c) {
-    gpointer val = g_hash_table_lookup(dsl->update_count_table, c);
+void dstar_lite_add_update_count(dstar_lite_t* dsl, const coord_t* c) {
+    void* val = coord_hash_get(dsl->update_count_table, c);
     if (!val) {
-        gint* count = g_new(gint, 1);
+        int* count =  new int(1);
         *count = 1;
-        g_hash_table_replace(dsl->update_count_table, coord_copy(c), count);
+        coord_hash_replace(dsl->update_count_table, coord_copy(c), count);
     } else {
-        (*(gint*)val)++;
+        (*(int*)val)++;
     }
 }
 
-void dstar_lite_clear_update_count(dstar_lite dsl) {
-    g_hash_table_remove_all(dsl->update_count_table);
+void dstar_lite_clear_update_count(dstar_lite_t* dsl) {
+    coord_hash_remove_all(dsl->update_count_table);
 }
 
-gint dstar_lite_get_update_count(dstar_lite dsl, const coord_t* c) {
-    gpointer val = g_hash_table_lookup(dsl->update_count_table, c);
-    return val ? *((gint*)val) : 0;
+int dstar_lite_get_update_count(dstar_lite_t* dsl, const coord_t* c) {
+    void* val = coord_hash_get(dsl->update_count_table, c);
+    return val ? *((int*)val) : 0;
 }
 
-const map_t* dstar_lite_get_map(const dstar_lite dsl) {
+const map_t* dstar_lite_get_map(const dstar_lite_t* dsl) {
     return dsl->m;
 }
 
-void    dstar_lite_set_map(const dstar_lite dsl, const map_t* m) {
+void    dstar_lite_set_map(dstar_lite_t* dsl, map_t* m) {
     dsl->m = m;
 }
 
-const route_t* dstar_lite_get_proto_route(const dstar_lite dsl) {
+const route_t* dstar_lite_get_proto_route(const dstar_lite_t* dsl) {
     return dsl->proto_route;
 }
 
-const route_t* dstar_lite_get_real_route(const dstar_lite dsl) {
+const route_t* dstar_lite_get_real_route(const dstar_lite_t* dsl) {
     return dsl->real_route;
 }
 
-void dstar_lite_reset(dstar_lite dsl) {
+void dstar_lite_reset(dstar_lite_t* dsl) {
     // 🔥 해시테이블 완전 삭제 및 재생성
-    g_hash_table_destroy(dsl->g_table);
-    g_hash_table_destroy(dsl->rhs_table);
-    g_hash_table_destroy(dsl->update_count_table);
+    coord_hash_free(dsl->g_table);
+    coord_hash_free(dsl->rhs_table);
+    coord_hash_free(dsl->update_count_table);
 
-    dsl->g_table = g_hash_table_new_full(
-        (GHashFunc) coord_hash, 
-        (GEqualFunc) coord_equal, 
-        (GDestroyNotify) coord_free, 
-        g_free
-    );
-    dsl->rhs_table = g_hash_table_new_full(
-        (GHashFunc) coord_hash, 
-        (GEqualFunc) coord_equal, 
-        (GDestroyNotify) coord_free, 
-        g_free
-    );
-    dsl->update_count_table = g_hash_table_new_full(
-        (GHashFunc) coord_hash, 
-        (GEqualFunc) coord_equal, 
-        (GDestroyNotify) coord_free, 
-        g_free
-    );
+    dsl->g_table = coord_hash_new();
+    dsl->rhs_table = coord_hash_new();
+    dsl->update_count_table = coord_hash_new();
 
     if (dsl->proto_route) {
         route_free(dsl->proto_route);
@@ -565,38 +517,38 @@ void dstar_lite_reset(dstar_lite dsl) {
     dstar_lite_init(dsl);
 }
 
-void dstar_lite_set_interval_msec(dstar_lite dsl, gint msec) {
+void dstar_lite_set_interval_msec(dstar_lite_t* dsl, int msec) {
     if (!dsl) return;
     dsl->interval_msec = msec;
 }
 
-gint dstar_lite_get_interval_msec(const dstar_lite dsl) {
+int dstar_lite_get_interval_msec(const dstar_lite_t* dsl) {
     return dsl ? dsl->interval_msec : 0;
 }
 
-dstar_lite_key dstar_lite_calculate_key(dstar_lite dsl, const coord_t* s) {
-    gfloat g_val = FLT_MAX;
-    gfloat rhs_val = FLT_MAX;
+dstar_lite_key_t* dstar_lite_calculate_key(dstar_lite_t* dsl, const coord_t* s) {
+    float g_val = FLT_MAX;
+    float rhs_val = FLT_MAX;
 
-    gpointer g_val_ptr = g_hash_table_lookup(dsl->g_table, s);
+    void* g_val_ptr = coord_hash_get(dsl->g_table, s);
     if (g_val_ptr != NULL) {
-        g_val = *((gfloat*)g_val_ptr);
+        g_val = *((float*)g_val_ptr);
     }
 
-    gpointer rhs_val_ptr = g_hash_table_lookup(dsl->rhs_table, s);
+    void* rhs_val_ptr = coord_hash_get(dsl->rhs_table, s);
     if (rhs_val_ptr != NULL) {
-        rhs_val = *((gfloat*)rhs_val_ptr);
+        rhs_val = *((float*)rhs_val_ptr);
     }
 
-    gfloat k2 = fminf(g_val, rhs_val);
-    gfloat h = dsl->heuristic_fn(dsl->start, s, NULL);
-    gfloat k1 = k2 + h + dsl->km;
+    float k2 = fminf(g_val, rhs_val);
+    float h = dsl->heuristic_fn(dsl->start, s, NULL);
+    float k1 = k2 + h + dsl->km;
 
-    dstar_lite_key key = dstar_lite_key_new_full( k1, k2 );
+    dstar_lite_key_t* key = dstar_lite_key_new_full( k1, k2 );
     return key;
 }
 
-void dstar_lite_init(dstar_lite dsl) {
+void dstar_lite_init(dstar_lite_t* dsl) {
     dsl->km = 0.0f;
 
     // for s in all_states:
@@ -605,44 +557,44 @@ void dstar_lite_init(dstar_lite dsl) {
     // dstar_lite_cost()함수가 기본적으로 무한대를 할당하고 있다.
 
     // rhs[goal] = 0    
-    gfloat* rhs_goal_ptr = g_malloc(sizeof(gfloat));
+    float* rhs_goal_ptr = new float;
     *rhs_goal_ptr = 0.0f;
-    g_hash_table_replace(dsl->rhs_table, coord_copy(dsl->goal), rhs_goal_ptr);
+    coord_hash_replace(dsl->rhs_table, coord_copy(dsl->goal), rhs_goal_ptr);
     
     // U.insert(goal, calculate_key(goal))
-    dstar_lite_key calc_key_goal = dstar_lite_calculate_key(dsl, dsl->start);
+    dstar_lite_key_t* calc_key_goal = dstar_lite_calculate_key(dsl, dsl->start);
     dstar_lite_pqueue_push(dsl->frontier, calc_key_goal, dsl->goal);
     dstar_lite_key_free(calc_key_goal);
 }
 
-void dstar_lite_update_vertex(const dstar_lite dsl, const coord_t* u) {
+void dstar_lite_update_vertex(dstar_lite_t* dsl, const coord_t* u) {
     if (!dsl || !u) return;
 
     // ✅ 디버그용: update 횟수 기록
     if (dsl->debug_mode_enabled)
         dstar_lite_add_update_count(dsl, u);
 
-    gfloat min_rhs = FLT_MAX;
-    GList* successors_s = NULL;
-    coord_t* s = NULL;
+    float min_rhs = FLT_MAX;
+    coord_list_t* successors_s = NULL;
     
-    gfloat* g_s_ptr = NULL;
-    gfloat g_s = FLT_MAX;
+    float* g_s_ptr = NULL;
+    float g_s = FLT_MAX;
 
-    gfloat cost =  FLT_MAX;
+    float cost =  FLT_MAX;
 
-    gfloat* g_u_ptr = NULL;
-    gfloat g_u = FLT_MAX;
+    float* g_u_ptr = NULL;
+    float g_u = FLT_MAX;
 
-    gfloat* rhs_u_ptr = NULL;
-    gfloat rhs_u = FLT_MAX;
+    float* rhs_u_ptr = NULL;
+    float rhs_u = FLT_MAX;
 
     if (!coord_equal(u, dsl->goal)) {
         successors_s = map_clone_neighbors_all(dsl->m, u->x, u->y);
-        for (GList* l = successors_s; l; l = l->next) {
-            s = l->data;
+        int len = coord_list_length(successors_s);
+        for(int i=0; i<len; i++){
+            const coord_t* s = coord_list_get(successors_s, i);
 
-            g_s_ptr = (gfloat*)g_hash_table_lookup(dsl->g_table, s);
+            g_s_ptr = (float*)coord_hash_get(dsl->g_table, s);
             if (g_s_ptr) {
                 g_s = *g_s_ptr;
             } else {
@@ -654,39 +606,39 @@ void dstar_lite_update_vertex(const dstar_lite dsl, const coord_t* u) {
             if (cost < min_rhs)
                 min_rhs = cost;
         }
-        g_list_free_full(successors_s, (GDestroyNotify) coord_free);
+        coord_list_free(successors_s);
 
-        gfloat* new_rhs_ptr = g_new(gfloat, 1);        
+        float* new_rhs_ptr = new float(1);        
         *new_rhs_ptr = min_rhs;
-        g_hash_table_replace(dsl->rhs_table, coord_copy(u), new_rhs_ptr);
+        coord_hash_replace(dsl->rhs_table, coord_copy(u), new_rhs_ptr);
     }
 
     if (dstar_lite_pqueue_contains(dsl->frontier, u)) 
         dstar_lite_pqueue_remove(dsl->frontier, u);
 
-    g_u_ptr = (gfloat*) g_hash_table_lookup(dsl->g_table, u);
+    g_u_ptr = (float*) coord_hash_get(dsl->g_table, u);
     if (g_u_ptr) {
         g_u = *g_u_ptr;
     } else {
         g_u = FLT_MAX;
     }
 
-    rhs_u_ptr = g_hash_table_lookup(dsl->rhs_table, u);
+    rhs_u_ptr = (float*) coord_hash_get(dsl->rhs_table, u);
     if (rhs_u_ptr) {
-        rhs_u = *(gfloat*)rhs_u_ptr;
+        rhs_u = *(float*)rhs_u_ptr;
     } else {
         rhs_u = FLT_MAX;
     }
 
-    if (!equal_float(g_u, rhs_u)) {
-        dstar_lite_key key = dstar_lite_calculate_key(dsl, u);
+    if (!float_equal(g_u, rhs_u)) {
+        dstar_lite_key_t* key = dstar_lite_calculate_key(dsl, u);
         dstar_lite_pqueue_push(dsl->frontier, key, u);
         dstar_lite_key_free(key);
     }
 }        
 
-void dstar_lite_update_vertex_range(const dstar_lite dsl, 
-    const coord_t* s, gint max_range) {
+void dstar_lite_update_vertex_range(dstar_lite_t* dsl, 
+    const coord_t* s, int max_range) {
 
     if (!dsl) return;
 
@@ -695,83 +647,80 @@ void dstar_lite_update_vertex_range(const dstar_lite dsl,
         return;
     }    
 
-    GList* neighbors = map_clone_neighbors_all_range(dsl->m, 
+    coord_list_t* neighbors = map_clone_neighbors_all_range(dsl->m, 
         s->x, s->y, max_range);
 
-    for (GList* l = neighbors; l; l = l->next) {
-        coord_t* c = l->data;
+    int len = coord_list_length(neighbors);
+    for(int i=0; i<len; i++) {
+        const coord_t* c = coord_list_get(neighbors, i);
         dstar_lite_update_vertex(dsl, c);
     }
 
-    g_list_free_full(neighbors, (GDestroyNotify)coord_free);
+    coord_list_free(neighbors);
 }
 
 void dstar_lite_update_vertex_auto_range(
-    const dstar_lite dsl, const coord_t* s) {
+    dstar_lite_t* dsl, const coord_t* s) {
     
-    gint max_range = dsl->max_range;
+    int max_range = dsl->max_range;
     return dstar_lite_update_vertex_range(dsl, s, max_range);
 }
 
-void dstar_lite_update_vertex_by_route(const dstar_lite dsl, const route_t* p) {
+void dstar_lite_update_vertex_by_route(dstar_lite_t* dsl, const route_t* p) {
     if (!dsl || !p) return;
 
-    GList* coords = route_get_coords(p);
-    for (GList* l = coords; l; l = l->next) {
-        
-        coord_t* c = (coord_t*)l->data;
+    const coord_list_t* coords = route_get_coords(p);
+    int len = coord_list_length(coords);
+    for(int i=0; i<len; i++){
+        const coord_t* c = coord_list_get(coords, i);
         dstar_lite_update_vertex(dsl, c);
     }
 }
 
-void dstar_lite_compute_shortest_route(dstar_lite dsl) {
+void dstar_lite_compute_shortest_route(dstar_lite_t* dsl) {
     if (!dsl) return;
 
     coord_t* u = NULL;
 
-    gfloat* g_u_ptr = NULL;
-    gfloat g_u = FLT_MAX;
+    float* g_u_ptr = NULL;
+    float g_u = FLT_MAX;
     
-    gfloat* rhs_u_ptr = NULL;
-    gfloat rhs_u = FLT_MAX;
+    float* rhs_u_ptr = NULL;
+    float rhs_u = FLT_MAX;
 
-    dstar_lite_key calc_key = NULL;
+    dstar_lite_key_t* calc_key = NULL;
 
-    GList* predecessors_u = NULL;
-    coord_t* s = NULL;
+    coord_list_t* predecessors_u = NULL;
 
-    gfloat* g_old_ptr = NULL;
-    gfloat g_old = FLT_MAX;
+    float g_old = FLT_MAX;
 
-    gfloat cost_s_u = FLT_MAX;
-    gfloat* rhs_s_ptr = NULL;
-    gfloat rhs_s = FLT_MAX;
+    float cost_s_u = FLT_MAX;
+    float* rhs_s_ptr = NULL;
+    float rhs_s = FLT_MAX;
 
-    gfloat min = FLT_MAX;   
+    float min = FLT_MAX;   
 
-    gfloat min_old = FLT_MAX;
-    gfloat cost_s_s_prime = FLT_MAX;
+    float min_old = FLT_MAX;
+    float cost_s_s_prime = FLT_MAX;
     
-    gfloat* g_s_prime_ptr = NULL;
-    gfloat g_s_prime = FLT_MAX;    
+    float* g_s_prime_ptr = NULL;
+    float g_s_prime = FLT_MAX;    
 
-    GList* successors_s = NULL;
+    coord_list_t* successors_s = NULL;
 
-    coord_t* s_prime = NULL;
-    
-    gfloat g_start = FLT_MAX;
-    gfloat rhs_start = FLT_MAX;
-    gfloat* g_start_ptr = NULL;
-    gfloat* rhs_start_ptr = NULL;
+    float g_start = FLT_MAX;
+    float rhs_start = FLT_MAX;
+    float* g_start_ptr = NULL;
+    float* rhs_start_ptr = NULL;
 
-    gint loop = 0;
+    int loop = 0;
 
-    dstar_lite_key calc_key_start = NULL;
-    dstar_lite_key k_old = NULL;
-    dstar_lite_key top_key = dstar_lite_pqueue_top_key(dsl->frontier);
+    dstar_lite_key_t* calc_key_start = NULL;
+    dstar_lite_key_t* k_old = NULL;
+    dstar_lite_key_t* top_key = dstar_lite_pqueue_top_key(dsl->frontier);
     do {
         loop++;
-        // g_print("dstar_lite_compute_shortest_route "
+        // printf("dstar_lite_compute_shortest_route "
         //     "내부에서 루프 %d 시작.\n", loop);
 
         // print_all_dsl_internal(
@@ -788,14 +737,14 @@ void dstar_lite_compute_shortest_route(dstar_lite dsl) {
             break;
         }
 
-        g_u_ptr = (gfloat*) g_hash_table_lookup(dsl->g_table, u);
+        g_u_ptr = (float*) coord_hash_get(dsl->g_table, u);
         if (g_u_ptr) {
-            g_u = *(gfloat*)g_u_ptr;
+            g_u = *(float*)g_u_ptr;
         } else {
             g_u = FLT_MAX;
         }
 
-        rhs_u_ptr = (gfloat*) g_hash_table_lookup(dsl->rhs_table, u);
+        rhs_u_ptr = (float*) coord_hash_get(dsl->rhs_table, u);
         if (rhs_u_ptr) {
             rhs_u = *rhs_u_ptr;
         } else {
@@ -812,57 +761,64 @@ void dstar_lite_compute_shortest_route(dstar_lite dsl) {
         } else if ( g_u > rhs_u) {
             // g_u = rhs_u;
             
-            gfloat* new_g = g_malloc(sizeof(gfloat));
+            float* new_g = new float;
             *new_g = rhs_u;
-            g_hash_table_replace(dsl->g_table, coord_copy(u), new_g);
+            coord_hash_replace(dsl->g_table, coord_copy(u), new_g);
 
             // for s in predecessors(u):
             //     update_vertex(s)
             predecessors_u = map_clone_neighbors_all(
                 dsl->m, u->x, u->y);
 
-            for (GList* l = predecessors_u; l; l = l->next) {
-                s = l->data;
+            int len = coord_list_length(predecessors_u);
+            for (int i=0; i<len; i++){
+                const coord_t* s = coord_list_get(predecessors_u, i);
                 dstar_lite_update_vertex(dsl, s);
             }
-            g_list_free_full(predecessors_u, (GDestroyNotify)coord_free);
+
+            coord_list_free(predecessors_u);
         } else {
-            g_old_ptr = g_hash_table_lookup(dsl->g_table, u);
+            float* g_old_ptr = (float*) coord_hash_get(dsl->g_table, u);
             if (g_old_ptr) {
                 g_old = *g_old_ptr;
             } else {
                 g_old = FLT_MAX;
             }
 
-            gfloat* new_g = g_malloc(sizeof(gfloat));
+            float* new_g = new float;
             *new_g = FLT_MAX;
-            g_hash_table_replace(dsl->g_table, coord_copy(u), new_g);
+            coord_hash_replace(dsl->g_table, coord_copy(u), new_g);
 
             // for s in predecessors(u) | {u}:            
             predecessors_u = map_clone_neighbors_all(
                 dsl->m, u->x, u->y);
-            predecessors_u = g_list_append(predecessors_u, coord_copy(u));
-            for (GList* l = predecessors_u; l; l = l->next) {
-                s = l->data;
+            coord_list_push_back(predecessors_u, coord_copy(u));
+
+            int len = coord_list_length(predecessors_u);
+            for (int i=0; i<len; i++){
+                const coord_t* s = coord_list_get(predecessors_u, i);
+
                 cost_s_u = dsl->cost_fn(dsl->m, s, u, NULL);
 
-                rhs_s_ptr = (gfloat*) g_hash_table_lookup(dsl->rhs_table, s);
+                rhs_s_ptr = (float*) coord_hash_get(dsl->rhs_table, s);
                 if (rhs_s_ptr) {
                     rhs_s = *rhs_s_ptr;
                 } else {
                     rhs_s = FLT_MAX;
                 }
 
-                if (equal_float(rhs_s, cost_s_u + g_old)) {
+                if (float_equal(rhs_s, cost_s_u + g_old)) {
                     if (!coord_equal(s, dsl->goal)) {
 
                         successors_s = map_clone_neighbors_all(
                             dsl->m, s->x, s->y);
-                        for (GList* l = successors_s; l; l = l->next) {
-                            s_prime = l->data;
+                        
+                        int len = coord_list_length(successors_s);
+                        for (int i=0; i<len; i++){
+                            const coord_t* s_prime = coord_list_get(successors_s, i);
 
                             cost_s_s_prime = dsl->cost_fn(dsl->m, s, s_prime, NULL);
-                            g_s_prime_ptr = (gfloat*) g_hash_table_lookup(
+                            g_s_prime_ptr = (float*) coord_hash_get(
                                 dsl->g_table, s_prime);
 
                             if ( g_s_prime_ptr ) {
@@ -873,17 +829,16 @@ void dstar_lite_compute_shortest_route(dstar_lite dsl) {
 
                             min = fminf(min, cost_s_s_prime + g_s_prime);
 
-                            gfloat* min_ptr = g_new0(gfloat, 1);
+                            float* min_ptr = new float(1);
                             *min_ptr = min;
-                g_hash_table_replace(dsl->rhs_table, coord_copy(s), min_ptr);
+                coord_hash_replace(dsl->rhs_table, coord_copy(s), min_ptr);
                         }
-                        g_list_free_full(successors_s, 
-                                (GDestroyNotify)coord_free);
+                        coord_list_free(successors_s);
                     }
                     dstar_lite_update_vertex(dsl, s);
                 }
             }
-            g_list_free_full(predecessors_u, (GDestroyNotify)coord_free);
+            coord_list_free(predecessors_u);
         }
         coord_free(u);
 
@@ -896,14 +851,14 @@ void dstar_lite_compute_shortest_route(dstar_lite dsl) {
         }
         calc_key_start = dstar_lite_calculate_key(dsl, dsl->start);
                     
-        g_start_ptr = (gfloat*)g_hash_table_lookup(dsl->g_table, dsl->start);
+        g_start_ptr = (float*)coord_hash_get(dsl->g_table, dsl->start);
         if ( g_start_ptr ) {
             g_start = *g_start_ptr;
         } else {
             g_start = FLT_MAX;
         }
 
-        rhs_start_ptr = (gfloat*)g_hash_table_lookup(
+        rhs_start_ptr = (float*)coord_hash_get(
             dsl->rhs_table, dsl->start);
 
         if ( rhs_start_ptr ) {
@@ -914,7 +869,7 @@ void dstar_lite_compute_shortest_route(dstar_lite dsl) {
 
     } while ((loop < dsl->compute_max_retry) && 
         ( (dstar_lite_key_compare(top_key, calc_key_start) < 0) || 
-            (!equal_float(rhs_start, g_start) ) ) );
+            (!float_equal(rhs_start, g_start) ) ) );
 
     if (calc_key_start) {
         dstar_lite_key_free(calc_key_start);
@@ -937,41 +892,46 @@ void dstar_lite_compute_shortest_route(dstar_lite dsl) {
     }
 }
 
-route_t* dstar_lite_reconstruct_route(const dstar_lite dsl) {
+route_t* dstar_lite_reconstruct_route(dstar_lite_t* dsl) {
     if (!dsl) return NULL;
 
     route_t* p = route_new();
     route_add_coord(p, dsl->start);    
 
-    gfloat* g_start_ptr = g_hash_table_lookup(dsl->g_table, dsl->start);
-    if (!g_start_ptr || equal_float(*g_start_ptr, FLT_MAX))
+    float* g_start_ptr = (float*) coord_hash_get(dsl->g_table, dsl->start);
+    if (!g_start_ptr || float_equal(*g_start_ptr, FLT_MAX)) {
+        if (dsl->debug_mode_enabled)
+        p->visited_count = coord_hash_copy(dsl->update_count_table);
         return p;
+    }
 
     coord_t* current = coord_copy(dsl->start);
     // coord_t* current = start;
 
-    gint loop = 0;
+    int loop = 0;
     while (!coord_equal(current, dsl->goal) && 
         (loop < dsl->reconstruct_max_retry)) {
 
         loop++;
-        // g_print("dstar_lite_reconstruct_route "
+        // printf("dstar_lite_reconstruct_route "
         //     "내부에서 루프 %d 시작.\n", loop);
 
-        GList* neighbors = map_clone_neighbors_all(
+        coord_list_t* neighbors = map_clone_neighbors_all(
             dsl->m, current->x, current->y);
 
-        gfloat min_cost = FLT_MAX;
+        int len = coord_list_length(neighbors);
+
+        float min_cost = FLT_MAX;
         coord_t* next = NULL;
 
-        for (GList* l = neighbors; l; l = l->next) {
-            coord_t* s = l->data;
+        for (int i=0; i<len; i++){
+            const coord_t* s = coord_list_get(neighbors, i);
 
-            gfloat cost_current_s = dsl->cost_fn(dsl->m, current, s, NULL);
-            gfloat* g_s_ptr = g_hash_table_lookup(dsl->g_table, s);
-            gfloat g_s = (g_s_ptr) ? *g_s_ptr : FLT_MAX;
+            float cost_current_s = dsl->cost_fn(dsl->m, current, s, NULL);
+            float* g_s_ptr = (float*) coord_hash_get(dsl->g_table, s);
+            float g_s = (g_s_ptr) ? *g_s_ptr : FLT_MAX;
 
-            gfloat total_cost = cost_current_s + g_s;
+            float total_cost = cost_current_s + g_s;
             if (total_cost < min_cost) {
                 min_cost = total_cost;
                 
@@ -980,21 +940,21 @@ route_t* dstar_lite_reconstruct_route(const dstar_lite dsl) {
                 // next = s;
             }
         }
-        g_list_free_full(neighbors, (GDestroyNotify)coord_free);
+        coord_list_free(neighbors);
 
         if (!next) {  // 더 이상 진행할 수 없음
             coord_free(current);
             // route_free(p);
-            route_set_success(p, FALSE);
+            route_set_success(p, false);
             return p;
         }
 
-        gfloat* g_next_ptr = g_hash_table_lookup(dsl->g_table, next);
-        if (!g_next_ptr || equal_float(*g_next_ptr, FLT_MAX)) {
+        float* g_next_ptr = (float*) coord_hash_get(dsl->g_table, next);
+        if (!g_next_ptr || float_equal(*g_next_ptr, FLT_MAX)) {
             coord_free(current);
             coord_free(next);
             // route_free(p);
-            route_set_success(p, FALSE);
+            route_set_success(p, false);
             return p;
         }
 
@@ -1006,11 +966,11 @@ route_t* dstar_lite_reconstruct_route(const dstar_lite dsl) {
     dsl->reconstruct_retry_count = loop;
 
     coord_free(current);
-    route_set_success(p, TRUE);    
+    route_set_success(p, true);    
     return p;
 }
 
-route_t* dstar_lite_find(const dstar_lite dsl) {
+route_t* dstar_lite_find(dstar_lite_t* dsl) {
     if (!dsl) return NULL;
 
     dstar_lite_reset(dsl);
@@ -1019,19 +979,19 @@ route_t* dstar_lite_find(const dstar_lite dsl) {
     return dstar_lite_reconstruct_route(dsl);
 }
 
-void dstar_lite_find_full(const dstar_lite dsl) {
+void dstar_lite_find_full(dstar_lite_t* dsl) {
     if (!dsl) return;
     dstar_lite_find_proto(dsl);
     dstar_lite_find_loop(dsl);
 }
 
-void dstar_lite_find_proto(const dstar_lite dsl) {
+void dstar_lite_find_proto(dstar_lite_t* dsl) {
     if (!dsl) return;
     // dstar_lite_reset(dsl);
     dsl->proto_route = dstar_lite_find(dsl);
 }
  
-void dstar_lite_find_loop(const dstar_lite dsl) {
+void dstar_lite_find_loop(dstar_lite_t* dsl) {
     if (!dsl) return;
 
     // if (!dsl->proto_route) dstar_lite_find_proto(dsl);
@@ -1042,42 +1002,42 @@ void dstar_lite_find_loop(const dstar_lite dsl) {
     dsl->real_route = route_new();
     route_add_coord(dsl->real_route, start);
 
-    gfloat* rhs_start_ptr = NULL;
-    gfloat rhs_start = FLT_MAX;
+    float* rhs_start_ptr = NULL;
+    float rhs_start = FLT_MAX;
 
-    GList* successors_start = NULL;
-    GList* l = NULL;
+    coord_list_t* successors_start = NULL;
+    coord_list_t* l = NULL;
 
-    gfloat min_cost = FLT_MAX;
+    float min_cost = FLT_MAX;
     coord_t* next = NULL;
 
     coord_t* s = NULL;
-    gfloat* g_s_ptr = NULL;
-    gfloat g_s = FLT_MAX;
-    gfloat cost_start_s = FLT_MAX;
-    gfloat total_cost = FLT_MAX;
+    float* g_s_ptr = NULL;
+    float g_s = FLT_MAX;
+    float cost_start_s = FLT_MAX;
+    float total_cost = FLT_MAX;
 
-    GList* changed_coords = NULL;
+    coord_list_t* changed_coords = NULL;
 
-    gint loop = 0;
+    int loop = 0;
     while (!coord_equal(start, dsl->goal) && 
         (loop < dsl->real_loop_max_retry) && !dsl->force_quit) {
 
         loop++;
-        // g_print("dstar_lite_find_loop "
+        // printf("dstar_lite_find_loop "
         //     "내부에서 루프 %d 시작.\n", loop);
 
-        rhs_start_ptr = g_hash_table_lookup(dsl->rhs_table, dsl->start);
+        rhs_start_ptr = (float*) coord_hash_get(dsl->rhs_table, dsl->start);
         if (rhs_start_ptr) {
             rhs_start = *rhs_start_ptr;
         } else {
             rhs_start = FLT_MAX;
         }
 
-        if (equal_float(rhs_start, FLT_MAX)) {
-            route_set_success(dsl->real_route, FALSE);
+        if (float_equal(rhs_start, FLT_MAX)) {
+            route_set_success(dsl->real_route, false);
             dsl->real_loop_retry_count = loop;
-            dsl->force_quit = FALSE;
+            dsl->force_quit = false;
             return;
         }
         
@@ -1085,10 +1045,12 @@ void dstar_lite_find_loop(const dstar_lite dsl) {
         min_cost = FLT_MAX;
         successors_start = map_clone_neighbors_all(
             dsl->m, start->x, start->y);
-        for (l = successors_start; l; l = l->next) {
-            s = l->data;
 
-            g_s_ptr = g_hash_table_lookup(dsl->g_table, s);
+        int len = coord_list_length(successors_start);
+        for (int i=0; i<len; i++){
+            const coord_t* s = coord_list_get(successors_start, i);
+
+            g_s_ptr = (float*)coord_hash_get(dsl->g_table, s);
             g_s = (g_s_ptr) ? *g_s_ptr : FLT_MAX;
             cost_start_s = dsl->cost_fn(dsl->m, start, s, NULL);
             total_cost = cost_start_s + g_s;
@@ -1101,12 +1063,12 @@ void dstar_lite_find_loop(const dstar_lite dsl) {
                 next = coord_copy(s);
             }
         }
-        g_list_free_full(successors_start, (GDestroyNotify)coord_free);
+        coord_list_free(successors_start);
 
         if (!next) {
-            route_set_success(dsl->real_route, FALSE);
+            route_set_success(dsl->real_route, false);
             dsl->real_loop_retry_count = loop;
-            dsl->force_quit = FALSE;
+            dsl->force_quit = false;
             return;
         }
         route_add_coord(dsl->real_route, next);
@@ -1122,11 +1084,16 @@ void dstar_lite_find_loop(const dstar_lite dsl) {
         // 이동 간 대기 시간 적용
         // time.sleep(dsl->interval_msec / 1000.0);
         // g_usleep(dsl->interval_msec * 1000);  // 밀리초 → 마이크로초
+        // if (dsl->interval_msec <= 0)
+        //     //쓰레드에서도 안전하게
+        //     g_thread_yield();   // 틱 양보
+        // else
+        //     g_usleep(dsl->interval_msec * 1000);
+
         if (dsl->interval_msec <= 0)
-            //쓰레드에서도 안전하게
-            g_thread_yield();   // 틱 양보
+            std::this_thread::yield();  // ✅ C++ 안전한 쓰레드 양보
         else
-            g_usleep(dsl->interval_msec * 1000);
+            std::this_thread::sleep_for(std::chrono::milliseconds(dsl->interval_msec));            
 
         if (dsl->force_quit) break;
 
@@ -1147,8 +1114,9 @@ void dstar_lite_find_loop(const dstar_lite dsl) {
 
                 // for u in changed_coords:
                     // update_vertex(u)
-                for (l = changed_coords; l; l = l->next) {
-                    s = l->data;
+                int len = coord_list_length(changed_coords);
+                for (int i=0; i<len; i++){
+                    const coord_t* s = coord_list_get(changed_coords, i);
                     dstar_lite_update_vertex(dsl, s);
                 }
             }
@@ -1159,7 +1127,7 @@ void dstar_lite_find_loop(const dstar_lite dsl) {
         }
         loop++;
     }
-    dsl->force_quit = FALSE;
+    dsl->force_quit = false;
     if (start) coord_free(start);
     if (next) coord_free(next);
 
@@ -1167,30 +1135,30 @@ void dstar_lite_find_loop(const dstar_lite dsl) {
         // 길을 못찾고 루프가 한계에 도달했다.
         if (s_last) {
             if (!coord_equal(s_last, dsl->goal)) {
-                route_set_success(dsl->real_route, FALSE);
+                route_set_success(dsl->real_route, false);
                 dsl->real_loop_retry_count = loop;
                 coord_free(s_last);
-                    dsl->force_quit = FALSE;
+                    dsl->force_quit = false;
                 return;
             }
         }
     }
-    route_set_success(dsl->real_route, TRUE);
+    route_set_success(dsl->real_route, true);
     dsl->real_loop_retry_count = loop;
     if (s_last) coord_free(s_last);    
-        dsl->force_quit = FALSE;
+        dsl->force_quit = false;
     return;    
 }
 
-void dstar_lite_force_quit(dstar_lite dsl) {
-    dsl->force_quit = TRUE;
+void dstar_lite_force_quit(dstar_lite_t* dsl) {
+    dsl->force_quit = true;
 }
 
-gboolean dstar_lite_is_quit_forced(dstar_lite dsl) {
+bool dstar_lite_is_quit_forced(dstar_lite_t* dsl) {
     return dsl->force_quit;
 }
 
-void dstar_lite_set_force_quit(dstar_lite dsl, gboolean v) {
+void dstar_lite_set_force_quit(dstar_lite_t* dsl, bool v) {
     dsl->force_quit = v;
 }
 

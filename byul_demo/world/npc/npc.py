@@ -129,11 +129,11 @@ class NPC(QObject):
 
         # self.finder.changed_coords_func = CHANGE_COORDS
         self._changed_coords_cb_c = ffi.callback(
-            "GList*(void*)", self.world.changed_coords_cb)
+            "coord_list_t*(void*)", self.world.changed_coords_cb)
         self.finder.changed_coords_func = self._changed_coords_cb_c
 
         self._cost_cb_c = ffi.callback(
-            "gfloat(const map, const coord, const coord, void*)",
+            "float(const map, const coord, const coord, void*)",
             self._cost_cb
         )
         self.finder.cost_func = self._cost_cb_c
@@ -141,7 +141,7 @@ class NPC(QObject):
         # C.dstar_lite_set_cost_func(self.finder.ptr(), self._cost_cb_c, ffi.NULL)        
 
         self._is_blocked_cb_c = ffi.callback(
-            "gboolean(const map, gint, gint, void*)",
+            "bool(const map, gint, gint, void*)",
             self._is_blocked_cb
         )
         # self.finder.is_blocked_func = self._is_blocked_cb_c

@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 typedef struct s_rta_star_config{
-    gint depth_limit; // 탐색 제한 깊이
+    int depth_limit; // 탐색 제한 깊이
 } rta_star_config_t;
 typedef rta_star_config_t* rta_star_config;
 
@@ -41,7 +41,7 @@ BYUL_API rta_star_config rta_star_config_new();
  * @param depth_limit 앞을 미리 보는 깊이 (1 이상 권장)
  * @return rta_star_config 설정 객체 (free 필요)
  */
-BYUL_API rta_star_config rta_star_config_new_full(gint depth_limit);
+BYUL_API rta_star_config rta_star_config_new_full(int depth_limit);
 
 
 BYUL_API void rta_star_config_free(rta_star_config cfg);
@@ -80,7 +80,7 @@ BYUL_API void rta_star_config_free(rta_star_config cfg);
  *     default_heuristic,
  *     NULL,
  *     cfg,
- *     TRUE
+ *     true
  * );
  *
  * // 장애물: 중앙 수직 벽
@@ -100,7 +100,7 @@ BYUL_API void rta_star_config_free(rta_star_config cfg);
  * @param al    알고리즘 컨텍스트 (algo_new_full로 생성)
  * @param start  시작 좌표
  * @param goal    도착 좌표
- * @return 탐색 결과 route_t*. 경로를 찾았으면 success == TRUE, 실패 시 FALSE.
+ * @return 탐색 결과 route_t*. 경로를 찾았으면 success == true, 실패 시 false.
  */
 BYUL_API route_t* find_rta_star(const map_t* m,
     const coord_t* start, const coord_t* goal,

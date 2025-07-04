@@ -1,72 +1,35 @@
-# CMakeLists.txt for the test project
-
 cmake_minimum_required(VERSION 3.10)
 
-# Set the project name
-project(test_core C)
+project(test_core)
 
-# Link the test executable with the external flud library and glib
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GLIB REQUIRED glib-2.0)
+# ------------------- 테스트 실행 파일 -------------------
+add_executable(${PROJECT_NAME} test_core.cpp)
 
-# Add the test executable
-add_executable(${PROJECT_NAME} ${PROJECT_NAME}.c)
+# ------------------- include 경로 설정 -------------------
+set(EXTERNAL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/../../external)
+message(STATUS "EXTERNAL_INCLUDE_DIR = ${EXTERNAL_INCLUDE_DIR}")
 
-# 컴파일·링크 옵션에 ASan 추가
-# win11과 우분투는 다르다
-if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-    if (CMAKE_HOST_SYSTEM_VERSION VERSION_GREATER_EQUAL 10.0.22000)
-        message(STATUS "${PROJECT_NAME} Windows 11 detected — ASan disabled")
-    else()
-        message(STATUS "${PROJECT_NAME} Applying ASan for Windows (no leak sanitizer)")
-        target_compile_options(${PROJECT_NAME} PRIVATE
-            -fsanitize=address
-            -g
-            -O1
-        )
-        target_link_options(${PROJECT_NAME} PRIVATE
-            -fsanitize=address
-        )
-    endif()
-else()
-    message(STATUS "${PROJECT_NAME} Applying ASan + LSan for Unix-like")
-    target_compile_options(${PROJECT_NAME} PRIVATE
-        -fsanitize=address
-        -fsanitize=leak
-        -g
-        -O1
-    )
-    target_link_options(${PROJECT_NAME} PRIVATE
-        -fsanitize=address
-        -fsanitize=leak
-    )
-endif()
-
-
-target_include_directories(${PROJECT_NAME} PRIVATE 
-    ${GLIB_INCLUDE_DIRS}
-    ${CMAKE_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_BINARY_DIR}/include/routefinder
+# 포함 디렉토리
+# core.h, doctest.h 등 경로 포함
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_SOURCE_DIR}                         # 프로젝트 루트
+    ${CMAKE_CURRENT_SOURCE_DIR}                 # 현재 테스트 디렉토리
+    ${CMAKE_BINARY_DIR}/include/routefinder     # 빌드시 생성되는 헤더
+    ${EXTERNAL_INCLUDE_DIR}                     
 )
 
-# Ensure glib.h can be included
+# ------------------- 라이브러리 링크 -------------------
 target_link_directories(${PROJECT_NAME} PRIVATE
-    ${GLIB_LIBRARY_DIRS}
-    ${CMAKE_BINARY_DIR}/lib
-    ${CMAKE_BINARY_DIR}/routefinder/core
+    ${CMAKE_BINARY_DIR}/core
 )
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE ${GLIB_CFLAGS_OTHER})
-
-# Link libraries
-target_link_libraries(${PROJECT_NAME} PRIVATE 
-    ${GLIB_LIBRARIES}
+target_link_libraries(${PROJECT_NAME} PRIVATE
     core
-    m
+    m # 수학함수 fabsf 등
 )
-
-# Add a test to CTest
-add_test(NAME AllTests COMMAND ${PROJECT_NAME})
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE BYUL_STATIC)
+
+# ------------------- CTest -------------------
+enable_testing()
+add_test(NAME ${PROJECT_NAME} COMMAND ${PROJECT_NAME})

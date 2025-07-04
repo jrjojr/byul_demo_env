@@ -65,6 +65,17 @@ BYUL_API void coord_hash_export(
     void** values_out,
     int* count_out);
 
+typedef struct s_coord_hash_iter coord_hash_iter_t;
+
+BYUL_API coord_hash_iter_t* coord_hash_iter_new(
+    const coord_hash_t* hash);
+
+BYUL_API bool coord_hash_iter_next(
+    coord_hash_iter_t* iter, coord_t** key_out, void** val_out);
+
+BYUL_API void coord_hash_iter_free(
+    coord_hash_iter_t* iter);
+
 #ifdef __cplusplus
 }
 #endif

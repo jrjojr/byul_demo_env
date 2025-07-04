@@ -34,8 +34,8 @@ extern "C" {
  * @param visited_logging TRUE인 경우, 방문한 셀의 수를 내부 기록에 저장함
  *
  * @return 경로 결과 route_t* 
- *         - 성공 시: route_get_success(route_t*) == TRUE
- *         - 실패 시: route는 비어 있으며, success == FALSE
+ *         - 성공 시: route_get_success(route_t*) == true
+ *         - 실패 시: route는 비어 있으며, success == false
  *
  * @note
  * memory_limit은 맵 크기 및 난이도에 따라 달라져야 하며,

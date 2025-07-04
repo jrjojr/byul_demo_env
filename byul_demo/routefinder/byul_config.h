@@ -57,7 +57,7 @@
 
 // 디버깅 출력
 #if BYUL_DEBUG
-  #define DBG_PRINT(...) g_print(__VA_ARGS__)
+  #define DBG_PRINT(...) printf(__VA_ARGS__)
 #else
   #define DBG_PRINT(...) ((void)0)
 #endif

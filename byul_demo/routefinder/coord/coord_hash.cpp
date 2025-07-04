@@ -8,20 +8,6 @@
 #include <cstdint>
 #include <cstdlib>
 
-// ---------- coord_t 관련 ----------
-
-// struct CoordHash {
-//     size_t operator()(const coord_t& c) const {
-//         return static_cast<size_t>(c.x) * 73856093u ^ static_cast<size_t>(c.y) * 19349663u;
-//     }
-// };
-
-// struct CoordEqual {
-//     bool operator()(const coord_t& a, const coord_t& b) const {
-//         return a.x == b.x && a.y == b.y;
-//     }
-// };
-
 struct CoordHash {
     size_t operator()(const coord_t& c) const {
         return coord_hash(&c);  // ✅ C 함수 기반 해시 사용
@@ -152,4 +138,34 @@ void coord_hash_export(const coord_hash_t* hash,
         values_out[i++] = val;
     }
     *count_out = static_cast<int>(hash->data.size());
+}
+
+typedef struct s_coord_hash_iter {
+    const std::unordered_map<coord_t, void*, CoordHash, CoordEqual>* map;
+    std::unordered_map<coord_t, void*, CoordHash, CoordEqual>::const_iterator it;
+    std::unordered_map<coord_t, void*, CoordHash, CoordEqual>::const_iterator end;
+} coord_hash_iter_t;
+
+coord_hash_iter_t* coord_hash_iter_new(const coord_hash_t* hash) {
+    if (!hash) return nullptr;
+
+    auto* iter = new coord_hash_iter_t;
+    iter->map = &hash->data;
+    iter->it = hash->data.begin();
+    iter->end = hash->data.end();
+    return iter;
+}
+
+bool coord_hash_iter_next(coord_hash_iter_t* iter, coord_t** key_out, void** val_out) {
+    if (!iter || iter->it == iter->end) return false;
+
+    if (key_out) *key_out = const_cast<coord_t*>(&iter->it->first);
+    if (val_out) *val_out = iter->it->second;
+
+    ++(iter->it);
+    return true;
+}
+
+void coord_hash_iter_free(coord_hash_iter_t* iter) {
+    delete iter;
 }

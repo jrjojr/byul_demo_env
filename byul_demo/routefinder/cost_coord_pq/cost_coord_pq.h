@@ -3,7 +3,7 @@
 
 #include "internal/coord.h"   // coord_t
 #include "byul_config.h"
-#include <stdbool.h>          // ✅ GLib의 gboolean 제거, 표준 bool 사용
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -31,6 +31,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 # Add a test to CTest
-add_test(NAME AllTests COMMAND ${PROJECT_NAME})
+add_test(NAME ${PROJECT_NAME} COMMAND ${PROJECT_NAME})
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE BYUL_STATIC)
