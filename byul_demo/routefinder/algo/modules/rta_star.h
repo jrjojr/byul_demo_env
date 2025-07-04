@@ -68,8 +68,8 @@ BYUL_API void rta_star_config_free(rta_star_config cfg);
  *
  * 사용 예:
  * @code
- * coord start = coord_new_full(0, 0);
- * coord goal = coord_new_full(9, 9);
+ * coord_t* start = coord_new_full(0, 0);
+ * coord_t* goal = coord_new_full(9, 9);
  *
  * rta_star_config cfg = rta_star_config_new_full(7); // 깊이 제한 7
  * algo al = algo_new_full(
@@ -87,7 +87,7 @@ BYUL_API void rta_star_config_free(rta_star_config cfg);
  * for (int y = 1; y < 10; y++)
  *     map_block_coord(al->m, 5, y);
  *
- * route p = algo_find(al, start, goal);
+ * route_t* p = algo_find(al, start, goal);
  * map_print_ascii_with_visited_count(al->m, p, start, goal);
  *
  * route_free(p);
@@ -100,9 +100,13 @@ BYUL_API void rta_star_config_free(rta_star_config cfg);
  * @param al    알고리즘 컨텍스트 (algo_new_full로 생성)
  * @param start  시작 좌표
  * @param goal    도착 좌표
- * @return 탐색 결과 route. 경로를 찾았으면 success == TRUE, 실패 시 FALSE.
+ * @return 탐색 결과 route_t*. 경로를 찾았으면 success == TRUE, 실패 시 FALSE.
  */
-BYUL_API route rta_star_find(const algo al, const coord start, const coord goal);
+BYUL_API route_t* find_rta_star(const map_t* m,
+    const coord_t* start, const coord_t* goal,
+    cost_func cost_fn, heuristic_func heuristic_fn,
+    int depth_limit, // 탐색 제한 깊이
+    int max_retry, bool visited_logging);
 
 #ifdef __cplusplus
 }

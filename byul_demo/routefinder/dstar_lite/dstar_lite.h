@@ -51,29 +51,29 @@
 extern "C" {
 #endif
 
-typedef void (*move_func)(const coord c, gpointer userdata);
+typedef void (*move_func)(const coord_t* c, gpointer userdata);
 
 typedef GList* (*changed_coords_func)(gpointer userdata);
 
 typedef gfloat (*dsl_cost_func)(
-    const map m, const coord start, const coord goal, gpointer userdata);
+    const map_t* m, const coord_t* start, const coord_t* goal, gpointer userdata);
 
 typedef gfloat (*dsl_heuristic_func)(
-    const coord start, const coord goal, gpointer userdata);
+    const coord_t* start, const coord_t* goal, gpointer userdata);
 
 typedef gboolean (*dsl_is_blocked_func)(
-    const map m, gint x, gint y, gpointer userdata);
+    const map_t* m, gint x, gint y, gpointer userdata);
 
 typedef struct s_dstar_lite {
     // 맵
-    map m;
+    map_t* m;
 
-    coord start;
-    coord goal;
+    coord_t* start;
+    coord_t* goal;
 
     gfloat km;
-    GHashTable* g_table;    // coord* → gfloat*
-    GHashTable* rhs_table;  // coord* → gfloat*
+    GHashTable* g_table;    // coord_t** → gfloat*
+    GHashTable* rhs_table;  // coord_t** → gfloat*
     
     // 탐색 프론티어 (우선순위 큐)
     dstar_lite_pqueue        frontier;
@@ -98,10 +98,10 @@ typedef struct s_dstar_lite {
     gpointer changed_coords_fn_userdata;
 
     // 초기 경로
-    route proto_route;
+    route_t* proto_route;
 
     // 실제 실시간 장애물 반영 경로
-    route real_route;
+    route_t* real_route;
 
     // find()내에서 잠시 멈춤 실시간 이동시에 속도 대응
     gint interval_msec;
@@ -133,7 +133,7 @@ typedef struct s_dstar_lite {
     gboolean debug_mode_enabled;  // ✅ 디버그 출력을 켤지 여부
 
     // ✅ 디버깅용: 각 좌표별 update_vertex() 호출 횟수 저장
-    GHashTable* update_count_table;  // key: coord* → value: gint*
+    GHashTable* update_count_table;  // key: coord_t** → value: gint*
 } dstar_lite_t;
 
 typedef dstar_lite_t* dstar_lite;
@@ -159,7 +159,7 @@ typedef dstar_lite_t* dstar_lite;
  * @return 새로 생성된 dstar_lite 객체. 
  *      사용 후 dstar_lite_free()로 해제 필요.
  */
-BYUL_API dstar_lite dstar_lite_new(map m);
+BYUL_API dstar_lite dstar_lite_new(map_t* m);
 
 /**
  * @brief 사용자 정의 값으로 D* Lite 설정 객체를 생성합니다.
@@ -170,7 +170,7 @@ BYUL_API dstar_lite dstar_lite_new(map m);
  * @return 새로 생성된 dstar_lite 객체. 
  *      사용 후 dstar_lite_free()로 해제 필요.
  */
-BYUL_API dstar_lite dstar_lite_new_full(map m, coord start, 
+BYUL_API dstar_lite dstar_lite_new_full(map_t* m, coord_t* start, 
     dsl_cost_func cost_fn, dsl_heuristic_func heuristic_fn,
     gboolean debug_mode_enabled);
 
@@ -178,13 +178,13 @@ BYUL_API void dstar_lite_free(dstar_lite dsl);
 
 BYUL_API dstar_lite dstar_lite_copy(dstar_lite src);
 
-BYUL_API coord dstar_lite_get_start(const dstar_lite dsl);
+BYUL_API coord_t* dstar_lite_get_start(const dstar_lite dsl);
 
-BYUL_API void  dstar_lite_set_start(dstar_lite dsl, const coord c);
+BYUL_API void  dstar_lite_set_start(dstar_lite dsl, const coord_t* c);
 
-BYUL_API coord dstar_lite_get_goal(const dstar_lite dsl);
+BYUL_API coord_t* dstar_lite_get_goal(const dstar_lite dsl);
 
-BYUL_API void  dstar_lite_set_goal(dstar_lite dsl, const coord c);
+BYUL_API void  dstar_lite_set_goal(dstar_lite dsl, const coord_t* c);
 
 BYUL_API GHashTable* dstar_lite_get_g_table(const dstar_lite dsl);
 
@@ -219,7 +219,7 @@ BYUL_API     gint dstar_lite_proto_compute_retry_count(dstar_lite dsl);
 
 BYUL_API     gint dstar_lite_real_compute_retry_count(dstar_lite dsl);
 
-// proto route 생성할때 reconstruct_route한다. 여기에 사용하는 루프
+// proto route_t* 생성할때 reconstruct_route한다. 여기에 사용하는 루프
 // 10x10에서 100은 오버고 10은 너무 작고 대충 40 정도면 되겠다.
 BYUL_API gint dstar_lite_get_reconstruct_max_retry(const dstar_lite dsl);
 BYUL_API void dstar_lite_set_reconstruct_max_retry(
@@ -234,20 +234,20 @@ BYUL_API void     dstar_lite_set_debug_mode_enabled(
 BYUL_API GHashTable* dstar_lite_get_update_count_table(const dstar_lite dsl);
 
 BYUL_API void         dstar_lite_add_update_count(
-    dstar_lite dsl, const coord c);
+    dstar_lite dsl, const coord_t* c);
 
 BYUL_API void         dstar_lite_clear_update_count(dstar_lite dsl);
 
 BYUL_API gint         dstar_lite_get_update_count(
-    dstar_lite dsl, const coord c);
+    dstar_lite dsl, const coord_t* c);
 
-BYUL_API const map    dstar_lite_get_map(const dstar_lite dsl);
-BYUL_API void    dstar_lite_set_map(const dstar_lite dsl, const map m);
+BYUL_API const map_t*    dstar_lite_get_map(const dstar_lite dsl);
+BYUL_API void    dstar_lite_set_map(const dstar_lite dsl, const map_t* m);
 
 
-BYUL_API const route dstar_lite_get_proto_route(const dstar_lite dsl);
+BYUL_API const route_t* dstar_lite_get_proto_route(const dstar_lite dsl);
 
-BYUL_API const route dstar_lite_get_real_route(const dstar_lite dsl);
+BYUL_API const route_t* dstar_lite_get_real_route(const dstar_lite dsl);
 
 // 설정 값들 시작, 목표 ,맵등을 유지하고
 // 해시테이블들과, 우선순위큐를 초기화한다.
@@ -260,7 +260,7 @@ BYUL_API void dstar_lite_set_interval_msec(dstar_lite dsl, gint interval_msec);
 // 함수 포인터
 
 BYUL_API gfloat dstar_lite_cost(
-    const map m, const coord start, const coord goal, gpointer userdata);
+    const map_t* m, const coord_t* start, const coord_t* goal, gpointer userdata);
 BYUL_API dsl_cost_func    dstar_lite_get_cost_func(const dstar_lite dsl);
 BYUL_API void dstar_lite_set_cost_func(dstar_lite dsl, dsl_cost_func fn);
 BYUL_API gpointer    dstar_lite_get_cost_func_userdata(const dstar_lite dsl);
@@ -277,7 +277,7 @@ BYUL_API void dstar_lite_set_is_blocked_func_userdata(
     dstar_lite dsl, gpointer userdata);
 
 BYUL_API gfloat dstar_lite_heuristic(
-    const coord start, const coord goal, gpointer userdata);
+    const coord_t* start, const coord_t* goal, gpointer userdata);
 BYUL_API dsl_heuristic_func dstar_lite_get_heuristic_func(
     const dstar_lite dsl);
 BYUL_API void         dstar_lite_set_heuristic_func(
@@ -286,7 +286,7 @@ BYUL_API gpointer dstar_lite_get_heuristic_func_userdata(dstar_lite dsl);
 BYUL_API void dstar_lite_set_heuristic_func_userdata(
     dstar_lite dsl, gpointer userdata);    
 
-BYUL_API void move_to(const coord c, gpointer userdata);
+BYUL_API void move_to(const coord_t* c, gpointer userdata);
 BYUL_API move_func dstar_lite_get_move_func(const dstar_lite dsl);
 BYUL_API void dstar_lite_set_move_func(dstar_lite dsl, move_func fn);
 BYUL_API gpointer dstar_lite_get_move_func_userdata(const dstar_lite dsl);
@@ -314,7 +314,7 @@ BYUL_API void dstar_lite_set_changed_coords_func_userdata(
  * @param s   대상 좌표
  * @return 계산된 dstar_lite_key_t 구조체
  */
-BYUL_API dstar_lite_key dstar_lite_calculate_key(dstar_lite dsl, const coord s);
+BYUL_API dstar_lite_key dstar_lite_calculate_key(dstar_lite dsl, const coord_t* s);
 
 BYUL_API void dstar_lite_init(dstar_lite dsl);
 
@@ -323,7 +323,7 @@ BYUL_API void dstar_lite_init(dstar_lite dsl);
  * @param al 알고리즘 컨텍스트
  * @param u 업데이트할 좌표
  */
-BYUL_API void dstar_lite_update_vertex(const dstar_lite dsl, const coord u);
+BYUL_API void dstar_lite_update_vertex(const dstar_lite dsl, const coord_t* u);
 
 /**
  * @brief 특정 좌표를 중심으로 주어진 범위 내 모든 좌표에 대해 update_vertex() 수행
@@ -333,7 +333,7 @@ BYUL_API void dstar_lite_update_vertex(const dstar_lite dsl, const coord u);
  * @param max_range  범위 (0이면 s만 갱신)
  */
 BYUL_API void dstar_lite_update_vertex_range(const dstar_lite dsl, 
-    const coord s, gint max_range);
+    const coord_t* s, gint max_range);
 
 /**
  * @brief config에 지정된 max_range를 기준으로 update_vertex_range() 수행
@@ -342,7 +342,7 @@ BYUL_API void dstar_lite_update_vertex_range(const dstar_lite dsl,
  * @param s 중심 좌표
  */
 BYUL_API void dstar_lite_update_vertex_auto_range(
-    const dstar_lite dsl, const coord s);
+    const dstar_lite dsl, const coord_t* s);
 
 /**
  * @brief open list에 따라 최단 경로 계산을 수행합니다.
@@ -358,12 +358,12 @@ BYUL_API void dstar_lite_compute_shortest_route(dstar_lite dsl);
  * 조건이 만족되지 않으면 NULL을 반환합니다.
  *
  * @param dsl 알고리즘 컨텍스트
- * @return route 유효한 경로 객체, 실패 시 NULL
+ * @return route_t* 유효한 경로 객체, 실패 시 NULL
  */
-BYUL_API route dstar_lite_reconstruct_route(const dstar_lite dsl);
+BYUL_API route_t* dstar_lite_reconstruct_route(const dstar_lite dsl);
 
 // 1회용 경로 찾기 가장 단순한 형태 정적인 경로 찾기와 같다.
-BYUL_API route dstar_lite_find(const dstar_lite dsl);
+BYUL_API route_t* dstar_lite_find(const dstar_lite dsl);
 
 // find_proto와 find_loop로 나뉜 경로 찾기를 통합했다
 BYUL_API void dstar_lite_find_full(const dstar_lite dsl);
@@ -388,7 +388,7 @@ BYUL_API void dstar_lite_find_loop(const dstar_lite dsl);
  * @param al 알고리즘 컨텍스트
  * @param p 갱신할 경로
  */
-BYUL_API void dstar_lite_update_vertex_by_route(dstar_lite dsl, route p);
+BYUL_API void dstar_lite_update_vertex_by_route(dstar_lite dsl, route_t* p);
 
 // 루프를 강제종료한다.
 BYUL_API void dstar_lite_force_quit(dstar_lite dsl);

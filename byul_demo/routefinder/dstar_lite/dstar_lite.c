@@ -15,20 +15,20 @@
 #include <math.h>
 #include <stdlib.h>
 
-static gint auto_max_range(const coord start, const coord goal) {
+static gint auto_max_range(const coord_t* start, const coord_t* goal) {
     gint dx = abs(goal->x - start->x);
     gint dy = abs(goal->y - start->y);
     return dx + dy;
 }
 
-static gint auto_compute_max_retry(const coord start, const coord goal) {
+static gint auto_compute_max_retry(const coord_t* start, const coord_t* goal) {
     gint dx = abs(goal->x - start->x);
     gint dy = abs(goal->y - start->y);
     gint r = dx * dy;
     return r ? r : 100;
 }
 
-static gint auto_reconstruct_max_retry(const coord start, const coord goal) {
+static gint auto_reconstruct_max_retry(const coord_t* start, const coord_t* goal) {
     gint dx = abs(goal->x - start->x);
     gint dy = abs(goal->y - start->y);
     gint r = dx * 2 + dy * 2;
@@ -36,7 +36,7 @@ static gint auto_reconstruct_max_retry(const coord start, const coord goal) {
 }
 
 gfloat dstar_lite_cost(
-    const map m, const coord start, const coord goal, gpointer userdata) {
+    const map_t* m, const coord_t* start, const coord_t* goal, gpointer userdata) {
 
     if (!m || !start || !goal)
         return FLT_MAX;
@@ -97,7 +97,7 @@ void dstar_lite_set_is_blocked_func_userdata(
 }
 
 gfloat dstar_lite_heuristic(
-    const coord start, const coord goal, gpointer userdata) {
+    const coord_t* start, const coord_t* goal, gpointer userdata) {
 
     if (!start || !goal)
         return FLT_MAX;
@@ -123,7 +123,7 @@ void dstar_lite_set_heuristic_func_userdata(dstar_lite dsl, gpointer userdata) {
     dsl->heuristic_fn_userdata = userdata;
 }
 
-void move_to(const coord c, gpointer userdata) {
+void move_to(const coord_t* c, gpointer userdata) {
     g_print("move to (%d, %d) in finder.\n", c->x, c->y);
     // coord_free(c);
 }
@@ -161,9 +161,9 @@ GList* get_changed_coords(gpointer userdata) {
     GList* copy = NULL;
 
     for (GList* l = original; l != NULL; l = l->next) {
-        coord original_c = (coord)l->data;
-        coord copied_c = coord_copy(original_c);
-        // coord copied_c = original_c;
+        coord_t* original_c = (coord_t*)l->data;
+        coord_t* copied_c = coord_copy(original_c);
+        // coord_t* copied_c = original_c;
         copy = g_list_append(copy, copied_c);
     }
 
@@ -200,10 +200,10 @@ void dstar_lite_set_changed_coords_func_userdata(
     dsl->changed_coords_fn_userdata = userdata;
 }
 
-dstar_lite dstar_lite_new(map m) {
+dstar_lite dstar_lite_new(map_t* m) {
     if (!m) return NULL;
 
-    coord c = coord_new();
+    coord_t* c = coord_new();
     dstar_lite dsl = dstar_lite_new_full(m, c,
         dstar_lite_cost, dstar_lite_heuristic,        
         FALSE);
@@ -212,7 +212,7 @@ dstar_lite dstar_lite_new(map m) {
     return dsl;
 }
 
-dstar_lite dstar_lite_new_full(map m, coord start,
+dstar_lite dstar_lite_new_full(map_t* m, coord_t* start,
     dsl_cost_func cost_fn, dsl_heuristic_func heuristic_fn,
     gboolean debug_mode_enabled) {
 
@@ -304,7 +304,7 @@ dstar_lite dstar_lite_copy(dstar_lite src) {
     copy->goal  = coord_copy(src->goal);
     copy->km    = src->km;
 
-    // 테이블 복사 (key: coord*, value: gfloat*)
+    // 테이블 복사 (key: coord_t**, value: gfloat*)
     copy->g_table = g_hash_table_copy_deep(
         src->g_table,
         (GHashFunc)coord_hash,
@@ -355,7 +355,7 @@ dstar_lite dstar_lite_copy(dstar_lite src) {
     copy->max_range              = src->max_range;
     copy->debug_mode_enabled     = src->debug_mode_enabled;
 
-    // update_count_table 복사 (key: coord*, value: gint*)
+    // update_count_table 복사 (key: coord_t**, value: gint*)
     copy->update_count_table = g_hash_table_copy_deep(
         src->update_count_table,
         (GHashFunc)coord_hash,
@@ -369,20 +369,20 @@ dstar_lite dstar_lite_copy(dstar_lite src) {
 }
 
 
-coord dstar_lite_get_start(const dstar_lite dsl) {
+coord_t* dstar_lite_get_start(const dstar_lite dsl) {
     return dsl->start;
 }
 
-void dstar_lite_set_start(dstar_lite dsl, const coord c) {
+void dstar_lite_set_start(dstar_lite dsl, const coord_t* c) {
     // dsl->start = c;
     coord_set(dsl->start, c->x, c->y);
 }
 
-coord dstar_lite_get_goal(const dstar_lite dsl) {
+coord_t* dstar_lite_get_goal(const dstar_lite dsl) {
     return dsl->goal;
 }
 
-void dstar_lite_set_goal(dstar_lite dsl, const coord c) {
+void dstar_lite_set_goal(dstar_lite dsl, const coord_t* c) {
     // dsl->goal = c;
     coord_set(dsl->goal, c->x, c->y);
 }
@@ -472,7 +472,7 @@ GHashTable* dstar_lite_get_update_count_table(const dstar_lite dsl) {
     return dsl->update_count_table;
 }
 
-void dstar_lite_add_update_count(dstar_lite dsl, const coord c) {
+void dstar_lite_add_update_count(dstar_lite dsl, const coord_t* c) {
     gpointer val = g_hash_table_lookup(dsl->update_count_table, c);
     if (!val) {
         gint* count = g_new(gint, 1);
@@ -487,24 +487,24 @@ void dstar_lite_clear_update_count(dstar_lite dsl) {
     g_hash_table_remove_all(dsl->update_count_table);
 }
 
-gint dstar_lite_get_update_count(dstar_lite dsl, const coord c) {
+gint dstar_lite_get_update_count(dstar_lite dsl, const coord_t* c) {
     gpointer val = g_hash_table_lookup(dsl->update_count_table, c);
     return val ? *((gint*)val) : 0;
 }
 
-const map dstar_lite_get_map(const dstar_lite dsl) {
+const map_t* dstar_lite_get_map(const dstar_lite dsl) {
     return dsl->m;
 }
 
-void    dstar_lite_set_map(const dstar_lite dsl, const map m) {
+void    dstar_lite_set_map(const dstar_lite dsl, const map_t* m) {
     dsl->m = m;
 }
 
-const route dstar_lite_get_proto_route(const dstar_lite dsl) {
+const route_t* dstar_lite_get_proto_route(const dstar_lite dsl) {
     return dsl->proto_route;
 }
 
-const route dstar_lite_get_real_route(const dstar_lite dsl) {
+const route_t* dstar_lite_get_real_route(const dstar_lite dsl) {
     return dsl->real_route;
 }
 
@@ -574,7 +574,7 @@ gint dstar_lite_get_interval_msec(const dstar_lite dsl) {
     return dsl ? dsl->interval_msec : 0;
 }
 
-dstar_lite_key dstar_lite_calculate_key(dstar_lite dsl, const coord s) {
+dstar_lite_key dstar_lite_calculate_key(dstar_lite dsl, const coord_t* s) {
     gfloat g_val = FLT_MAX;
     gfloat rhs_val = FLT_MAX;
 
@@ -615,7 +615,7 @@ void dstar_lite_init(dstar_lite dsl) {
     dstar_lite_key_free(calc_key_goal);
 }
 
-void dstar_lite_update_vertex(const dstar_lite dsl, const coord u) {
+void dstar_lite_update_vertex(const dstar_lite dsl, const coord_t* u) {
     if (!dsl || !u) return;
 
     // ✅ 디버그용: update 횟수 기록
@@ -624,7 +624,7 @@ void dstar_lite_update_vertex(const dstar_lite dsl, const coord u) {
 
     gfloat min_rhs = FLT_MAX;
     GList* successors_s = NULL;
-    coord s = NULL;
+    coord_t* s = NULL;
     
     gfloat* g_s_ptr = NULL;
     gfloat g_s = FLT_MAX;
@@ -678,7 +678,7 @@ void dstar_lite_update_vertex(const dstar_lite dsl, const coord u) {
         rhs_u = FLT_MAX;
     }
 
-    if (!float_equal(g_u, rhs_u)) {
+    if (!equal_float(g_u, rhs_u)) {
         dstar_lite_key key = dstar_lite_calculate_key(dsl, u);
         dstar_lite_pqueue_push(dsl->frontier, key, u);
         dstar_lite_key_free(key);
@@ -686,7 +686,7 @@ void dstar_lite_update_vertex(const dstar_lite dsl, const coord u) {
 }        
 
 void dstar_lite_update_vertex_range(const dstar_lite dsl, 
-    const coord s, gint max_range) {
+    const coord_t* s, gint max_range) {
 
     if (!dsl) return;
 
@@ -699,7 +699,7 @@ void dstar_lite_update_vertex_range(const dstar_lite dsl,
         s->x, s->y, max_range);
 
     for (GList* l = neighbors; l; l = l->next) {
-        coord c = l->data;
+        coord_t* c = l->data;
         dstar_lite_update_vertex(dsl, c);
     }
 
@@ -707,19 +707,19 @@ void dstar_lite_update_vertex_range(const dstar_lite dsl,
 }
 
 void dstar_lite_update_vertex_auto_range(
-    const dstar_lite dsl, const coord s) {
+    const dstar_lite dsl, const coord_t* s) {
     
     gint max_range = dsl->max_range;
     return dstar_lite_update_vertex_range(dsl, s, max_range);
 }
 
-void dstar_lite_update_vertex_by_route(const dstar_lite dsl, const route p) {
+void dstar_lite_update_vertex_by_route(const dstar_lite dsl, const route_t* p) {
     if (!dsl || !p) return;
 
     GList* coords = route_get_coords(p);
     for (GList* l = coords; l; l = l->next) {
         
-        coord c = (coord)l->data;
+        coord_t* c = (coord_t*)l->data;
         dstar_lite_update_vertex(dsl, c);
     }
 }
@@ -727,7 +727,7 @@ void dstar_lite_update_vertex_by_route(const dstar_lite dsl, const route p) {
 void dstar_lite_compute_shortest_route(dstar_lite dsl) {
     if (!dsl) return;
 
-    coord u = NULL;
+    coord_t* u = NULL;
 
     gfloat* g_u_ptr = NULL;
     gfloat g_u = FLT_MAX;
@@ -738,7 +738,7 @@ void dstar_lite_compute_shortest_route(dstar_lite dsl) {
     dstar_lite_key calc_key = NULL;
 
     GList* predecessors_u = NULL;
-    coord s = NULL;
+    coord_t* s = NULL;
 
     gfloat* g_old_ptr = NULL;
     gfloat g_old = FLT_MAX;
@@ -757,7 +757,7 @@ void dstar_lite_compute_shortest_route(dstar_lite dsl) {
 
     GList* successors_s = NULL;
 
-    coord s_prime = NULL;
+    coord_t* s_prime = NULL;
     
     gfloat g_start = FLT_MAX;
     gfloat rhs_start = FLT_MAX;
@@ -853,7 +853,7 @@ void dstar_lite_compute_shortest_route(dstar_lite dsl) {
                     rhs_s = FLT_MAX;
                 }
 
-                if (float_equal(rhs_s, cost_s_u + g_old)) {
+                if (equal_float(rhs_s, cost_s_u + g_old)) {
                     if (!coord_equal(s, dsl->goal)) {
 
                         successors_s = map_clone_neighbors_all(
@@ -914,7 +914,7 @@ void dstar_lite_compute_shortest_route(dstar_lite dsl) {
 
     } while ((loop < dsl->compute_max_retry) && 
         ( (dstar_lite_key_compare(top_key, calc_key_start) < 0) || 
-            (!float_equal(rhs_start, g_start) ) ) );
+            (!equal_float(rhs_start, g_start) ) ) );
 
     if (calc_key_start) {
         dstar_lite_key_free(calc_key_start);
@@ -937,18 +937,18 @@ void dstar_lite_compute_shortest_route(dstar_lite dsl) {
     }
 }
 
-route dstar_lite_reconstruct_route(const dstar_lite dsl) {
+route_t* dstar_lite_reconstruct_route(const dstar_lite dsl) {
     if (!dsl) return NULL;
 
-    route p = route_new();
+    route_t* p = route_new();
     route_add_coord(p, dsl->start);    
 
     gfloat* g_start_ptr = g_hash_table_lookup(dsl->g_table, dsl->start);
-    if (!g_start_ptr || float_equal(*g_start_ptr, FLT_MAX))
+    if (!g_start_ptr || equal_float(*g_start_ptr, FLT_MAX))
         return p;
 
-    coord current = coord_copy(dsl->start);
-    // coord current = start;
+    coord_t* current = coord_copy(dsl->start);
+    // coord_t* current = start;
 
     gint loop = 0;
     while (!coord_equal(current, dsl->goal) && 
@@ -962,10 +962,10 @@ route dstar_lite_reconstruct_route(const dstar_lite dsl) {
             dsl->m, current->x, current->y);
 
         gfloat min_cost = FLT_MAX;
-        coord next = NULL;
+        coord_t* next = NULL;
 
         for (GList* l = neighbors; l; l = l->next) {
-            coord s = l->data;
+            coord_t* s = l->data;
 
             gfloat cost_current_s = dsl->cost_fn(dsl->m, current, s, NULL);
             gfloat* g_s_ptr = g_hash_table_lookup(dsl->g_table, s);
@@ -990,7 +990,7 @@ route dstar_lite_reconstruct_route(const dstar_lite dsl) {
         }
 
         gfloat* g_next_ptr = g_hash_table_lookup(dsl->g_table, next);
-        if (!g_next_ptr || float_equal(*g_next_ptr, FLT_MAX)) {
+        if (!g_next_ptr || equal_float(*g_next_ptr, FLT_MAX)) {
             coord_free(current);
             coord_free(next);
             // route_free(p);
@@ -1010,7 +1010,7 @@ route dstar_lite_reconstruct_route(const dstar_lite dsl) {
     return p;
 }
 
-route dstar_lite_find(const dstar_lite dsl) {
+route_t* dstar_lite_find(const dstar_lite dsl) {
     if (!dsl) return NULL;
 
     dstar_lite_reset(dsl);
@@ -1036,8 +1036,8 @@ void dstar_lite_find_loop(const dstar_lite dsl) {
 
     // if (!dsl->proto_route) dstar_lite_find_proto(dsl);
 
-    coord s_last = coord_copy(dsl->start);
-    coord start = coord_copy(dsl->start);
+    coord_t* s_last = coord_copy(dsl->start);
+    coord_t* start = coord_copy(dsl->start);
 
     dsl->real_route = route_new();
     route_add_coord(dsl->real_route, start);
@@ -1049,9 +1049,9 @@ void dstar_lite_find_loop(const dstar_lite dsl) {
     GList* l = NULL;
 
     gfloat min_cost = FLT_MAX;
-    coord next = NULL;
+    coord_t* next = NULL;
 
-    coord s = NULL;
+    coord_t* s = NULL;
     gfloat* g_s_ptr = NULL;
     gfloat g_s = FLT_MAX;
     gfloat cost_start_s = FLT_MAX;
@@ -1074,7 +1074,7 @@ void dstar_lite_find_loop(const dstar_lite dsl) {
             rhs_start = FLT_MAX;
         }
 
-        if (float_equal(rhs_start, FLT_MAX)) {
+        if (equal_float(rhs_start, FLT_MAX)) {
             route_set_success(dsl->real_route, FALSE);
             dsl->real_loop_retry_count = loop;
             dsl->force_quit = FALSE;

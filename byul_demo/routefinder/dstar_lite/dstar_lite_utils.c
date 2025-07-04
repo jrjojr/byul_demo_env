@@ -6,8 +6,8 @@
 #include "internal/coord.h"
 
 static char get_map_char(
-    const map m, gint x, gint y,
-    const coord start, const coord goal,
+    const map_t* m, gint x, gint y,
+    const coord_t* start, const coord_t* goal,
     GHashTable* route_coords,
     GHashTable* visited_count
 ) {
@@ -21,7 +21,7 @@ static char get_map_char(
     if (map_is_blocked(m, x, y)) return '#';
 
     // 비교용 좌표 생성
-    coord tmp = coord_new_full(x, y);
+    coord_t* tmp = coord_new_full(x, y);
 
     gboolean is_route    = route_coords && g_hash_table_contains(
         route_coords, tmp);
@@ -37,10 +37,10 @@ static char get_map_char(
 }
 
 static const char* get_map_string(
-    const map m,
+    const map_t* m,
     gint x, gint y,
-    const coord start,
-    const coord goal,
+    const coord_t* start,
+    const coord_t* goal,
     GHashTable* route_coords,    
     GHashTable* visited_count
 ) {
@@ -53,7 +53,7 @@ static const char* get_map_string(
     if (map_is_blocked(m, x, y))
         return "  #";
 
-    coord tmp = coord_new_full(x, y);
+    coord_t* tmp = coord_new_full(x, y);
 
     gboolean is_route    = route_coords && g_hash_table_contains(
         route_coords, tmp);
@@ -78,7 +78,7 @@ static const char* get_map_string(
     return "  .";
 }
 
-void print_all_g_table_internal(const map m, GHashTable* g_table) {
+void print_all_g_table_internal(const map_t* m, GHashTable* g_table) {
     if (!g_table) return;
 
     g_print("\n📊 g_table (g-values):\n");
@@ -87,13 +87,13 @@ void print_all_g_table_internal(const map m, GHashTable* g_table) {
     gpointer key, value;
     g_hash_table_iter_init(&iter, g_table);
     while (g_hash_table_iter_next(&iter, &key, &value)) {
-        coord c = (coord)key;
+        coord_t* c = (coord_t*)key;
         gfloat* gval = (gfloat*)value;
         g_print("  (%d, %d) → g = %.3f\n", c->x, c->y, *gval);
     }
 }
 
-void print_all_rhs_table_internal(const map m, GHashTable* rhs_table) {
+void print_all_rhs_table_internal(const map_t* m, GHashTable* rhs_table) {
     if (!rhs_table) return;
 
     g_print("\n📊 rhs_table:\n");
@@ -102,16 +102,16 @@ void print_all_rhs_table_internal(const map m, GHashTable* rhs_table) {
     gpointer key, value;
     g_hash_table_iter_init(&iter, rhs_table);
     while (g_hash_table_iter_next(&iter, &key, &value)) {
-        coord c = (coord)key;
+        coord_t* c = (coord_t*)key;
         gfloat* rhs = (gfloat*)value;
         g_print("  (%d, %d) → rhs = %.3f\n", c->x, c->y, *rhs);
     }
 }
 
 void print_all_dsl_internal_full(
-    const map m,
-    const coord start,
-    const coord goal,
+    const map_t* m,
+    const coord_t* start,
+    const coord_t* goal,
     gfloat km,
     GHashTable* g_table,
     GHashTable* rhs_table,
@@ -147,7 +147,7 @@ void print_all_dsl_internal_full(
         gpointer key, value;
         g_hash_table_iter_init(&iter, g_table);
         while (g_hash_table_iter_next(&iter, &key, &value)) {
-            coord c = key;
+            coord_t* c = key;
             gfloat* gval = value;
             g_print("  (%d, %d) → g = %.3f\n", c->x, c->y, *gval);
         }
@@ -160,7 +160,7 @@ void print_all_dsl_internal_full(
         gpointer key, value;
         g_hash_table_iter_init(&iter, rhs_table);
         while (g_hash_table_iter_next(&iter, &key, &value)) {
-            coord c = key;
+            coord_t* c = key;
             gfloat* rhs = value;
             g_print("  (%d, %d) → rhs = %.3f\n", c->x, c->y, *rhs);
         }
@@ -188,7 +188,7 @@ void print_all_dsl_internal_full(
 
             int len = g_queue_get_length(coords);
             for (int i = 0; i < len && i < 3; ++i) {
-                coord c = g_queue_peek_nth(coords, i);
+                coord_t* c = g_queue_peek_nth(coords, i);
                 g_print(" (%d, %d)", c->x, c->y);
             }
             if (len > 3)
@@ -207,7 +207,7 @@ void print_all_dsl_internal_full(
         gpointer key, value;
         g_hash_table_iter_init(&iter, update_count_table);
         while (g_hash_table_iter_next(&iter, &key, &value)) {
-            coord c = key;
+            coord_t* c = key;
             gint* cnt = value;
             g_print("  (%d, %d) → update count = %d\n", c->x, c->y, *cnt);
         }
@@ -223,7 +223,7 @@ void print_all_dsl(const dstar_lite dsl) {
     dsl->debug_mode_enabled, dsl->update_count_table);
 }
 
-void print_all_dsl_internal(const map m, const coord start, const coord goal,
+void print_all_dsl_internal(const map_t* m, const coord_t* start, const coord_t* goal,
     gfloat km, GHashTable* g_table, GHashTable* rhs_table,
     dstar_lite_pqueue frontier) 
 {
@@ -245,35 +245,7 @@ void dsl_print_ascii_only_map(const dstar_lite dsl) {
     }
 }
 
-// void dsl_print_ascii(const dstar_lite dsl, const route p) {
-//     if (!dsl->m) return;
-
-//     // hashset route_coords = NULL;
-//     GHashTable* route_coords = g_hash_table_new_full(
-//         (GHashFunc) coord_hash,
-//         (GEqualFunc) coord_equal,
-//         (GDestroyNotify) coord_free,
-//         NULL);
-
-//     if (p && route_get_success(p)) {
-//         for (const GList* l = route_get_coords(p); l != NULL; l = l->next)
-//             g_hash_table_add(route_coords, coord_copy((coord)l->data));
-//     }
-
-//     printf("[MAP %dx%d with ROUTE]\n", dsl->m->width, dsl->m->height);
-//     for (gint y = 0; y < dsl->m->height; y++) {
-//         for (gint x = 0; x < dsl->m->width; x++) {
-//             printf("%s", get_map_string(
-//                 dsl->m, x, y, dsl->start, dsl->goal, route_coords, NULL));
-//         }
-//         putchar('\n');
-//     }
-
-//     // if (route_coords) hashset_free(route_coords);
-//     if (route_coords) g_hash_table_destroy(route_coords);
-// }
-
-void dsl_print_ascii(const dstar_lite dsl, const route p) {
+void dsl_print_ascii(const dstar_lite dsl, const route_t* p) {
     if (!dsl || !dsl->m) return;
 
     GHashTable* route_coords = g_hash_table_new_full(
@@ -294,7 +266,7 @@ void dsl_print_ascii(const dstar_lite dsl, const route p) {
 
     if (p && route_get_success(p)) {
         for (const GList* l = route_get_coords(p); l != NULL; l = l->next) {
-            coord c = (coord)l->data;
+            coord_t* c = (coord_t*)l->data;
             g_hash_table_add(route_coords, coord_copy(c));
             min_x = MIN(min_x, c->x);
             max_x = MAX(max_x, c->x);
@@ -333,8 +305,7 @@ void dsl_print_ascii(const dstar_lite dsl, const route p) {
     g_hash_table_destroy(route_coords);
 }
 
-
-void dsl_print_ascii_uv(const dstar_lite dsl, const route p) {
+void dsl_print_ascii_uv(const dstar_lite dsl, const route_t* p) {
     if (!dsl || !p) return;
 
     GHashTable* route_coords = g_hash_table_new_full(
@@ -351,8 +322,8 @@ void dsl_print_ascii_uv(const dstar_lite dsl, const route p) {
 
     if (p && route_get_success(p)) {
         for (const GList* l = route_get_coords(p); l != NULL; l = l->next) {
-            coord c = (coord)l->data;
-            coord c_copy = coord_copy(c);
+            coord_t* c = (coord_t*)l->data;
+            coord_t* c_copy = coord_copy(c);
             g_hash_table_add(route_coords, c_copy);
 
             min_x = MIN(min_x, c->x); max_x = MAX(max_x, c->x);
@@ -380,7 +351,7 @@ void dsl_print_ascii_uv(const dstar_lite dsl, const route p) {
 
     for (gint y = min_y; y <= max_y; y++) {
         for (gint x = min_x; x <= max_x; x++) {
-            coord c = coord_new_full(x, y);
+            coord_t* c = coord_new_full(x, y);
 
             if (coord_equal(c, dsl->start)) {
                 printf("  S");

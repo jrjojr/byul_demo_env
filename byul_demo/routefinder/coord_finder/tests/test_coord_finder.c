@@ -5,7 +5,7 @@
 
 static gboolean test_map[10][10];
 
-static gboolean is_reachable_cb(const coord c, gpointer user_data) {
+static gboolean is_reachable_cb(const coord_t* c, gpointer user_data) {
     if (c->x < 0 || c->x >= 10 || c->y < 0 || c->y >= 10)
         return FALSE;
     return test_map[c->y][c->x];
@@ -27,14 +27,14 @@ static void setup_map() {
 
 static void test_find_goal_bfs(void) {
     setup_map();
-    coord start = coord_new_full(2, 2);
-    // coord result = coord_new_full(-1, -1);
-    coord result = NULL;
+    coord_t* start = coord_new_full(2, 2);
+    // coord_t* result = coord_new_full(-1, -1);
+    coord_t* result = NULL;
 
     gboolean found = find_goal_bfs(start, is_reachable_cb, NULL, 10, &result);
     g_assert_true(found);
     g_assert_true(is_reachable_cb(result, NULL));
-    printf("[BFS] found coord: (%d, %d)\n", result->x, result->y);
+    printf("[BFS] found coord_t*: (%d, %d)\n", result->x, result->y);
 
         coord_free(start);
     coord_free(result);
@@ -42,13 +42,13 @@ static void test_find_goal_bfs(void) {
 
 static void test_find_goal_astar(void) {
     setup_map();
-    coord start = coord_new_full(2, 2);
-    coord result = NULL;
+    coord_t* start = coord_new_full(2, 2);
+    coord_t* result = NULL;
 
     gboolean found = find_goal_astar(start, is_reachable_cb, NULL, 10, &result);
     g_assert_true(found);
     g_assert_true(is_reachable_cb(result, NULL));
-    printf("[A*]  found coord: (%d, %d)\n", result->x, result->y);
+    printf("[A*]  found coord_t*: (%d, %d)\n", result->x, result->y);
 
     coord_free(start);
     coord_free(result);

@@ -31,7 +31,7 @@ dstar_lite_pqueue dstar_lite_pqueue_copy(dstar_lite_pqueue src) {
 
     dstar_lite_pqueue copy = g_malloc0(sizeof(struct s_dstar_lite_pqueue));
 
-    // 1. coord_to_key 해시테이블 복사 (coord* → float*)
+    // 1. coord_to_key 해시테이블 복사 (coord_t** → float*)
     copy->coord_to_key = g_hash_table_copy_deep(
         src->coord_to_key,
         (GHashFunc)coord_hash,
@@ -41,7 +41,7 @@ dstar_lite_pqueue dstar_lite_pqueue_copy(dstar_lite_pqueue src) {
         (GCopyFunc)g_memdup2,
         (GDestroyNotify)g_free);
 
-    // 2. 우선순위 큐 복사 (coord 포함한 전체 복사)
+    // 2. 우선순위 큐 복사 (coord_t* 포함한 전체 복사)
     copy->pq = pqueue_copy(src->pq, 
         (GCopyFunc)coord_copy, 
         (GDestroyNotify)coord_free);
@@ -50,10 +50,10 @@ dstar_lite_pqueue dstar_lite_pqueue_copy(dstar_lite_pqueue src) {
 }
 
 void dstar_lite_pqueue_push(
-    dstar_lite_pqueue q, const dstar_lite_key key, const coord c) {
+    dstar_lite_pqueue q, const dstar_lite_key key, const coord_t* c) {
 
     // dstar_lite_key new_key = dstar_lite_key_copy(key);
-    // coord new_coord = coord_copy(c);
+    // coord_t* new_coord = coord_copy(c);
     pqueue_push(q->pq, key, sizeof(dstar_lite_key_t), 
         c, sizeof(coord_t));
 
@@ -61,12 +61,12 @@ void dstar_lite_pqueue_push(
     g_hash_table_replace(q->coord_to_key, coord_copy(c), key_for_hash);
 }
 
-coord dstar_lite_pqueue_peek(dstar_lite_pqueue q) {
-    return (coord)pqueue_peek(q->pq);
+coord_t* dstar_lite_pqueue_peek(dstar_lite_pqueue q) {
+    return (coord_t*)pqueue_peek(q->pq);
 }
 
-coord dstar_lite_pqueue_pop(dstar_lite_pqueue q) {
-    coord c = (coord)pqueue_pop(q->pq);
+coord_t* dstar_lite_pqueue_pop(dstar_lite_pqueue q) {
+    coord_t* c = (coord_t*)pqueue_pop(q->pq);
     if (c) {
         g_hash_table_remove(q->coord_to_key, c);
     }
@@ -78,7 +78,7 @@ gboolean dstar_lite_pqueue_is_empty(dstar_lite_pqueue q) {
 }
 
 gboolean dstar_lite_pqueue_remove(
-    dstar_lite_pqueue q, const coord u) {
+    dstar_lite_pqueue q, const coord_t* u) {
     if (!q || !u) return FALSE;
 
     dstar_lite_key key = g_hash_table_lookup(q->coord_to_key, u);
@@ -97,7 +97,7 @@ gboolean dstar_lite_pqueue_remove(
 }
 
 gboolean dstar_lite_pqueue_remove_full(
-    dstar_lite_pqueue q, const dstar_lite_key key, const coord c) {
+    dstar_lite_pqueue q, const dstar_lite_key key, const coord_t* c) {
     if (!q || !key || !c) return FALSE;
 
     gboolean removed = pqueue_remove_custom(
@@ -114,7 +114,7 @@ gboolean dstar_lite_pqueue_remove_full(
 }
 
 dstar_lite_key dstar_lite_pqueue_find_key_by_coord(
-    dstar_lite_pqueue q, const coord c) {
+    dstar_lite_pqueue q, const coord_t* c) {
     return (dstar_lite_key)g_hash_table_lookup(q->coord_to_key, c);
 }
 
@@ -125,7 +125,7 @@ dstar_lite_key dstar_lite_pqueue_top_key(dstar_lite_pqueue q) {
 }
 
 gboolean dstar_lite_pqueue_contains(
-    dstar_lite_pqueue q, const coord u) {
+    dstar_lite_pqueue q, const coord_t* u) {
     if (!q || !u) return FALSE;
     return g_hash_table_contains(q->coord_to_key, u);
 }

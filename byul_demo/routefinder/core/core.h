@@ -13,15 +13,15 @@ extern "C" {
 #define FLOAT_EPSILON 1e-5f
 
 /// @brief float 정확도 비교 함수
-BYUL_API gboolean float_equal(gfloat a, gfloat b);
+BYUL_API gboolean equal_float(gfloat a, gfloat b);
 
 /// @brief float 비교 함수 (우선순위용)
 // typedef gint (*GCompareDataFunc) (
 //     gconstpointer a, gconstpointer b, gpointer userdata);
-BYUL_API gint float_compare(
+BYUL_API gint compare_float(
     gconstpointer a, gconstpointer b, gpointer userdata);
 
-BYUL_API gint int_compare(
+BYUL_API gint compare_int(
     gconstpointer a, gconstpointer b, gpointer userdata);
 
 BYUL_API GHashTable* hashset_new(void);

@@ -1,16 +1,16 @@
 #include <glib.h>
 #include "internal/core.h"
 
-static void test_float_equal_func(void) {
-    g_assert_true(float_equal(1.000001f, 1.000002f));
-    g_assert_false(float_equal(1.0f, 1.1f));
+static void test_equal_float_func(void) {
+    g_assert_true(equal_float(1.000001f, 1.000002f));
+    g_assert_false(equal_float(1.0f, 1.1f));
 }
 
-static void test_float_compare_func(void) {
+static void test_compare_float_func(void) {
     gfloat a = 1.0f, b = 2.0f, c = 1.0f;
-    g_assert_cmpint(float_compare(&a, &b, NULL), <, 0);
-    g_assert_cmpint(float_compare(&b, &a, NULL), >, 0);
-    g_assert_cmpint(float_compare(&a, &c, NULL), ==, 0);
+    g_assert_cmpint(compare_float(&a, &b, NULL), <, 0);
+    g_assert_cmpint(compare_float(&b, &a, NULL), >, 0);
+    g_assert_cmpint(compare_float(&a, &c, NULL), ==, 0);
 }
 
 static void test_hashset_basic_func(void) {
@@ -44,8 +44,8 @@ static void test_hashset_copy_and_equal_func(void) {
 int main(int argc, char **argv) {
     g_test_init(&argc, &argv, NULL);
 
-    g_test_add_func("/core/float_equal", test_float_equal_func);
-    g_test_add_func("/core/float_compare", test_float_compare_func);
+    g_test_add_func("/core/equal_float", test_equal_float_func);
+    g_test_add_func("/core/compare_float", test_compare_float_func);
     g_test_add_func("/core/hashset_basic", test_hashset_basic_func);
 
     g_test_add_func("/core/hashset_copy_equal", 

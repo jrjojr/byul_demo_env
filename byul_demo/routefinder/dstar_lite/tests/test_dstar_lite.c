@@ -8,20 +8,20 @@
 #include <unistd.h>
 
 static void test_dstar_lite_basic(void) {
-        coord start = coord_new_full(0, 0);
-        coord goal = coord_new_full(9, 9);
+        coord_t* start = coord_new_full(0, 0);
+        coord_t* goal = coord_new_full(9, 9);
 
-        map m = map_new_full(0, 0, MAP_NEIGHBOR_8);
+        map_t* m = map_new_full(0, 0, MAP_NEIGHBOR_8);
         dstar_lite dsl = dstar_lite_new_full(m,start,
             dstar_lite_cost, dstar_lite_heuristic, TRUE);
 
         dstar_lite_set_start(dsl, start);
         dstar_lite_set_goal(dsl, goal);
 
-        route p = dstar_lite_find(dsl);
+        route_t* p = dstar_lite_find(dsl);
 
         g_assert_true(route_get_success(p));
-        g_print("[BASIC] route length = %d\n", route_length(p));
+        g_print("[BASIC] route_t* length = %d\n", route_length(p));
 
         route_print(p);
         dsl_print_ascii_uv(dsl, p);
@@ -35,10 +35,10 @@ static void test_dstar_lite_basic(void) {
 }
 
 static void test_dstar_lite_blocked_route(void) {
-    coord start = coord_new_full(0, 0);
-    coord goal = coord_new_full(9, 9);
+    coord_t* start = coord_new_full(0, 0);
+    coord_t* goal = coord_new_full(9, 9);
 
-    map m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     dstar_lite dsl = dstar_lite_new_full(m, start,
         dstar_lite_cost, dstar_lite_heuristic, TRUE);
 
@@ -47,7 +47,7 @@ static void test_dstar_lite_blocked_route(void) {
 
     for (int y = 1; y < 10; y++) map_block_coord(dsl->m, 5, y);    
 
-    route p = dstar_lite_find(dsl);
+    route_t* p = dstar_lite_find(dsl);
 
     g_assert_nonnull(p);
     g_assert_true(route_get_success(p));
@@ -64,10 +64,10 @@ static void test_dstar_lite_blocked_route(void) {
 }
 
 static void test_dstar_lite_blocked_route_refind_ub1(void) {
-    coord start = coord_new_full(0, 0);
-    coord goal = coord_new_full(9, 9);
+    coord_t* start = coord_new_full(0, 0);
+    coord_t* goal = coord_new_full(9, 9);
 
-    map m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     dstar_lite dsl = dstar_lite_new_full(m, start,
         dstar_lite_cost, dstar_lite_heuristic, TRUE);
 
@@ -76,7 +76,7 @@ static void test_dstar_lite_blocked_route_refind_ub1(void) {
 
     for (int y = 1; y < 10; y++) map_block_coord(dsl->m, 5, y);    
 
-    route p = dstar_lite_find(dsl);
+    route_t* p = dstar_lite_find(dsl);
 
     g_assert_nonnull(p);
     g_assert_true(route_get_success(p));
@@ -84,8 +84,8 @@ static void test_dstar_lite_blocked_route_refind_ub1(void) {
     route_print(p);
     dsl_print_ascii_uv(dsl, p);
 
-    coord c0 = coord_new_full(5,0);
-    coord c1 = coord_new_full(5,1);
+    coord_t* c0 = coord_new_full(5,0);
+    coord_t* c1 = coord_new_full(5,1);
 
     map_block_coord(dsl->m, c0->x, c0->y);
     map_unblock_coord(dsl->m, c1->x, c1->y);
@@ -95,7 +95,7 @@ static void test_dstar_lite_blocked_route_refind_ub1(void) {
     
     // dstar_lite_update_vertex_by_route(dsl, p);
 
-    route p1 = dstar_lite_find(dsl);
+    route_t* p1 = dstar_lite_find(dsl);
 
     route_print(p);        
     dsl_print_ascii_uv(dsl, p1);
@@ -114,10 +114,10 @@ static void test_dstar_lite_blocked_route_refind_ub1(void) {
 }
 
 static void test_dstar_lite_blocked_route_refind_ub2(void) {
-    coord start = coord_new_full(0, 0);
-    coord goal = coord_new_full(9, 9);
+    coord_t* start = coord_new_full(0, 0);
+    coord_t* goal = coord_new_full(9, 9);
 
-    map m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     dstar_lite dsl = dstar_lite_new_full(m, start,
         dstar_lite_cost, dstar_lite_heuristic, TRUE);
 
@@ -126,7 +126,7 @@ static void test_dstar_lite_blocked_route_refind_ub2(void) {
 
     for (int y = 1; y < 10; y++) map_block_coord(dsl->m, 5, y);    
 
-    route p = dstar_lite_find(dsl);
+    route_t* p = dstar_lite_find(dsl);
 
     g_assert_nonnull(p);
     g_assert_true(route_get_success(p));
@@ -134,8 +134,8 @@ static void test_dstar_lite_blocked_route_refind_ub2(void) {
     route_print(p);
     dsl_print_ascii_uv(dsl, p);
 
-    coord c0 = coord_new_full(5,0);
-    coord c2 = coord_new_full(5,2);
+    coord_t* c0 = coord_new_full(5,0);
+    coord_t* c2 = coord_new_full(5,2);
 
     map_block_coord(dsl->m, c0->x, c0->y);
     map_unblock_coord(dsl->m, c2->x, c2->y);
@@ -146,7 +146,7 @@ static void test_dstar_lite_blocked_route_refind_ub2(void) {
     // 기존 경로 기반 update
     // dstar_lite_update_vertex_by_route(dsl, p);
 
-    route p1 = dstar_lite_find(dsl);
+    route_t* p1 = dstar_lite_find(dsl);
 
     route_print(p);        
     dsl_print_ascii_uv(dsl, p1);
@@ -165,10 +165,10 @@ static void test_dstar_lite_blocked_route_refind_ub2(void) {
 }
 
 static void test_dstar_lite_blocked_route_refind_ub3(void) {
-    coord start = coord_new_full(0, 0);
-    coord goal = coord_new_full(9, 9);
+    coord_t* start = coord_new_full(0, 0);
+    coord_t* goal = coord_new_full(9, 9);
 
-    map m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     dstar_lite dsl = dstar_lite_new_full(m, start,
         dstar_lite_cost, dstar_lite_heuristic, TRUE);
 
@@ -177,7 +177,7 @@ static void test_dstar_lite_blocked_route_refind_ub3(void) {
 
     for (int y = 1; y < 10; y++) map_block_coord(dsl->m, 5, y);    
 
-    route p = dstar_lite_find(dsl);
+    route_t* p = dstar_lite_find(dsl);
 
     g_assert_nonnull(p);
     g_assert_true(route_get_success(p));
@@ -185,8 +185,8 @@ static void test_dstar_lite_blocked_route_refind_ub3(void) {
     route_print(p);    
     dsl_print_ascii_uv(dsl, p);
 
-    coord c0 = coord_new_full(5,0);
-    coord c3 = coord_new_full(5,3);
+    coord_t* c0 = coord_new_full(5,0);
+    coord_t* c3 = coord_new_full(5,3);
 
     map_block_coord(dsl->m, c0->x, c0->y);
     map_unblock_coord(dsl->m, c3->x, c3->y);
@@ -197,7 +197,7 @@ static void test_dstar_lite_blocked_route_refind_ub3(void) {
     // 기존 경로 기반 update
     // dstar_lite_update_vertex_by_route(dsl, p);
 
-    route p1 = dstar_lite_find(dsl);
+    route_t* p1 = dstar_lite_find(dsl);
 
     route_print(p);        
     dsl_print_ascii_uv(dsl, p1);
@@ -216,10 +216,10 @@ static void test_dstar_lite_blocked_route_refind_ub3(void) {
 }
 
 static void test_dstar_lite_blocked_route_refind_ub4(void) {
-    coord start = coord_new_full(0, 0);
-    coord goal = coord_new_full(9, 9);
+    coord_t* start = coord_new_full(0, 0);
+    coord_t* goal = coord_new_full(9, 9);
 
-    map m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     dstar_lite dsl = dstar_lite_new_full(m, start,
         dstar_lite_cost, dstar_lite_heuristic, TRUE);
 
@@ -228,15 +228,15 @@ static void test_dstar_lite_blocked_route_refind_ub4(void) {
 
     for (int y = 1; y < 10; y++) map_block_coord(dsl->m, 5, y);    
 
-    route p = dstar_lite_find(dsl);
+    route_t* p = dstar_lite_find(dsl);
 
     g_assert_nonnull(p);
     g_assert_true(route_get_success(p));
 
     dsl_print_ascii_uv(dsl, p);
 
-    coord c0 = coord_new_full(5,0);
-    coord c4 = coord_new_full(5,4);
+    coord_t* c0 = coord_new_full(5,0);
+    coord_t* c4 = coord_new_full(5,4);
 
     map_block_coord(dsl->m, c0->x, c0->y);
     map_unblock_coord(dsl->m, c4->x, c4->y);
@@ -244,7 +244,7 @@ static void test_dstar_lite_blocked_route_refind_ub4(void) {
     dstar_lite_update_vertex_range(dsl, c0, 1);
     dstar_lite_update_vertex_range(dsl, c4, 1);    
     
-    route p1 = dstar_lite_find(dsl);
+    route_t* p1 = dstar_lite_find(dsl);
 
     route_print(p);        
     dsl_print_ascii_uv(dsl, p1);
@@ -263,10 +263,10 @@ static void test_dstar_lite_blocked_route_refind_ub4(void) {
 }
 
 static void test_dstar_lite_blocked_route_refind_ub5(void) {
-    coord start = coord_new_full(0, 0);
-    coord goal = coord_new_full(9, 9);
+    coord_t* start = coord_new_full(0, 0);
+    coord_t* goal = coord_new_full(9, 9);
 
-    map m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     dstar_lite dsl = dstar_lite_new_full(m, start,
         dstar_lite_cost, dstar_lite_heuristic, TRUE);
 
@@ -275,7 +275,7 @@ static void test_dstar_lite_blocked_route_refind_ub5(void) {
 
     for (int y = 1; y < 10; y++) map_block_coord(dsl->m, 5, y);    
 
-    route p = dstar_lite_find(dsl);
+    route_t* p = dstar_lite_find(dsl);
 
     g_assert_nonnull(p);
     g_assert_true(route_get_success(p));
@@ -283,8 +283,8 @@ static void test_dstar_lite_blocked_route_refind_ub5(void) {
     route_print(p);
     dsl_print_ascii_uv(dsl, p);
 
-    coord c0 = coord_new_full(5,0);
-    coord c5 = coord_new_full(5,5);
+    coord_t* c0 = coord_new_full(5,0);
+    coord_t* c5 = coord_new_full(5,5);
 
     map_block_coord(dsl->m, c0->x, c0->y);
     map_unblock_coord(dsl->m, c5->x, c5->y);
@@ -292,7 +292,7 @@ static void test_dstar_lite_blocked_route_refind_ub5(void) {
     dstar_lite_update_vertex_range(dsl, c0, 1);
     dstar_lite_update_vertex_range(dsl, c5, 1);
     
-    route p1 = dstar_lite_find(dsl);
+    route_t* p1 = dstar_lite_find(dsl);
 
     route_print(p1);
     dsl_print_ascii_uv(dsl, p1);
@@ -311,15 +311,15 @@ static void test_dstar_lite_blocked_route_refind_ub5(void) {
 }
 
 static void test_dstar_lite_blocked_route_default(void) {
-    coord start = coord_new_full(5, 5);
-    coord goal = coord_new_full(5, 5);
+    coord_t* start = coord_new_full(5, 5);
+    coord_t* goal = coord_new_full(5, 5);
 
-    map m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     dstar_lite dsl = dstar_lite_new(m);
     dstar_lite_set_real_loop_max_retry(dsl, 20);
 
     g_print("기본 생성자로 길찾기\n");
-    route p = dstar_lite_find(dsl);
+    route_t* p = dstar_lite_find(dsl);
     g_assert_nonnull(p);
     // g_assert_true(route_get_success(p));
     route_print(p);
@@ -344,10 +344,10 @@ static void test_dstar_lite_blocked_route_default(void) {
 }
 
 static void test_dstar_lite_block_unblock_recover(void) {
-    coord start = coord_new_full(0, 0);
-    coord goal = coord_new_full(9, 9);
+    coord_t* start = coord_new_full(0, 0);
+    coord_t* goal = coord_new_full(9, 9);
 
-    map m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     dstar_lite dsl = dstar_lite_new_full(m, start,
         dstar_lite_cost, dstar_lite_heuristic, TRUE);
 
@@ -355,7 +355,7 @@ static void test_dstar_lite_block_unblock_recover(void) {
         dstar_lite_set_goal(dsl, goal);
 
     // 🔹 1. 최초 경로
-    route p = dstar_lite_find(dsl);
+    route_t* p = dstar_lite_find(dsl);
     g_assert_nonnull(p);
     g_assert_true(route_get_success(p));
 
@@ -364,9 +364,9 @@ static void test_dstar_lite_block_unblock_recover(void) {
     route_free(p);
     p = NULL;
 
-    coord c = coord_new_full(4, 4);
-    coord c0 = coord_new_full(3, 3);
-    coord c1 = coord_new_full(4, 3);
+    coord_t* c = coord_new_full(4, 4);
+    coord_t* c0 = coord_new_full(3, 3);
+    coord_t* c1 = coord_new_full(4, 3);
 
     // 🔹 2. 장애물 추가
     map_block_coord(dsl->m, c->x, c->y);
@@ -418,10 +418,10 @@ static void test_dstar_lite_block_unblock_recover(void) {
 }    
 
 static void test_dstar_lite_find_loop(void) {
-    coord start = coord_new_full(0, 0);
-    coord goal = coord_new_full(9, 9);
+    coord_t* start = coord_new_full(0, 0);
+    coord_t* goal = coord_new_full(9, 9);
 
-    map m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     dstar_lite dsl = dstar_lite_new_full(m, start,
         dstar_lite_cost, dstar_lite_heuristic, TRUE);
 
@@ -430,7 +430,7 @@ static void test_dstar_lite_find_loop(void) {
 
     // 🔹 1. 최초 경로
     g_print("최초 경로 dstar_lite_find()로 정적인 경로 생성\n");
-    route p = dstar_lite_find(dsl);
+    route_t* p = dstar_lite_find(dsl);
     g_assert_nonnull(p);
     g_assert_true(route_get_success(p));
 
@@ -440,10 +440,10 @@ static void test_dstar_lite_find_loop(void) {
     p = NULL;
     dstar_lite_reset(dsl);
 
-    coord c = coord_new_full(4, 4);
-    coord c0 = coord_new_full(3, 3);
-    coord c1 = coord_new_full(4, 3);
-    coord c2 = coord_new_full(5, 3);
+    coord_t* c = coord_new_full(4, 4);
+    coord_t* c0 = coord_new_full(3, 3);
+    coord_t* c1 = coord_new_full(4, 3);
+    coord_t* c2 = coord_new_full(5, 3);
 
     // 🔹 2. 장애물 추가
     g_print("장애물 추가 dstar_lite_find()로 정적인 경로 생성\n");    
@@ -501,7 +501,7 @@ dstar_lite_find_loop(dsl);
 for (guint i = 0; i < 5; i++) {
     g_print("인터벌 msec : %d, dstar_lite_find_loop()로 동적 경로 생성\n", interval_msec);
 
-    coord coord_i = coord_new_full(i + 4, 5);
+    coord_t* coord_i = coord_new_full(i + 4, 5);
     g_print("블락했다 (%d, %d)\n", coord_get_x(coord_i), coord_get_y(coord_i));
 
 
@@ -542,10 +542,10 @@ g_list_free_full((GList*)dsl->changed_coords_fn_userdata, (GDestroyNotify)coord_
 }    
 
 static void test_dstar_lite_find_static(void) {
-    coord start = coord_new_full(0, 0);
-    coord goal = coord_new_full(9, 9);
+    coord_t* start = coord_new_full(0, 0);
+    coord_t* goal = coord_new_full(9, 9);
 
-    map m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     dstar_lite dsl = dstar_lite_new_full(m, start,
         dstar_lite_cost, dstar_lite_heuristic, TRUE);
 
@@ -554,7 +554,7 @@ static void test_dstar_lite_find_static(void) {
 
     // 🔹 최초 경로
     g_print("최초 경로 dstar_lite_find()로 정적인 경로 생성\n");
-    route p = dstar_lite_find(dsl);
+    route_t* p = dstar_lite_find(dsl);
     g_assert_nonnull(p);
     g_assert_true(route_get_success(p));
     route_print(p);
@@ -563,10 +563,10 @@ static void test_dstar_lite_find_static(void) {
     dstar_lite_reset(dsl);
 
     // 🔹 장애물 추가 후 경로 재계산
-    coord c = coord_new_full(4, 4);
-    coord c0 = coord_new_full(3, 3);
-    coord c1 = coord_new_full(4, 3);
-    coord c2 = coord_new_full(5, 3);
+    coord_t* c = coord_new_full(4, 4);
+    coord_t* c0 = coord_new_full(3, 3);
+    coord_t* c1 = coord_new_full(4, 3);
+    coord_t* c2 = coord_new_full(5, 3);
 
     g_print("장애물 추가 dstar_lite_find()로 경로 생성\n");
     map_block_coord(dsl->m, c->x, c->y);
@@ -622,10 +622,10 @@ static gpointer run_find_loop(gpointer data) {
 }
 
 static void test_dstar_lite_find_dynamic(void) {
-    coord start = coord_new_full(0, 0);
-    coord goal = coord_new_full(7, 6);
+    coord_t* start = coord_new_full(0, 0);
+    coord_t* goal = coord_new_full(7, 6);
 
-    map m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     dstar_lite dsl = dstar_lite_new_full(m, start,
         dstar_lite_cost, dstar_lite_heuristic, TRUE);
 
@@ -649,7 +649,7 @@ static void test_dstar_lite_find_dynamic(void) {
     GThread* loop_thread = g_thread_new("dstar_lite_loop", run_find_loop, dsl);
     g_assert_nonnull(loop_thread);
 
-    coord coord_i = NULL;
+    coord_t* coord_i = NULL;
     GList* changed_coords = NULL;
     for (guint i = 0; i < 50; i++) {
         g_usleep(interval_msec * 30);
@@ -708,10 +708,10 @@ static void test_dstar_lite_find_dynamic(void) {
 }
 
 static void test_dstar_lite_block_all_around_start(void) {
-    coord start = coord_new_full(0, 0);
-    coord goal = coord_new_full(-9, -9);
+    coord_t* start = coord_new_full(0, 0);
+    coord_t* goal = coord_new_full(-9, -9);
 
-    map m = map_new_full(0, 0, MAP_NEIGHBOR_8);
+    map_t* m = map_new_full(0, 0, MAP_NEIGHBOR_8);
     dstar_lite dsl = dstar_lite_new_full(m, start,
         dstar_lite_cost, dstar_lite_heuristic, TRUE);
 
@@ -723,7 +723,7 @@ static void test_dstar_lite_block_all_around_start(void) {
     map_block_coord(dsl->m, 0, -1);
     map_block_coord(dsl->m, -1, -1);
 
-    route p = dstar_lite_find(dsl);
+    route_t* p = dstar_lite_find(dsl);
     g_assert_nonnull(p);
     g_assert_true(route_get_success(p));
     route_print(p);

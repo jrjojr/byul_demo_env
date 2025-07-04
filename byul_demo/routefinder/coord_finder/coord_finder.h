@@ -13,7 +13,7 @@ extern "C" {
 #define MAX_RANGE_LIMIT 256
 
 // 🔍 사용자가 지정하는 도달 가능성 판단 함수
-typedef gboolean (*is_reeachable_func)(const coord coord, gpointer user_data);
+typedef gboolean (*is_reeachable_func)(const coord_t* c, gpointer user_data);
 
 /**
  * @brief 기준 좌표 주변에서 가장 가까운 reachable 셀을 BFS로 탐색합니다.
@@ -26,11 +26,11 @@ typedef gboolean (*is_reeachable_func)(const coord coord, gpointer user_data);
  * 
  * @return gboolean       TRUE: 찾음, FALSE: 실패
  */
-BYUL_API gboolean find_goal_bfs(const coord start,
+BYUL_API gboolean find_goal_bfs(const coord_t* start,
                         is_reeachable_func is_reachable_fn,
                         gpointer user_data,
                         gint max_range,
-                        coord* out_result);
+                        coord_t** out_result);
 
 
 // 내부 구조체: A* 노드
@@ -47,11 +47,11 @@ BYUL_API gint astar_node_compare(gconstpointer a, gconstpointer b, gpointer user
 /**
  * @brief GPriorityQueue 기반 A* 방식으로 가장 가까운 reachable 좌표를 탐색
  */
-BYUL_API gboolean find_goal_astar(const coord start,
+BYUL_API gboolean find_goal_astar(const coord_t* start,
                           is_reeachable_func is_reachable_fn,
                           gpointer user_data,
                           gint max_range,
-                          coord *out_result);
+                          coord_t* *out_result);
 
 #ifdef __cplusplus
 }

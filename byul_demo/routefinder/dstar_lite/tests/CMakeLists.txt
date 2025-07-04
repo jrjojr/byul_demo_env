@@ -20,17 +20,19 @@ add_executable(${PROJECT_NAME}
 # win11과 우분투는 다르다
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-    message(STATUS 
-    "${PROJECT_NAME} Applying ASan for Windows (no leak sanitizer)")
-
-    target_compile_options(${PROJECT_NAME} PRIVATE
-        -fsanitize=address
-        -g
-        -O1
-    )
-    target_link_options(${PROJECT_NAME} PRIVATE
-        -fsanitize=address
-    )
+    if (CMAKE_HOST_SYSTEM_VERSION VERSION_GREATER_EQUAL 10.0.22000)
+        message(STATUS "${PROJECT_NAME} Windows 11 detected — ASan disabled")
+    else()
+        message(STATUS "${PROJECT_NAME} Applying ASan for Windows (no leak sanitizer)")
+        target_compile_options(${PROJECT_NAME} PRIVATE
+            -fsanitize=address
+            -g
+            -O1
+        )
+        target_link_options(${PROJECT_NAME} PRIVATE
+            -fsanitize=address
+        )
+    endif()
 else()
     message(STATUS "${PROJECT_NAME} Applying ASan + LSan for Unix-like")
     target_compile_options(${PROJECT_NAME} PRIVATE
@@ -44,6 +46,7 @@ else()
         -fsanitize=leak
     )
 endif()
+
 
 target_include_directories(${PROJECT_NAME} PRIVATE 
     ${GLIB_INCLUDE_DIRS}

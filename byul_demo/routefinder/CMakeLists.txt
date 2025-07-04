@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Project name
-project(routefinder C)
+project(routefinder)
 
 enable_testing()
 
@@ -69,22 +69,25 @@ add_subdirectory(core)
 add_subdirectory(coord)
 add_subdirectory(map)
 add_subdirectory(route)
-add_subdirectory(pqueue)
-add_subdirectory(dstar_lite)
-add_subdirectory(coord_finder)
+add_subdirectory(cost_coord_pq)
 add_subdirectory(algo)
+# add_subdirectory(dstar_lite)
+# add_subdirectory(coord_finder)
+
 
 # 각 모듈 헤더 복사
 copy_headers(core)
 copy_headers(coord)
 copy_headers(map)
 copy_headers(route)
-copy_headers(pqueue)
-copy_headers(dstar_lite)
-copy_headers(coord_finder)
+copy_headers(cost_coord_pq)
 
 copy_headers(algo)
 copy_algo_headers(algo)
+
+# copy_headers(dstar_lite)
+# copy_headers(coord_finder)
+
 
 # routefinder.h 복사
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.h 
@@ -107,6 +110,13 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 target_link_directories(${PROJECT_NAME} PRIVATE 
     ${GLIB_LIBRARY_DIRS}
     ${PROJECT_NAME}_BUILD_LIB_DIR
+    ${CMAKE_BINARY_DIR}/coord
+    ${CMAKE_BINARY_DIR}/map
+    ${CMAKE_BINARY_DIR}/route
+    ${CMAKE_BINARY_DIR}/dstar_lite
+    ${CMAKE_BINARY_DIR}/coord_finder
+    ${CMAKE_BINARY_DIR}/algo
+    ${CMAKE_BINARY_DIR}/cost_coord_pq
 )
 
 # 정적 라이브러리 통합 링크 (GNU/Clang 계열)
@@ -116,6 +126,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     coord 
     map 
     route 
+    cost_coord_pq
     dstar_lite
     coord_finder
     algo
@@ -165,4 +176,4 @@ install(FILES ${CMAKE_BINARY_DIR}/routefinder.pc DESTINATION
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE BYUL_EXPORTS)
 
-# add_subdirectory(tests)
+add_subdirectory(tests)

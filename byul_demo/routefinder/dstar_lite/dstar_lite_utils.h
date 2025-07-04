@@ -18,7 +18,7 @@ extern "C" {
  * @param m        맵 객체
  * @param g_table  좌표별 g값을 저장한 GHashTable
  */
-BYUL_API void print_all_g_table_internal(const map m, GHashTable* g_table);
+BYUL_API void print_all_g_table_internal(const map_t* m, GHashTable* g_table);
 
 /**
  * @brief rhs_table에 저장된 모든 좌표의 rhs 값을 출력합니다.
@@ -27,7 +27,7 @@ BYUL_API void print_all_g_table_internal(const map m, GHashTable* g_table);
  * @param rhs_table 좌표별 rhs값을 저장한 GHashTable
  */
 BYUL_API void print_all_rhs_table_internal(
-    const map m, GHashTable* rhs_table);
+    const map_t* m, GHashTable* rhs_table);
 
 /**
  * @brief D* Lite 내부 상태를 상세하게 출력합니다.
@@ -48,9 +48,9 @@ BYUL_API void print_all_rhs_table_internal(
  * @param update_count_table update_vertex 호출 횟수 테이블
  */
 BYUL_API void print_all_dsl_internal_full(
-    const map m,
-    const coord start,
-    const coord goal,
+    const map_t* m,
+    const coord_t* start,
+    const coord_t* goal,
     gfloat km,
     GHashTable* g_table,
     GHashTable* rhs_table,
@@ -74,7 +74,7 @@ BYUL_API void print_all_dsl_internal_full(
  * @param frontier  우선순위 큐
  */
 BYUL_API void print_all_dsl_internal(
-    const map m, const coord start, const coord goal,
+    const map_t* m, const coord_t* start, const coord_t* goal,
     gfloat km, GHashTable* g_table, GHashTable* rhs_table,
     dstar_lite_pqueue frontier);
 
@@ -108,7 +108,7 @@ BYUL_API void dsl_print_ascii_only_map(const dstar_lite dsl);
  * @param dsl   D* Lite 객체
  * @param p     경로 객체 (성공한 경우만 유효)
  */
-BYUL_API void dsl_print_ascii(const dstar_lite dsl, const route p);
+BYUL_API void dsl_print_ascii(const dstar_lite dsl, const route_t* p);
 
 /**
  * @brief update_vertex 호출 횟수를 포함한 ASCII 맵 출력
@@ -125,7 +125,7 @@ BYUL_API void dsl_print_ascii(const dstar_lite dsl, const route p);
  * @param dsl D* Lite 객체
  * @param p   경로 객체 (NULL 허용)
  */
-BYUL_API void dsl_print_ascii_uv(const dstar_lite dsl, const route p);
+BYUL_API void dsl_print_ascii_uv(const dstar_lite dsl, const route_t* p);
 
 #ifdef __cplusplus
 }

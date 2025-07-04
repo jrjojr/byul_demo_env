@@ -1,8 +1,6 @@
 #ifndef BYUL_CONFIG_H
 #define BYUL_CONFIG_H
 
-#include <glib.h>
-
 // 플랫폼 감지
 #if defined(_WIN32) || defined(_WIN64)
   #define BYUL_PLATFORM_WINDOWS 1

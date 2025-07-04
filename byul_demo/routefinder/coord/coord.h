@@ -1,73 +1,51 @@
 #ifndef COORD_H
 #define COORD_H
 
-#include <glib.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include "byul_config.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// coord 구조체
+// ------------------------ 구조체 정의 ------------------------
+
 typedef struct s_coord {
-    gint x;  // x 좌표
-    gint y;  // y 좌표
+    int x;
+    int y;
 } coord_t;
 
-typedef coord_t* coord;
+// ------------------------ 생성/해제 ------------------------
 
-// start----------------------------------------------------------------------
+BYUL_API coord_t* coord_new_full(int x, int y);
+BYUL_API coord_t* coord_new(void);
+BYUL_API void     coord_free(coord_t* c);
+BYUL_API coord_t* coord_copy(const coord_t* c);
 
-// coord 생성
-BYUL_API coord    coord_new_full(gint x, gint y);
+// ------------------------ 비교/해시 ------------------------
 
-BYUL_API coord    coord_new();
+BYUL_API unsigned coord_hash(const coord_t* c);
+BYUL_API bool     coord_equal(const coord_t* c1, const coord_t* c2);
+BYUL_API int      coord_compare(const coord_t* c1, const coord_t* c2);
 
-// coord 해제
-BYUL_API void     coord_free(coord c);
+// ------------------------ 거리/각도 ------------------------
 
-// coord 해시
-BYUL_API guint coord_hash(const coord c);
+/// 유클리드 거리 계산
+BYUL_API float      coord_distance(const coord_t* a, const coord_t* b);
+BYUL_API int coord_manhattan_distance(const coord_t* a, const coord_t* b);
+BYUL_API double   coord_degree(const coord_t* a, const coord_t* b);
 
-// coord 비교
-BYUL_API gboolean coord_equal(const coord c1, const coord c2);
+// ------------------------ 좌표 접근자/설정자 ------------------------
 
-// coord 깊은 복사
-BYUL_API coord coord_copy(const coord c);
+BYUL_API int      coord_get_x(const coord_t* c);
+BYUL_API void     coord_set_x(coord_t* c, int x);
 
-// BYUL_API gint coord_compare(gconstpointer a, gconstpointer b);
-BYUL_API gint coord_compare(const coord c1, const coord c2);
+BYUL_API int      coord_get_y(const coord_t* c);
+BYUL_API void     coord_set_y(coord_t* c, int y);
 
-// 맨하튼 거리
-BYUL_API gint coord_distance(const coord a, const coord b);
-
-// 각도를 double로 360도 얻는다.
-// (1,0)이 0도이고 반시계방향이다.
-BYUL_API gdouble coord_degree(const coord a, const coord b);
-
-// ------------------------------------------------------------------------end
-
-// coord 구조체 전용 함수들
-// start----------------------------------------------------------------------
-
-// x 접근자
-BYUL_API gint     coord_get_x(const coord c);
-// x 설정자
-BYUL_API void     coord_set_x(coord c, gint x);
-
-// y 접근자
-BYUL_API gint     coord_get_y(const coord c);
-// y 설정자
-BYUL_API void     coord_set_y(coord c, gint y);
-
-// 좌표를 64비트로 패킹
-BYUL_API guint64  coord_pack(const coord c);
-// 패킹된 값에서 coord 생성
-BYUL_API coord    coord_unpack(guint64 packed);
-
-BYUL_API void     coord_set(coord c, gint x, gint y);
-
-BYUL_API void     coord_fetch(coord c, gint* out_x, gint* out_y);
+BYUL_API void     coord_set(coord_t* c, int x, int y);
+BYUL_API void     coord_fetch(const coord_t* c, int* out_x, int* out_y);
 
 #ifdef __cplusplus
 }

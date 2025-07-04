@@ -2,7 +2,6 @@
 #define DIJKSTRA_H
 
 #include "byul_config.h"
-#include "core.h"
 #include "internal/coord.h"
 #include "internal/map.h"
 #include "internal/route.h"
@@ -15,59 +14,29 @@ extern "C" {
 /**
  * @brief Dijkstra 알고리즘을 사용하여 최단 경로를 탐색합니다.
  *
- * Dijkstra 알고리즘은 휴리스틱을 사용하지 않고, 
- * 시작 지점에서 목표 지점까지의 실제 누적 비용(g)만을 기준으로
- * 모든 경로를 탐색하여 최단 경로를 찾습니다.
+ * 이 함수는 휴리스틱 없이 실제 누적 비용만을 기준으로 경로를 탐색하는
+ * Dijkstra 알고리즘을 구현합니다.  
+ * 각 인접 좌표에 대한 이동 비용은 @p cost_fn 함수에 따라 계산되며,  
+ * 이를 누적하여 가장 낮은 총 비용 경로를 찾습니다.
  *
- * A*와 달리 f-score에 휴리스틱 항(h)을 포함하지 않으며,
- * 따라서 항상 최단 경로를 찾지만 탐색 노드 수는 많아질 수 있습니다.
+ * A* 알고리즘과 달리 휴리스틱을 사용하지 않기 때문에 항상 최단 경로를 보장하지만,  
+ * 탐색에 필요한 노드 수가 많아질 수 있습니다.
  *
- * 이 함수는 @c algo 구조체를 기반으로 하며,
- * 내부적으로 비용 함수(@c cost_fn), 방문 추적, 
- * 우선순위 큐(@c frontier), 방문 로깅 등을 활용합니다.
+ * 함수는 내부적으로 우선순위 큐, 비용 테이블, 경로 추적 테이블을 생성 및 관리하며,  
+ * 입력으로는 맵, 시작/목표 좌표, 그리고 비용 함수만 제공하면 됩니다.
  *
- * @param al     알고리즘 컨텍스트 (algo 구조체). 반드시 초기화되어 있어야 합니다.
- * @param start   시작 좌표
- * @param goal     도착 좌표
- * @return route  경로 객체. 탐색에 성공한 경우 
- *                  @c route_get_success(p) 가 TRUE를 반환합니다.
- *
- * @usage 예시:
- * @code
- * coord start = coord_new_full(0, 0);
- * coord goal   = coord_new_full(9, 9);
- *
- * algo al = algo_new_full(
- *     10, 10,
- *     MAP_NEIGHBOR_8,
- *     PATH_ALGO_DIJKSTRA,
- *     default_cost,
- *     default_heuristic,  // 휴리스틱은 사용되지 않음
- *     NULL,   // userdata
- *     NULL,   // algo_specific
- *     TRUE    // 방문 순서 로깅 활성화
- * );
- *
- * // 장애물 설치 (열 한가운데를 막음)
- * for (int y = 1; y < 10; y++)
- *     map_block_coord(al->m, 5, y);
- *
- * route p = dijkstra_find(al, start, goal);
- * if (route_get_success(p)) {
- *     map_print_ascii_with_visited_count(al->m, p, start, goal);
- * }
- *
- * route_free(p);
- * coord_free(start);
- * coord_free(goal);
- * algo_free(al);
- * @endcode
- *
- * @see algo_new_full(), 
- *      route_get_success(), 
- *      map_print_ascii_with_visited_count()
+ * @param m         탐색 대상 맵
+ * @param start     시작 좌표
+ * @param goal      목표 좌표
+ * @param cost_fn   좌표 간 이동 비용을 계산하는 함수. 
+ *                  NULL인 경우 기본 비용 1.0f가 사용됩니다.
+ * @return          경로 객체.  
+ *                  @c route_get_success(route_t*) 가 
+ *                  TRUE인 경우 탐색에 성공한 것입니다.
  */
-BYUL_API route dijkstra_find(const algo al, const coord start, const coord goal);
+BYUL_API route_t* find_dijkstra(const map_t* m, 
+    const coord_t* start, const coord_t* goal, cost_func cost_fn,
+    int max_retry, bool visited_logging);
 
 #ifdef __cplusplus
 }

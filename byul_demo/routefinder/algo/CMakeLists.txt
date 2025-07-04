@@ -1,30 +1,26 @@
 cmake_minimum_required(VERSION 3.10)
 
 # 프로젝트 이름과 언어 설정
-project(algo C)
+project(algo)
 
 enable_testing()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# glib 포함 디렉토리 추가
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GLIB REQUIRED glib-2.0)
-
 # 소스 파일 설정
 set(SOURCES
-    ${PROJECT_NAME}.c
-    algo_utils.c
-    modules/bfs.c
-    modules/dfs.c
-    modules/dijkstra.c
-    modules/astar.c
-    modules/weighted_astar.c
-    modules/greedy_best_first.c
-    modules/ida_star.c
-    modules/rta_star.c
-    modules/sma_star.c
-    modules/fast_marching.c
-    modules/fringe_search.c
+    ${PROJECT_NAME}.cpp
+    algo_utils.cpp
+    modules/bfs.cpp
+    modules/dfs.cpp
+    modules/dijkstra.cpp
+    modules/astar.cpp
+    modules/weighted_astar.cpp
+    modules/greedy_best_first.cpp
+    modules/ida_star.cpp
+    modules/rta_star.cpp
+    modules/sma_star.cpp
+    modules/fast_marching.cpp
+    modules/fringe_search.cpp
 )
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -34,18 +30,17 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 # 헤더 파일 디렉토리 추가
 target_include_directories(${PROJECT_NAME} PRIVATE 
-    ${GLIB_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}/include/routefinder
 )
 
 target_link_directories(${PROJECT_NAME} PRIVATE 
-    ${GLIB_LIBRARY_DIRS}
     ${CMAKE_BINARY_DIR}/lib
     ${CMAKE_BINARY_DIR}/coord
     ${CMAKE_BINARY_DIR}/map
     ${CMAKE_BINARY_DIR}/route
+    ${CMAKE_BINARY_DIR}/cost_coord_pq
 )
 
 # 링크 라이브러리 설정
@@ -54,13 +49,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${GLIB_LIBRARIES}
     coord
     map
     route
+    cost_coord_pq
     m
 )
-
-# 컴파일러 플래그 추가
-target_compile_options(${PROJECT_NAME} PRIVATE ${GLIB_CFLAGS_OTHER})
-
-target_compile_definitions(${PROJECT_NAME} PRIVATE ${GLIB_CFLAGS_OTHER})
 
 add_subdirectory(tests)
 

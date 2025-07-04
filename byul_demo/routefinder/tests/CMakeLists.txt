@@ -1,80 +1,48 @@
-# CMakeLists.txt for the test project
-
 cmake_minimum_required(VERSION 3.10)
+project(test_routefinder)
 
-# Set the project name
-project(test_routefinder C)
-
-# Link the test executable with the external flud library and glib
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GLIB REQUIRED glib-2.0)
-
-set(CMAKE_C_FLAGS_DEBUG "-g -O0")
-
-# Add the test executable
-add_executable(${PROJECT_NAME} 
+# ============================
+# Executable 정의
+# ============================
+add_executable(${PROJECT_NAME}
     ${PROJECT_NAME}.c
-    )
+)
 
-# 컴파일·링크 옵션에 ASan 추가
-# win11과 우분투는 다르다
-
-if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-    message(STATUS 
-    "${PROJECT_NAME} Applying ASan for Windows (no leak sanitizer)")
-
-    target_compile_options(${PROJECT_NAME} PRIVATE
-        -fsanitize=address
-        -g
-        -O1
-    )
-    target_link_options(${PROJECT_NAME} PRIVATE
-        -fsanitize=address
-    )
-else()
-    message(STATUS "${PROJECT_NAME} Applying ASan + LSan for Unix-like")
-    target_compile_options(${PROJECT_NAME} PRIVATE
-        -fsanitize=address
-        -fsanitize=leak
-        -g
-        -O1
-    )
-    target_link_options(${PROJECT_NAME} PRIVATE
-        -fsanitize=address
-        -fsanitize=leak
-    )
-endif()
-
-target_include_directories(${PROJECT_NAME} PRIVATE 
-    ${GLIB_INCLUDE_DIRS}
+# ============================
+# Include 디렉토리 (routefinder만)
+# ============================
+target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}/include/routefinder
-    )
+)
 
-# Ensure glib.h can be included
-target_link_directories(${PROJECT_NAME} PRIVATE 
-    ${GLIB_LIBRARY_DIRS}
+# ============================
+# Link 디렉토리
+# ============================
+target_link_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_BINARY_DIR}
     ${CMAKE_BINARY_DIR}/lib
-    ${CMAKE_BINARY_DIR}/routefinder/coord
-    ${CMAKE_BINARY_DIR}/routefinder/route
-    ${CMAKE_BINARY_DIR}/routefinder/map
-    ${CMAKE_BINARY_DIR}/routefinder/dstar_lite
-    )
+)
 
-# Link libraries
-target_link_libraries(${PROJECT_NAME} PRIVATE 
-    ${GLIB_LIBRARIES}
-    coord
-    route
-    map
-    dstar_lite
-    m
-    )
+# ============================
+# 라이브러리 연결 (GLib 직접 링크 금지)
+# ============================
+target_link_libraries(${PROJECT_NAME} PRIVATE routefinder)
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE ${GLIB_CFLAGS_OTHER})
+# ============================
+# 컴파일 매크로 정의
+# ============================
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    ${GLIB_CFLAGS_OTHER}
+    BYUL_STATIC
+)
 
-# Add a test goal CTest
+message(STATUS "${PROJECT_NAME}: ✅ routefinder.dll만 링크하고 glib은 절대 직접 연결하지 않음.")
+
+# ============================
+# 테스트 등록
+# ============================
+enable_testing()
 add_test(NAME AllTests COMMAND ${PROJECT_NAME})
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE BYUL_STATIC)

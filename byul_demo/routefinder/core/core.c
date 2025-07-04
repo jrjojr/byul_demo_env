@@ -3,24 +3,24 @@
 #include <stdlib.h>
 #include <math.h>
 
-gboolean float_equal(gfloat a, gfloat b) {
+gboolean equal_float(gfloat a, gfloat b) {
     if (a == b) return TRUE;
     gfloat diff = fabsf(a - b);
     gfloat largest = fmaxf(fabsf(a), fabsf(b));
     return diff <= FLOAT_EPSILON * largest;
 }
 
-gint float_compare(
+gint compare_float(
     gconstpointer a, gconstpointer b, gpointer userdata) {
         
     float fa = *(float*)a;
     float fb = *(float*)b;
 
-    if (float_equal(fa, fb)) return 0;
+    if (equal_float(fa, fb)) return 0;
     return (fa < fb) ? -1 : 1;
 }
 
-gint int_compare(
+gint compare_int(
     gconstpointer a, gconstpointer b, gpointer userdata) {
 
     int ia = *(int*)a;

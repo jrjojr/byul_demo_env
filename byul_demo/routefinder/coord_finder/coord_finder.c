@@ -5,11 +5,11 @@
 /**
  * @brief 내부적으로 BFS를 수행하여 도달 가능한 가장 가까운 좌표를 탐색한다.
  */
-gboolean find_goal_bfs(const coord start,
+gboolean find_goal_bfs(const coord_t* start,
                        is_reeachable_func is_reachable_fn,
                        gpointer user_data,
                        gint max_range,
-                       coord *out_result)
+                       coord_t* *out_result)
 {
     if (!out_result || !is_reachable_fn || max_range <= 0 || max_range > MAX_RANGE_LIMIT)
         return FALSE;
@@ -27,7 +27,7 @@ gboolean find_goal_bfs(const coord start,
     };
 
     while (!g_queue_is_empty(queue)) {
-        coord cur = (coord) g_queue_pop_head(queue);
+        coord_t* cur = (coord_t*) g_queue_pop_head(queue);
 
         if (is_reachable_fn(cur, user_data)) {
             *out_result = coord_copy(cur);
@@ -75,11 +75,11 @@ gint astar_node_compare(gconstpointer a, gconstpointer b, gpointer user_data) {
 /**
  * @brief GPriorityQueue 기반 A* 방식으로 가장 가까운 reachable 좌표를 탐색
  */
-gboolean find_goal_astar(const coord start,
+gboolean find_goal_astar(const coord_t* start,
                           is_reeachable_func is_reachable_fn,
                           gpointer user_data,
                           gint max_range,
-                          coord *out_result)
+                          coord_t* *out_result)
 {
     if (!out_result || !is_reachable_fn || max_range <= 0)
         return FALSE;
@@ -88,7 +88,7 @@ gboolean find_goal_astar(const coord start,
         (GHashFunc) coord_hash, (GEqualFunc) coord_equal,
         (GDestroyNotify) coord_free, NULL);
 
-    pqueue open_list = pqueue_new_full((GCompareDataFunc) float_equal,
+    pqueue open_list = pqueue_new_full((GCompareDataFunc) compare_float,
         NULL, g_free, g_free);
 
     astar_node start_node = (astar_node) g_malloc(sizeof(astar_node_t));
@@ -156,3 +156,5 @@ gboolean find_goal_astar(const coord start,
     *out_result = coord_new_full(-1, -1);
     return FALSE;
 }
+
+
