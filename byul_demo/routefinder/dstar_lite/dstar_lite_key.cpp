@@ -3,10 +3,19 @@
 #include <cmath>
 #include <cstdint>
 
+bool dstar_lite_key_equal(
+    const dstar_lite_key_t* dsk0, const dstar_lite_key_t* dsk1) {
+
+    if (!dsk0 || !dsk1) return false;
+
+    return (float_equal(dsk0->k1, dsk1->k1)) &&
+           (float_equal(dsk0->k2, dsk1->k2));
+}
+
 int dstar_lite_key_compare(
     const dstar_lite_key_t* dsk0, const dstar_lite_key_t* dsk1) {
 
-    if (!dsk0 || !dsk1) return 0;
+    if (dstar_lite_key_equal(dsk0, dsk1)) return 0;
 
     if (dsk0->k1 < dsk1->k1)
         return -1;
@@ -20,15 +29,6 @@ int dstar_lite_key_compare(
         else
             return 0;
     }
-}
-
-bool dstar_lite_key_equal(
-    const dstar_lite_key_t* dsk0, const dstar_lite_key_t* dsk1) {
-
-    if (!dsk0 || !dsk1) return false;
-
-    return (std::fabs(dsk0->k1 - dsk1->k1) < FLOAT_EPSILON) &&
-           (std::fabs(dsk0->k2 - dsk1->k2) < FLOAT_EPSILON);
 }
 
 unsigned int dstar_lite_key_hash(const dstar_lite_key_t* key) {

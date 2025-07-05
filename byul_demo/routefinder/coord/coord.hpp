@@ -4,13 +4,33 @@
 #include "internal/coord.h"
 #include <cstddef>     // for size_t
 #include <functional>  // for std::hash
+#include <ostream>     // for operator<<
 
-/// C++ 전용 확장
-/// coord_t를 값 타입으로 사용하기 위한 비교 및 해시 지원
+// ------------------------ 비교 연산자 ------------------------
 
+/// @brief 값 동등 비교 (coord_equal() 사용)
 inline bool operator==(const coord_t& a, const coord_t& b) {
     return coord_equal(&a, &b);
 }
+
+/// @brief 값 비동등 비교
+inline bool operator!=(const coord_t& a, const coord_t& b) {
+    return !coord_equal(&a, &b);
+}
+
+/// @brief 정렬용 비교 연산자 (x 우선, 같으면 y)
+inline bool operator<(const coord_t& a, const coord_t& b) {
+    return coord_compare(&a, &b) < 0;
+}
+
+/// @brief 디버깅 출력용
+inline std::ostream& operator<<(std::ostream& os, const coord_t& c) {
+    int x = coord_get_x(&c);
+    int y = coord_get_y(&c);
+    return os << "(" << x << ", " << y << ")";
+}
+
+// ------------------------ 해시 연산자는 std에 있어야 함 ------------------------
 
 namespace std {
     template<>

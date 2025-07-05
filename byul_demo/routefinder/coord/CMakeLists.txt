@@ -15,7 +15,7 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE 
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_BINARY_DIR}/include/routefinder
+    ${CMAKE_BINARY_DIR}/include/routefinder    
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE 

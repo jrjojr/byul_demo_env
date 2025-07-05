@@ -1,7 +1,7 @@
 #include "internal/algo.h"
 #include "internal/cost_coord_pq.h"
 #include "internal/coord_list.h"
-#include "internal/coord.hpp"
+#include "coord.hpp"
 
 #include <cmath>
 #include <vector>

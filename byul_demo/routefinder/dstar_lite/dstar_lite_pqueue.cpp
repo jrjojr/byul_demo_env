@@ -1,6 +1,6 @@
 #include "internal/dstar_lite_pqueue.h"
 #include "internal/coord.h"
-#include "internal/dstar_lite_key.h"
+#include "dstar_lite_key.hpp"  // C++ 비교자 사용
 #include "internal/core.h"
 
 #include <map>
@@ -10,15 +10,15 @@
 #include "internal/coord_hash.h"
 
 typedef struct s_dstar_lite_pqueue {
-    std::map<dstar_lite_key_t*, 
-        std::vector<coord_t*>, std::less<>> key_to_coords;
+    std::map<dstar_lite_key_t*, std::vector<coord_t*>, 
+        dstar_lite_key_ptr_less> key_to_coords;
         
     coord_hash_t* coord_to_key;
-}dstar_lite_pqueue_t;
+} dstar_lite_pqueue_t;
 
 dstar_lite_pqueue_t* dstar_lite_pqueue_new() {
     auto* q = new dstar_lite_pqueue_t{};
-    q->coord_to_key = coord_hash_new();  // 별이아빠님이 제공한 해시 구조체 생성
+    q->coord_to_key = coord_hash_new();
     return q;
 }
 
@@ -43,7 +43,7 @@ dstar_lite_pqueue_t* dstar_lite_pqueue_copy(const dstar_lite_pqueue_t* src) {
     copy->coord_to_key = coord_hash_copy(src->coord_to_key);
 
     for (const auto& [key, coords] : src->key_to_coords) {
-        auto* copied_key = dstar_lite_key_copy(key);
+        dstar_lite_key_t* copied_key = dstar_lite_key_copy(key);
         std::vector<coord_t*> copied_coords;
         for (auto* c : coords)
             copied_coords.push_back(coord_copy(c));
@@ -60,11 +60,11 @@ void dstar_lite_pqueue_push(
     const coord_t* c) {
     if (!q || !key || !c) return;
 
-    auto* new_key = dstar_lite_key_copy(key);
-    auto* new_coord = coord_copy(c);
+    auto* key_copy = dstar_lite_key_copy(key);
+    auto* coord_copy_ptr = coord_copy(c);
 
-    q->key_to_coords[new_key].push_back(new_coord);
-    coord_hash_insert(q->coord_to_key, new_coord, new_key);
+    q->key_to_coords[key_copy].push_back(coord_copy_ptr);
+    coord_hash_insert(q->coord_to_key, coord_copy_ptr, key_copy);
 }
 
 coord_t* dstar_lite_pqueue_peek(dstar_lite_pqueue_t* q) {
@@ -102,12 +102,10 @@ bool dstar_lite_pqueue_is_empty(dstar_lite_pqueue_t* q) {
 bool dstar_lite_pqueue_remove(dstar_lite_pqueue_t* q, const coord_t* u) {
     if (!q || !u) return false;
 
-    dstar_lite_key_t* key = static_cast<dstar_lite_key_t*>(
-        coord_hash_get(q->coord_to_key, u));
+    auto* key_ptr = static_cast<dstar_lite_key_t*>(coord_hash_get(q->coord_to_key, u));
+    if (!key_ptr) return false;
 
-    if (!key) return false;
-
-    auto it = q->key_to_coords.find(key);
+    auto it = q->key_to_coords.find(key_ptr);
     if (it == q->key_to_coords.end()) return false;
 
     auto& vec = it->second;
@@ -119,7 +117,7 @@ bool dstar_lite_pqueue_remove(dstar_lite_pqueue_t* q, const coord_t* u) {
         vec.erase(found);
         coord_hash_remove(q->coord_to_key, u);
         if (vec.empty()) {
-            delete key;
+            delete key_ptr;
             q->key_to_coords.erase(it);
         }
         return true;
@@ -158,8 +156,7 @@ bool dstar_lite_pqueue_remove_full(
 dstar_lite_key_t* dstar_lite_pqueue_find_key_by_coord(
     dstar_lite_pqueue_t* q, const coord_t* c) {
     if (!q || !c) return nullptr;
-    return static_cast<dstar_lite_key_t*>(
-        coord_hash_get(q->coord_to_key, c));
+    return static_cast<dstar_lite_key_t*>(coord_hash_get(q->coord_to_key, c));
 }
 
 dstar_lite_key_t* dstar_lite_pqueue_top_key(dstar_lite_pqueue_t* q) {

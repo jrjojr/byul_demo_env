@@ -18,11 +18,11 @@ add_executable(${PROJECT_NAME}
     )
 
 target_include_directories(${PROJECT_NAME} PRIVATE 
-    ${GLIB_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}/include/routefinder
     ${EXTERNAL_INCLUDE_DIR}
+    ${CMAKE_SOURCE_DIR}/coord
     )
 
 # Ensure glib.h can be included

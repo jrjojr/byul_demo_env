@@ -1,6 +1,6 @@
 #include "internal/fringe_search.h"
 #include "internal/map.h"
-#include "internal/coord.hpp"
+#include "coord.hpp"
 #include "internal/coord_list.h"
 #include "internal/coord_hash.h"
 #include "internal/cost_coord_pq.h"

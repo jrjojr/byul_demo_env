@@ -1,4 +1,4 @@
-#include "internal/coord.hpp"
+#include "coord.hpp"
 #include "internal/coord_list.h"
 #include "internal/coord_hash.h"
 #include <vector>

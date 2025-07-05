@@ -219,7 +219,7 @@ dstar_lite_t* dstar_lite_new_full(map_t* m, coord_t* start,
 
     if (!m) return NULL;
 
-    dstar_lite_t* dsl = new dstar_lite_t;
+    dstar_lite_t* dsl = new dstar_lite_t();
     dsl->m = m;
     // printf("[dsl->m assigned] %p\n", m);
 
@@ -557,7 +557,7 @@ void dstar_lite_init(dstar_lite_t* dsl) {
     // dstar_lite_cost()함수가 기본적으로 무한대를 할당하고 있다.
 
     // rhs[goal] = 0    
-    float* rhs_goal_ptr = new float;
+    float* rhs_goal_ptr = new float();
     *rhs_goal_ptr = 0.0f;
     coord_hash_replace(dsl->rhs_table, coord_copy(dsl->goal), rhs_goal_ptr);
     
@@ -761,7 +761,7 @@ void dstar_lite_compute_shortest_route(dstar_lite_t* dsl) {
         } else if ( g_u > rhs_u) {
             // g_u = rhs_u;
             
-            float* new_g = new float;
+            float* new_g = new float();
             *new_g = rhs_u;
             coord_hash_replace(dsl->g_table, coord_copy(u), new_g);
 
@@ -785,7 +785,7 @@ void dstar_lite_compute_shortest_route(dstar_lite_t* dsl) {
                 g_old = FLT_MAX;
             }
 
-            float* new_g = new float;
+            float* new_g = new float();
             *new_g = FLT_MAX;
             coord_hash_replace(dsl->g_table, coord_copy(u), new_g);
 

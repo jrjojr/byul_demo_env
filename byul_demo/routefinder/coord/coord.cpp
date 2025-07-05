@@ -1,4 +1,4 @@
-#include "internal/coord.hpp"
+#include "coord.hpp"
 #include <cmath>
 #include <new>
 #include <cstdint>
@@ -9,7 +9,7 @@
 
 coord_t* coord_new_full(int x, int y) {
     // coord_t* c = new (std::nothrow) coord_t;
-    coord_t* c = new coord_t;
+    coord_t* c = new coord_t();
     if (!c) return nullptr;
     c->x = x;
     c->y = y;

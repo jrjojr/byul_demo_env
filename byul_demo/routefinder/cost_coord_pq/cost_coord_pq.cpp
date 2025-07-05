@@ -1,5 +1,5 @@
 #include "internal/cost_coord_pq.h"
-#include "internal/coord.hpp"   // coord_t, coord_hash, coord_equal
+#include "coord.hpp"   // coord_t, coord_hash, coord_equal
 #include <queue>
 #include <unordered_map>
 #include <functional>

@@ -18,6 +18,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}/include/routefinder
+    ${CMAKE_SOURCE_DIR}/coord
+    ${CMAKE_SOURCE_DIR}/core
 )
 
 target_link_directories(${PROJECT_NAME} PRIVATE 

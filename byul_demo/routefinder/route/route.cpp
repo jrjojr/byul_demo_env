@@ -1,7 +1,7 @@
 // route.cpp - GLib 제거, 구조체 은닉, 내부 std::vector 기반
 
 #include "internal/route.h"
-#include "internal/coord.hpp"
+#include "coord.hpp"
 #include "internal/core.h"
 
 #include <vector>
