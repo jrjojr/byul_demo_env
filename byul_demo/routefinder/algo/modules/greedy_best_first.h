@@ -1,7 +1,7 @@
 #ifndef GREEDY_BEST_FIRST_H
 #define GREEDY_BEST_FIRST_H
 
-#include "internal/algo.h"
+#include "internal/algo_common.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,7 +1,7 @@
 #ifndef IDA_STAR_H
 #define IDA_STAR_H
 
-#include "internal/algo.h"
+#include "internal/algo_common.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -87,7 +87,7 @@ EXTERNAL_FORWARD_DECLS = {
 }
 
 FUNC_POINTER_NAMES = {"algo_find_func", "cost_func", "heuristic_func",
-                      "dsl_cost_func", "dsl_heuristic_func"}
+                      "cost_func", "heuristic_func"}
 
 def patch_func_ptr_fields(decls: list[str]) -> list[str]:
     patched = []

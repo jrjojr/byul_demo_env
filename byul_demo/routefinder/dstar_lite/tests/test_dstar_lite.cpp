@@ -323,7 +323,7 @@ TEST_CASE("test_dstar_lite_blocked_route_default") {
     dstar_lite_t* dsl = dstar_lite_new(m);
     dstar_lite_set_real_loop_max_retry(dsl, 20);
 
-    printf("Running pathfinding with default constructor\n");
+    printf("Running find_route with default constructor\n");
     route_t* p = dstar_lite_find(dsl);
     CHECK(p);
     // g_assert_true(route_get_success(p));

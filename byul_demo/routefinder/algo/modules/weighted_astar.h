@@ -4,7 +4,7 @@
 #include "byul_config.h"
 #include "internal/core.h"
 
-#include "internal/algo.h"
+#include "internal/algo_common.h"
 #include "internal/map.h"
 #include "internal/coord.h"
 #include "internal/route.h"

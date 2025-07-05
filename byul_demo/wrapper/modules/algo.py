@@ -3,62 +3,62 @@ from ffi_core import ffi, C
 from enum import IntEnum
 
 class RouteAlgotype(IntEnum):
-    PATH_ALGO_UNKNOWN = 0
+    ROUTE_ALGO_UNKNOWN = 0
 
     # // 1950s~1960s
-    PATH_ALGO_BELLMAN_FORD #            // 1958
-    PATH_ALGO_DFS #                     // 1959
-    PATH_ALGO_BFS #                     // 1959
-    PATH_ALGO_DIJKSTRA #                // 1959
-    PATH_ALGO_FLOYD_WARSHALL #          // 1959~
-    PATH_ALGO_ASTAR #                   // 1968
+    ROUTE_ALGO_BELLMAN_FORD #            // 1958
+    ROUTE_ALGO_DFS #                     // 1959
+    ROUTE_ALGO_BFS #                     // 1959
+    ROUTE_ALGO_DIJKSTRA #                // 1959
+    ROUTE_ALGO_FLOYD_WARSHALL #          // 1959~
+    ROUTE_ALGO_ASTAR #                   // 1968
 
     # // 1970s
-    PATH_ALGO_BIDIRECTIONAL_DIJKSTRA # ,  // 1971
-    PATH_ALGO_BIDIRECTIONAL_ASTAR #,     // 1971
-    PATH_ALGO_WEIGHTED_ASTAR #,          // 1977~
-    PATH_ALGO_JOHNSON #,                 // 1977
-    PATH_ALGO_K_SHORTEST_PATH #,         // 1977~
-    PATH_ALGO_DIAL #,                    // 1969
+    ROUTE_ALGO_BIDIRECTIONAL_DIJKSTRA # ,  // 1971
+    ROUTE_ALGO_BIDIRECTIONAL_ASTAR #,     // 1971
+    ROUTE_ALGO_WEIGHTED_ASTAR #,          // 1977~
+    ROUTE_ALGO_JOHNSON #,                 // 1977
+    ROUTE_ALGO_K_SHORTEST_PATH #,         // 1977~
+    ROUTE_ALGO_DIAL #,                    // 1969
 
     # // 1980s
-    PATH_ALGO_ITERATIVE_DEEPENING #,     // 1980
-    PATH_ALGO_GREEDY_BEST_FIRST #,       // 1985
-    PATH_ALGO_IDA_STAR #,                // 1985
+    ROUTE_ALGO_ITERATIVE_DEEPENING #,     // 1980
+    ROUTE_ALGO_GREEDY_BEST_FIRST #,       // 1985
+    ROUTE_ALGO_IDA_STAR #,                // 1985
 
     # // 1990s
-    PATH_ALGO_RTA_STAR #,                // 1990
-    PATH_ALGO_SMA_STAR #,                // 1991
-    PATH_ALGO_DSTAR #,                   // 1994
-    PATH_ALGO_FAST_MARCHING #,           // 1996
-    PATH_ALGO_ANT_COLONY #,              // 1996
-    PATH_ALGO_FRINGE_SEARCH #,           // 1997
+    ROUTE_ALGO_RTA_STAR #,                // 1990
+    ROUTE_ALGO_SMA_STAR #,                // 1991
+    ROUTE_ALGO_DSTAR #,                   // 1994
+    ROUTE_ALGO_FAST_MARCHING #,           // 1996
+    ROUTE_ALGO_ANT_COLONY #,              // 1996
+    ROUTE_ALGO_FRINGE_SEARCH #,           // 1997
 
     # // 2000s
-    PATH_ALGO_FOCAL_SEARCH #,            // 2001
-    PATH_ALGO_DSTAR_LITE #,              // 2002
-    PATH_ALGO_LPA_STAR #,                // 2004
-    PATH_ALGO_HPA_STAR #,                // 2004
-    PATH_ALGO_ALT #,                     // 2005
-    PATH_ALGO_ANY_ANGLE_ASTAR #,         // 2005~
-    PATH_ALGO_HCA_STAR #,                // 2005
-    PATH_ALGO_RTAA_STAR #,               // 2006
-    PATH_ALGO_THETA_STAR #,              // 2007
-    PATH_ALGO_CONTRACTION_HIERARCHIES # ,// 2008
+    ROUTE_ALGO_FOCAL_SEARCH #,            // 2001
+    ROUTE_ALGO_DSTAR_LITE #,              // 2002
+    ROUTE_ALGO_LPA_STAR #,                // 2004
+    ROUTE_ALGO_HPA_STAR #,                // 2004
+    ROUTE_ALGO_ALT #,                     // 2005
+    ROUTE_ALGO_ANY_ANGLE_ASTAR #,         // 2005~
+    ROUTE_ALGO_HCA_STAR #,                // 2005
+    ROUTE_ALGO_RTAA_STAR #,               // 2006
+    ROUTE_ALGO_THETA_STAR #,              // 2007
+    ROUTE_ALGO_CONTRACTION_HIERARCHIES # ,// 2008
 
     # // 2010s
-    PATH_ALGO_LAZY_THETA_STAR #,         // 2010
-    PATH_ALGO_JUMP_POINT_SEARCH #,       // 2011
-    PATH_ALGO_SIPP #,                    // 2011
-    PATH_ALGO_JPS_PLUS #,                // 2012
-    PATH_ALGO_EPEA_STAR #,               // 2012
-    PATH_ALGO_MHA_STAR #              // 2012
-    PATH_ALGO_ANYA #,                    // 2013
+    ROUTE_ALGO_LAZY_THETA_STAR #,         // 2010
+    ROUTE_ALGO_JUMP_POINT_SEARCH #,       // 2011
+    ROUTE_ALGO_SIPP #,                    // 2011
+    ROUTE_ALGO_JPS_PLUS #,                // 2012
+    ROUTE_ALGO_EPEA_STAR #,               // 2012
+    ROUTE_ALGO_MHA_STAR #              // 2012
+    ROUTE_ALGO_ANYA #,                    // 2013
 
     # // 특수 목적 / 확장형
-    PATH_ALGO_DAG_SP #,                  // 1960s (DAG 최단경로 O(V+E))
-    PATH_ALGO_MULTI_SOURCE_BFS #,        // 2000s (복수 시작점 BFS)
-    PATH_ALGO_MCTS #                     // 2006
+    ROUTE_ALGO_DAG_SP #,                  // 1960s (DAG 최단경로 O(V+E))
+    ROUTE_ALGO_MULTI_SOURCE_BFS #,        // 2000s (복수 시작점 BFS)
+    ROUTE_ALGO_MCTS #                     // 2006
 
 ffi.cdef("""
 #define DIAGONAL_COST 1.4142135f  // √2 근사값
@@ -110,62 +110,62 @@ float default_heuristic(const coord_t* start, const coord_t* goal,
  * 알고리즘 종류 정의
  *------------------------------------------------------------*/
 typedef enum {
-    PATH_ALGO_UNKNOWN = 0,
+    ROUTE_ALGO_UNKNOWN = 0,
 
     // 1950s~1960s
-    PATH_ALGO_BELLMAN_FORD,            // 1958
-    PATH_ALGO_DFS,                     // 1959
-    PATH_ALGO_BFS,                     // 1959
-    PATH_ALGO_DIJKSTRA,                // 1959
-    PATH_ALGO_FLOYD_WARSHALL,          // 1959~
-    PATH_ALGO_ASTAR,                   // 1968
+    ROUTE_ALGO_BELLMAN_FORD,            // 1958
+    ROUTE_ALGO_DFS,                     // 1959
+    ROUTE_ALGO_BFS,                     // 1959
+    ROUTE_ALGO_DIJKSTRA,                // 1959
+    ROUTE_ALGO_FLOYD_WARSHALL,          // 1959~
+    ROUTE_ALGO_ASTAR,                   // 1968
 
     // 1970s
-    PATH_ALGO_BIDIRECTIONAL_DIJKSTRA,  // 1971
-    PATH_ALGO_BIDIRECTIONAL_ASTAR,     // 1971
-    PATH_ALGO_WEIGHTED_ASTAR,          // 1977~
-    PATH_ALGO_JOHNSON,                 // 1977
-    PATH_ALGO_K_SHORTEST_PATH,         // 1977~
-    PATH_ALGO_DIAL,                    // 1969
+    ROUTE_ALGO_BIDIRECTIONAL_DIJKSTRA,  // 1971
+    ROUTE_ALGO_BIDIRECTIONAL_ASTAR,     // 1971
+    ROUTE_ALGO_WEIGHTED_ASTAR,          // 1977~
+    ROUTE_ALGO_JOHNSON,                 // 1977
+    ROUTE_ALGO_K_SHORTEST_PATH,         // 1977~
+    ROUTE_ALGO_DIAL,                    // 1969
 
     // 1980s
-    PATH_ALGO_ITERATIVE_DEEPENING,     // 1980
-    PATH_ALGO_GREEDY_BEST_FIRST,       // 1985
-    PATH_ALGO_IDA_STAR,                // 1985
+    ROUTE_ALGO_ITERATIVE_DEEPENING,     // 1980
+    ROUTE_ALGO_GREEDY_BEST_FIRST,       // 1985
+    ROUTE_ALGO_IDA_STAR,                // 1985
 
     // 1990s
-    PATH_ALGO_RTA_STAR,                // 1990
-    PATH_ALGO_SMA_STAR,                // 1991
-    PATH_ALGO_DSTAR,                   // 1994
-    PATH_ALGO_FAST_MARCHING,           // 1996
-    PATH_ALGO_ANT_COLONY,              // 1996
-    PATH_ALGO_FRINGE_SEARCH,           // 1997
+    ROUTE_ALGO_RTA_STAR,                // 1990
+    ROUTE_ALGO_SMA_STAR,                // 1991
+    ROUTE_ALGO_DSTAR,                   // 1994
+    ROUTE_ALGO_FAST_MARCHING,           // 1996
+    ROUTE_ALGO_ANT_COLONY,              // 1996
+    ROUTE_ALGO_FRINGE_SEARCH,           // 1997
 
     // 2000s
-    PATH_ALGO_FOCAL_SEARCH,            // 2001
-    PATH_ALGO_DSTAR_LITE,              // 2002
-    PATH_ALGO_LPA_STAR,                // 2004
-    PATH_ALGO_HPA_STAR,                // 2004
-    PATH_ALGO_ALT,                     // 2005
-    PATH_ALGO_ANY_ANGLE_ASTAR,         // 2005~
-    PATH_ALGO_HCA_STAR,                // 2005
-    PATH_ALGO_RTAA_STAR,               // 2006
-    PATH_ALGO_THETA_STAR,              // 2007
-    PATH_ALGO_CONTRACTION_HIERARCHIES,// 2008
+    ROUTE_ALGO_FOCAL_SEARCH,            // 2001
+    ROUTE_ALGO_DSTAR_LITE,              // 2002
+    ROUTE_ALGO_LPA_STAR,                // 2004
+    ROUTE_ALGO_HPA_STAR,                // 2004
+    ROUTE_ALGO_ALT,                     // 2005
+    ROUTE_ALGO_ANY_ANGLE_ASTAR,         // 2005~
+    ROUTE_ALGO_HCA_STAR,                // 2005
+    ROUTE_ALGO_RTAA_STAR,               // 2006
+    ROUTE_ALGO_THETA_STAR,              // 2007
+    ROUTE_ALGO_CONTRACTION_HIERARCHIES,// 2008
 
     // 2010s
-    PATH_ALGO_LAZY_THETA_STAR,         // 2010
-    PATH_ALGO_JUMP_POINT_SEARCH,       // 2011
-    PATH_ALGO_SIPP,                    // 2011
-    PATH_ALGO_JPS_PLUS,                // 2012
-    PATH_ALGO_EPEA_STAR,               // 2012
-    PATH_ALGO_MHA_STAR,                // 2012
-    PATH_ALGO_ANYA,                    // 2013
+    ROUTE_ALGO_LAZY_THETA_STAR,         // 2010
+    ROUTE_ALGO_JUMP_POINT_SEARCH,       // 2011
+    ROUTE_ALGO_SIPP,                    // 2011
+    ROUTE_ALGO_JPS_PLUS,                // 2012
+    ROUTE_ALGO_EPEA_STAR,               // 2012
+    ROUTE_ALGO_MHA_STAR,                // 2012
+    ROUTE_ALGO_ANYA,                    // 2013
 
     // 특수 목적 / 확장형
-    PATH_ALGO_DAG_SP,                  // 1960s (DAG 최단경로 O(V+E))
-    PATH_ALGO_MULTI_SOURCE_BFS,        // 2000s (복수 시작점 BFS)
-    PATH_ALGO_MCTS                     // 2006
+    ROUTE_ALGO_DAG_SP,                  // 1960s (DAG 최단경로 O(V+E))
+    ROUTE_ALGO_MULTI_SOURCE_BFS,        // 2000s (복수 시작점 BFS)
+    ROUTE_ALGO_MCTS                     // 2006
 } route_algotype_t;
 
 typedef enum {
@@ -227,4 +227,4 @@ class c_algo:
             algo = c_algo(a)
             if algo.name().lower() == name.lower():
                 return a
-        return RouteAlgotype.PATH_ALGO_UNKNOWN
+        return RouteAlgotype.ROUTE_ALGO_UNKNOWN

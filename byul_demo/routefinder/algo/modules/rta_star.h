@@ -1,7 +1,7 @@
 #ifndef RTA_STAR_H
 #define RTA_STAR_H
 
-#include "internal/algo.h"
+#include "internal/algo_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -75,7 +75,7 @@ BYUL_API void rta_star_config_free(rta_star_config cfg);
  * algo al = algo_new_full(
  *     10, 10,
  *     MAP_NEIGHBOR_8,
- *     PATH_ALGO_RTA_STAR,
+ *     ROUTE_ALGO_RTA_STAR,
  *     default_cost,
  *     default_heuristic,
  *     NULL,

@@ -5,7 +5,7 @@
 #include "internal/coord.h"
 #include "internal/map.h"
 #include "internal/route.h"
-#include "internal/algo.h"
+#include "internal/algo_common.h"
 
 #ifdef __cplusplus
 extern "C" {

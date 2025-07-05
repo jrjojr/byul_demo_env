@@ -7,18 +7,6 @@
     #include "internal/route.h"
     #include "internal/algo.h"
     #include "internal/algo_utils.h"
-    #include "internal/bfs.h"
-    #include "internal/dfs.h"
-    #include "internal/dijkstra.h"
-    #include "internal/astar.h"
-    #include "internal/fast_marching.h"
-    #include "internal/greedy_best_first.h"
-    #include "internal/ida_star.h"
-    #include "internal/fringe_search.h"
-    #include "internal/weighted_astar.h"
-    #include "internal/rta_star.h"
-    #include "internal/sma_star.h"
-
 // }
 
 #include <iostream>

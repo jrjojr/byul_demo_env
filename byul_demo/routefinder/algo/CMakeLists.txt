@@ -9,6 +9,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # 소스 파일 설정
 set(SOURCES
     ${PROJECT_NAME}.cpp
+    algo_common.cpp
     algo_utils.cpp
     modules/bfs.cpp
     modules/dfs.cpp

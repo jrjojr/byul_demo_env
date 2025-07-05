@@ -1,7 +1,7 @@
 #ifndef FAST_MARCHING_H
 #define FAST_MARCHING_H
 
-#include "internal/algo.h"
+#include "internal/algo_common.h"
 #include "internal/cost_coord_pq.h"
 #include "internal/map.h"
 

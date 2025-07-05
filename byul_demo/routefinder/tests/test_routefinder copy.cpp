@@ -8,7 +8,7 @@
 // }
 
 TEST_CASE("Simple route_t* with algo_find") {
-    algo al = algo_new_default(10, 10, PATH_ALGO_BFS, TRUE);
+    algo al = algo_new_default(10, 10, ROUTE_ALGO_BFS, TRUE);
     coord_t* start = coord_new_full(0, 0);
     coord_t* goal = coord_new_full(9, 9);
 

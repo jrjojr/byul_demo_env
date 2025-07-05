@@ -51,11 +51,11 @@ float dstar_lite_cost(
     return hypotf(dx, dy);  // ✅ 더 안전한 방식
 }
 
-dsl_cost_func dstar_lite_get_cost_func(const dstar_lite_t* dsl) {
+cost_func dstar_lite_get_cost_func(const dstar_lite_t* dsl) {
     return dsl->cost_fn;
 }
 
-void dstar_lite_set_cost_func(dstar_lite_t* dsl, dsl_cost_func fn) {
+void dstar_lite_set_cost_func(dstar_lite_t* dsl, cost_func fn) {
     if (!dsl) return;
     dsl->cost_fn = fn;
 }
@@ -109,11 +109,11 @@ float dstar_lite_heuristic(
     return hypotf(dx, dy);  // ✅ 더 정확하고 안정적
 }
 
-dsl_heuristic_func dstar_lite_get_heuristic_func(const dstar_lite_t* dsl) {
+heuristic_func dstar_lite_get_heuristic_func(const dstar_lite_t* dsl) {
     return dsl->heuristic_fn;
 }
 
-void dstar_lite_set_heuristic_func(dstar_lite_t* dsl, dsl_heuristic_func func) {
+void dstar_lite_set_heuristic_func(dstar_lite_t* dsl, heuristic_func func) {
     dsl->heuristic_fn = func;
 }
 
@@ -214,7 +214,7 @@ dstar_lite_t* dstar_lite_new(map_t* m) {
 }
 
 dstar_lite_t* dstar_lite_new_full(map_t* m, coord_t* start,
-    dsl_cost_func cost_fn, dsl_heuristic_func heuristic_fn,
+    cost_func cost_fn, heuristic_func heuristic_fn,
     bool debug_mode_enabled) {
 
     if (!m) return NULL;

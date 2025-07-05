@@ -6,7 +6,7 @@
 #define COORD_EQUAL(a, b) coord_equal((a), (b))
 
 static void test_algo_find_bfs(void) {
-    algo al = algo_new_default(10, 10, PATH_ALGO_BFS, true);
+    algo al = algo_new_default(10, 10, ROUTE_ALGO_BFS, true);
     coord_t* start = coord_new_full(0, 0);
     coord_t* goal = coord_new_full(9, 9);
 

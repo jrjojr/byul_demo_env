@@ -19,10 +19,10 @@ typedef void (*move_func)(const coord_t* c, void* userdata);
 
 typedef coord_list_t* (*changed_coords_func)(void* userdata);
 
-typedef float (*dsl_cost_func)(
+typedef float (*cost_func)(
     const map_t* m, const coord_t* start, const coord_t* goal, void* userdata);
 
-typedef float (*dsl_heuristic_func)(
+typedef float (*heuristic_func)(
     const coord_t* start, const coord_t* goal, void* userdata);
 
 typedef bool (*dsl_is_blocked_func)(
@@ -43,14 +43,14 @@ typedef struct s_dstar_lite {
     dstar_lite_pqueue_t*        frontier;
 
     // 비용 함수
-    dsl_cost_func cost_fn;
+    cost_func cost_fn;
     void* cost_fn_userdata;
 
     dsl_is_blocked_func is_blocked_fn;
     void* is_blocked_fn_userdata;
 
     // 휴리스틱 함수
-    dsl_heuristic_func heuristic_fn;
+    heuristic_func heuristic_fn;
     void* heuristic_fn_userdata;    
 
     // find 함수내에서 루프시에 실행될 move_fn
@@ -133,7 +133,7 @@ dstar_lite_t* dstar_lite_new(map_t* m);
  *      사용 후 dstar_lite_free()로 해제 필요.
  */
 dstar_lite_t* dstar_lite_new_full(map_t* m, coord_t* start, 
-    dsl_cost_func cost_fn, dsl_heuristic_func heuristic_fn,
+    cost_func cost_fn, heuristic_func heuristic_fn,
     bool debug_mode_enabled);
 
 void dstar_lite_free(dstar_lite_t* dsl);
@@ -222,8 +222,8 @@ void dstar_lite_set_interval_msec(dstar_lite_t* dsl, int interval_msec);
 
 float dstar_lite_cost(
     const map_t* m, const coord_t* start, const coord_t* goal, void* userdata);
-dsl_cost_func    dstar_lite_get_cost_func(const dstar_lite_t* dsl);
-void dstar_lite_set_cost_func(dstar_lite_t* dsl, dsl_cost_func fn);
+cost_func    dstar_lite_get_cost_func(const dstar_lite_t* dsl);
+void dstar_lite_set_cost_func(dstar_lite_t* dsl, cost_func fn);
 void*    dstar_lite_get_cost_func_userdata(const dstar_lite_t* dsl);
 void dstar_lite_set_cost_func_userdata(
     dstar_lite_t* dsl, void* userdata);    
@@ -239,10 +239,10 @@ void dstar_lite_set_is_blocked_func_userdata(
 
 float dstar_lite_heuristic(
     const coord_t* start, const coord_t* goal, void* userdata);
-dsl_heuristic_func dstar_lite_get_heuristic_func(
+heuristic_func dstar_lite_get_heuristic_func(
     const dstar_lite_t* dsl);
 void         dstar_lite_set_heuristic_func(
-    dstar_lite_t* dsl, dsl_heuristic_func func);
+    dstar_lite_t* dsl, heuristic_func func);
 void* dstar_lite_get_heuristic_func_userdata(dstar_lite_t* dsl);
 void dstar_lite_set_heuristic_func_userdata(
     dstar_lite_t* dsl, void* userdata);    
