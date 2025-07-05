@@ -50,7 +50,7 @@ bool coord_list_equals(const coord_list_t* a, const coord_list_t* b);
 """)
 
 class c_coord_list:
-    def __init__(self, raw_ptr=None, own=True):
+    def __init__(self, raw_ptr=None, own=False):
         if raw_ptr is not None:
             self._c = raw_ptr
             self._own = own
@@ -61,7 +61,7 @@ class c_coord_list:
             self._own = True
 
         self._finalizer = weakref.finalize(
-            self, C.coord_list_free, self._c) if self._own else None
+            self, C.coord_list_free, self._c)
 
     def __len__(self):
         return C.coord_list_length(self._c)
@@ -164,3 +164,19 @@ class c_coord_list:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
+    def to_list(self):
+        """c_coord_list → Python list[c_coord]"""
+        return [c.copy() for c in self]
+
+    @classmethod
+    def from_list(cls, lst):
+        """
+        Python list[c_coord] → c_coord_list
+        """
+        clist = cls()
+        for c in lst:
+            if not isinstance(c, c_coord):
+                raise TypeError("from_list() expects only c_coord elements")
+            clist.append(c)
+        return clist

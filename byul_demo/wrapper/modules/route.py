@@ -150,19 +150,21 @@ bool route_reconstruct_path(
 """)
 
 class c_route:
-    def __init__(self, raw_ptr=None, cost=None, own=True):
+    def __init__(self, raw_ptr=None, cost=None, own=False):
         if raw_ptr:
             self._c = raw_ptr
+            self._own = own
         elif cost is not None:
             self._c = C.route_new_full(cost)
+            self._own = True
         else:
             self._c = C.route_new()
+            self._own = True
 
         if not self._c:
             raise MemoryError("route allocation failed")
 
-        self._own = own
-        self._finalizer = weakref.finalize(self, C.route_free, self._c) if own else None
+        self._finalizer = weakref.finalize(self, C.route_free, self._c)
 
     # ───── 기본 정보 ─────
     def cost(self):

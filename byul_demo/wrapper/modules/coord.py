@@ -31,10 +31,10 @@ ffi.cdef("""
 """)
 
 class c_coord:
-    def __init__(self, x=0, y=0, raw_ptr=None):
+    def __init__(self, x=0, y=0, raw_ptr=None, own=False):
         if raw_ptr is not None:
             self._c = raw_ptr
-            self._own = False
+            self._own = own
             self._finalizer = None
         else:
             self._c = C.coord_new_full(x, y)
@@ -124,3 +124,54 @@ class c_coord:
     @staticmethod
     def from_tuple(t: tuple):
         return c_coord(*t)
+    
+def test_coord_basic():
+    a = c_coord(3, 4)
+    b = c_coord(6, 8)
+    
+    print("a:", a)
+    print("b:", b)
+
+    assert a.to_tuple() == (3, 4)
+    assert b.to_tuple() == (6, 8)
+    assert a + b == c_coord(9, 12)
+    assert b - a == c_coord(3, 4)
+
+    print("distance(a, b):", a.distance(b))
+    print("manhattan(a, b):", a.manhattan_distance(b))
+    print("degree(a, b):", a.degree(b))
+
+
+def test_coord_eq_hash():
+    c1 = c_coord(1, 2)
+    c2 = c_coord(1, 2)
+    c3 = c_coord(2, 1)
+
+    assert c1 == c2
+    assert c1 != c3
+    coord_set = {c1.copy(), c2.copy(), c3.copy()}
+    assert len(coord_set) == 2
+
+
+def test_coord_copy_and_free():
+    c = c_coord(10, 20)
+    c2 = c.copy()
+    assert c == c2
+    c.close()
+    c2.close()
+
+
+def test_from_tuple():
+    t = (7, 9)
+    c = c_coord.from_tuple(t)
+    assert c.to_tuple() == t
+    print("from_tuple:", c)
+
+
+if __name__ == "__main__":
+    test_coord_basic()
+    test_coord_eq_hash()
+    test_coord_copy_and_free()
+    test_from_tuple()
+    print("✅ c_coord 모든 테스트 통과")
+

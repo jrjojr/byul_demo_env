@@ -8,8 +8,7 @@
 from ffi_core import ffi, C
 from coord import c_coord
 from map import c_map
-from dstar_lite import c_dstar_lite, MOVE_TO, CHANGE_COORDS
-from typing import List, Optional
+from dstar_lite import c_dstar_lite
 
 from pathlib import Path
 
@@ -17,7 +16,7 @@ from PySide6.QtGui import QPixmap, QPainter, QColor
 from PySide6.QtCore import QPoint, QRect, Qt, QTimer, QObject, Signal, Slot
 
 from route import c_route, RouteDir, calc_direction
-from list import c_list
+from coord_list import c_coord_list
 
 from world.village.village import Village
 from grid.grid_cell import TerrainType, GridCell, CellStatus
@@ -71,10 +70,8 @@ class NPC(QObject):
         self.influence_range = influence_range
         self.max_range = max_range
 
-        if start:
-            self.finder = c_dstar_lite.from_values(self.world.map, start)
-        else:
-            self.finder = c_dstar_lite.from_map(self.world.map)
+        c = c_coord.from_tuple(start)
+        self.finder = c_dstar_lite(self.world.map, c)
         
         self.compute_max_retry = compute_max_retry
         self.set_compute_max_retry(compute_max_retry)
@@ -122,36 +119,18 @@ class NPC(QObject):
 
         self.total_elapsed_sec = 0.0
 
-        # self.finder.move_func = MOVE_TO
-        self._move_cb_c = ffi.callback(
-            "void(const coord, void*)", self._move_cb)
-        self.finder.move_func = self._move_cb_c
+        self.finder.set_move_func(self._move_cb)
 
-        # self.finder.changed_coords_func = CHANGE_COORDS
-        self._changed_coords_cb_c = ffi.callback(
-            "coord_list_t*(void*)", self.world.changed_coords_cb)
-        self.finder.changed_coords_func = self._changed_coords_cb_c
+        self.finder.set_changed_coords_func(self.world.changed_coords_cb)
 
-        self._cost_cb_c = ffi.callback(
-            "float(const map, const coord, const coord, void*)",
-            self._cost_cb
-        )
-        self.finder.cost_func = self._cost_cb_c
-        # 반드시 C 함수로 등록
-        # C.dstar_lite_set_cost_func(self.finder.ptr(), self._cost_cb_c, ffi.NULL)        
-
-        self._is_blocked_cb_c = ffi.callback(
-            "bool(const map, gint, gint, void*)",
-            self._is_blocked_cb
-        )
-        # self.finder.is_blocked_func = self._is_blocked_cb_c
+        self.finder.set_cost_func(self._cost_cb)
 
         self.finding_thread = None
         
         self.finding_active = False
 
-        self._real_q = Queue()
-        self._proto_q = Queue()
+        # self._real_q = Queue()
+        # self._proto_q = Queue()
 
     @Slot(float)
     def set_disp_dx(self, dx:float):
@@ -186,39 +165,9 @@ class NPC(QObject):
     def reset(self):
         """NPC 상태를 초기화한다. (경로, 애니메이션, 큐 등)"""
         # 탐색기 재초기화
-        if self.start:
-            self.finder.close()
-            self.finder = c_dstar_lite.from_values(self.world.map, self.start)
-        else:
-            self.finder.close()
-            self.finder = c_dstar_lite.from_map(self.world.map)
+        self.finder.reset()
 
-        self.finder.max_range = self.max_range
-        self.finder.compute_max_retry = self.finder.compute_max_retry
-        self.finder.move_func = self._move_cb_c
-        self.finder.changed_coords_func = self._changed_coords_cb_c
-        self.finder.cost_func = self._cost_cb_c
-        # self.finder.is_blocked_func = self._is_blocked_cb_c
-
-        # 경로 초기화
-        # self.real_route.clear_coords()
-        # self.proto_route.clear_coords()
-        # self.proto_route.clear_visited()
-        # self.real_route.clear_visited()
         self.goal_list.clear()
-
-        # self._changed_q.shutdown()
-        # self._goal_q.shutdown()
-        # self._next_q.shutdown()
-        # self._real_q.shutdown()
-        # while not self._real_q.empty():
-        #     route = self._real_q.get()
-        #     route.close()  # 무조건 해제
-
-        # self._proto_q.shutdown()
-        # while not self._proto_q.empty():
-        #     route = self._proto_q.get()
-        #     route.close()  # 무조건 해제
 
         self.next = None
 
@@ -246,22 +195,7 @@ class NPC(QObject):
 
         self.phantom_start = None
 
-        # self._changed_q.shutdown()
-        # self._goal_q.shutdown()
-        # self._next_q.shutdown()
-
-        # while not self._real_q.empty():
-        #     route = self._real_q.get()
-        #     route.close()  # 무조건 해제
-
-        # # self._proto_q.shutdown()
-        # while not self._proto_q.empty():
-        #     route = self._proto_q.get()
-        #     route.close()  # 무조건 해제        
-
         self.finder.close()
-        # self.proto_route.close()
-        # self.real_route.close()
 
         # 🔸 로깅
         g_logger.log_debug(f"[NPC.close] npc({self.id}) 종료 완료")
@@ -271,21 +205,28 @@ class NPC(QObject):
 
     @property
     def start(self):
-        return self.finder.start.to_tuple()
-    
+        # return self.finder.start.to_tuple()
+        c = self.finder.get_start()
+        return c.to_tuple()
+        
     @start.setter
     def start(self, coord:tuple):
-        self.finder.start = c_coord.from_tuple(coord)
+        # self.finder.start = c_coord.from_tuple(coord)
+        c = c_coord.from_tuple(coord)
+        self.finder.set_start(c)
         # self.world.add_changed_coord(coord)
         self.start_changed_sig.emit(coord)
 
     @property
     def goal(self):
-        return self.finder.goal.to_tuple()
+        # return self.finder.goal.to_tuple()
+        c = self.finder.get_goal()
+        return c.to_tuple()
     
     @goal.setter
     def goal(self, coord: tuple):
-        self.finder.goal = c_coord.from_tuple(coord)
+        # self.finder.goal = c_coord.from_tuple(coord)
+        self.finder.set_goal(c_coord.from_tuple(coord))
         # self.world.add_changed_coord(coord)
         self.goal_changed_sig.emit(coord)
 
@@ -296,7 +237,7 @@ class NPC(QObject):
     @speed_kmh.setter
     def speed_kmh(self, kmh: float):
         self.m_speed_kmh = kmh
-        self.finder.interval_msec = self.interval_msec
+        self.finder.set_interval_msec(self.interval_msec)
         self.speed_kmh_changed.emit(kmh)
 
     @property
@@ -459,9 +400,10 @@ start_delay_sec : {self.start_delay_sec}''')
 
                     self.finder.find_proto()
                     route = self.finder.get_proto_route()
-                    self.proto_list.append(route.to_list())
+                    self.proto_list.append(route.coords().to_list())
 
-                    if route.success:
+                    # if route.success:
+                    if route.is_success():
                         g_logger.log_debug_threadsafe(f'proto route 찾기가 성공했다')
                     else:
                         g_logger.log_debug_threadsafe(f'proto route 찾기가 실패했다')
@@ -478,8 +420,9 @@ start_delay_sec : {self.start_delay_sec}''')
 
                     self.finder.find_loop()
                     route1 = self.finder.get_real_route()
-                    self.real_list.append(route1.to_list())
-                    if route1.success:
+                    self.real_list.append(route1.coords().to_list())
+                    # if route1.success:
+                    if route1.is_success():
                         g_logger.log_debug_threadsafe(f'real route 찾기가 성공했다')
                     else:
                         g_logger.log_debug_threadsafe(f'real route 찾기가 실패했다')
@@ -531,15 +474,23 @@ start_delay_sec : {self.start_delay_sec}''')
                     return  # 또는 그냥 남겨둠
             self.finding_thread = None
 
+    # def _move_cb(self, coord_c, userdata):
+    #     try:
+    #         c = c_coord(raw_ptr=coord_c).to_tuple()
+
+    #         g_logger.log_debug_threadsafe(f"[MOVE_CB] 받은 이동 좌표: {c}")
+    #         self.next_history.append(c)
+
+    #     except Exception as e:
+    #         g_logger.log_debug_threadsafe(f"[MOVE_CB] 예외 발생: {e}")
     def _move_cb(self, coord_c, userdata):
         try:
-            c = c_coord(raw_ptr=coord_c).to_tuple()
-
-            g_logger.log_debug_threadsafe(f"[MOVE_CB] 받은 이동 좌표: {c}")
-            self.next_history.append(c)
+            g_logger.log_debug_threadsafe(f"[MOVE_CB] 받은 이동 좌표: {coord_c}")
+            self.next_history.append(coord_c)
 
         except Exception as e:
             g_logger.log_debug_threadsafe(f"[MOVE_CB] 예외 발생: {e}")
+
 
     # def _cost_cb(self, map_ptr, start_ptr, goal_ptr, userdata):
     #     if not map_ptr or not start_ptr or not goal_ptr:
@@ -550,7 +501,10 @@ start_delay_sec : {self.start_delay_sec}''')
 
     #     tg = goal.to_tuple()
     #     cell = self.world.block_mgr.get_cell(tg)
-    #     if self.is_obstacle(cell):
+
+    #     if cell is None or self.is_obstacle(cell):
+    #         start.close()
+    #         goal.close()
     #         return ffi.cast("gfloat", float("inf"))
 
     #     dx = start.x - goal.x
@@ -559,31 +513,29 @@ start_delay_sec : {self.start_delay_sec}''')
     #     goal.close()
     #     return ffi.cast("gfloat", math.hypot(dx, dy))
     
-    def _cost_cb(self, map_ptr, start_ptr, goal_ptr, userdata):
-        if not map_ptr or not start_ptr or not goal_ptr:
-            return ffi.cast("gfloat", float("inf"))
-
-        start = c_coord(raw_ptr=start_ptr)
-        goal = c_coord(raw_ptr=goal_ptr)
-
+    # @staticmethod
+    def _cost_cb(self, map_obj, start, goal, userdata):
+        """
+        기본 비용 함수 예시. set_cost_func()에 전달 가능한 형태.
+        
+        - 장애물 셀은 inf 반환
+        - 아닌 경우 유클리드 거리 반환
+        """
         tg = goal.to_tuple()
         cell = self.world.block_mgr.get_cell(tg)
 
         if cell is None or self.is_obstacle(cell):
-            start.close()
-            goal.close()
-            return ffi.cast("gfloat", float("inf"))
+            return float('inf')
 
         dx = start.x - goal.x
         dy = start.y - goal.y
-        start.close()
-        goal.close()
-        return ffi.cast("gfloat", math.hypot(dx, dy))
+        return math.hypot(dx, dy)
 
-    def _is_blocked_cb(self, map:c_map, x, y, userdata):
+    @staticmethod
+    def _is_blocked_cb(map:c_map, x, y, userdata):
         c = (x, y)
-        cell = self.world.block_mgr.get_cell(c)
-        return self.is_obstacle(cell)
+        cell = userdata.world.block_mgr.get_cell(c)
+        return userdata.is_obstacle(cell)
 
     def draw(self, painter: QPainter,
                  start_win_pos_x:int, start_win_pos_y:int, cell_size):

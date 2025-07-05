@@ -73,7 +73,7 @@ void coord_hash_iter_free(
 """)
 
 class c_coord_hash:
-    def __init__(self, raw_ptr=None, own=True):
+    def __init__(self, raw_ptr=None, own=False):
         if raw_ptr is not None:
             self._c = raw_ptr
             self._own = own
@@ -84,7 +84,7 @@ class c_coord_hash:
             self._own = True
 
         self._finalizer = weakref.finalize(
-            self, C.coord_hash_free, self._c) if self._own else None
+            self, C.coord_hash_free, self._c)
 
     def __len__(self):
         return C.coord_hash_length(self._c)
@@ -183,6 +183,28 @@ class c_coord_hash:
 
     def __repr__(self):
         return f"c_coord_hash(len={len(self)})"
+
+    def to_dict(self):
+        """
+        coord_hash → Python dict[c_coord, Any]
+        """
+        result = {}
+        for key in self:
+            val = self.get(key)
+            result[key.copy()] = val  # 키는 c_coord 객체, 복사 안전
+        return result
+
+    @classmethod
+    def from_dict(cls, d: dict):
+        """
+        Python dict[c_coord, Any] → c_coord_hash
+        """
+        h = cls()
+        for k, v in d.items():
+            if not isinstance(k, c_coord):
+                raise TypeError("from_dict keys must be c_coord")
+            h.set(k, v)
+        return h
 
 class c_coord_hash_iter:
     def __init__(self, hash_obj: c_coord_hash):

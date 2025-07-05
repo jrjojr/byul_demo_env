@@ -85,10 +85,10 @@ BYUL_API const char* get_algo_name(route_algotype_t pa);
  * @brief 정적 길찾기 설정 구조체
  */
 typedef struct s_algo {
-    route_algotype_t type;
     map_t* map;                        ///< 경로를 탐색할 지도
-    coord_t start;                     ///< 시작 좌표
-    coord_t goal;                      ///< 도착 좌표
+    route_algotype_t type;
+    coord_t* start;                     ///< 시작 좌표
+    coord_t* goal;                      ///< 도착 좌표
     cost_func cost_fn;                ///< 비용 함수
     heuristic_func heuristic_fn;      ///< 휴리스틱 함수
     int max_retry;                    ///< 최대 반복 횟수
@@ -108,10 +108,11 @@ typedef struct s_algo {
  *
  * @return 초기화된 algo_t 포인터 (heap에 생성되며, 사용 후 algo_free로 해제해야 함)
  */
-BYUL_API algo_t* algo_new(void);
+BYUL_API algo_t* algo_new(map_t* map);
 
-BYUL_API algo_t* algo_new_full(route_algotype_t type, map_t* map, 
-    coord_t start, coord_t goal,
+BYUL_API algo_t* algo_new_full(map_t* map, 
+    route_algotype_t type, 
+    coord_t* start, coord_t* goal,
     cost_func cost_fn, heuristic_func heuristic_fn,
     int max_retry, bool visited_logging, void* userdata);
 
@@ -123,12 +124,12 @@ BYUL_API algo_t* algo_copy(const algo_t* src);
  * @brief 설정값 세터/게터
  */
 BYUL_API void algo_set_map(algo_t* a, map_t* map);
-BYUL_API void algo_set_start(algo_t* a, coord_t start);
-BYUL_API void algo_set_goal(algo_t* a, coord_t goal);
+BYUL_API void algo_set_start(algo_t* a, coord_t* start);
+BYUL_API void algo_set_goal(algo_t* a, coord_t* goal);
 
 BYUL_API map_t* algo_get_map(const algo_t* a);
-BYUL_API coord_t algo_get_start(const algo_t* a);
-BYUL_API coord_t algo_get_goal(const algo_t* a);
+BYUL_API coord_t* algo_get_start(const algo_t* a);
+BYUL_API coord_t* algo_get_goal(const algo_t* a);
 
 BYUL_API void algo_set_userdata(algo_t* a, void* userdata);
 BYUL_API void* algo_get_userdata(algo_t* a);

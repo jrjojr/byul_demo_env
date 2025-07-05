@@ -70,18 +70,100 @@ class RouteAlgotype(IntEnum):
     ROUTE_ALGO_MCTS =41 #                     // 2006
 
 ffi.cdef("""
-typedef enum e_route_algotype route_algotype_t;
+         
+typedef float (*cost_func)(
+    const map_t*, const coord_t*, const coord_t*, void*);
 
-BYUL_API const char* get_algo_name(route_algotype_t pa);
+typedef float (*heuristic_func)(const coord_t*, const coord_t*, void*);
+         
+float default_cost(
+    const map_t*, const coord_t*, const coord_t*, void*);         
+                  
+/**
+ * @brief 유클리드 거리 휴리스틱
+ */
+float euclidean_heuristic(const coord_t*, const coord_t*, void*);
+
+/**
+ * @brief 맨해튼 거리 휴리스틱
+ */
+float manhattan_heuristic(const coord_t*, const coord_t*, void*);
+         
+/**
+ * @brief 기본 휴리스틱 ( 유클리드)
+ */
+float default_heuristic(const coord_t*, const coord_t*, void*);         
+                  
+typedef enum e_route_algotype{
+    ROUTE_ALGO_UNKNOWN = 0,
+
+    // 1950s~1960s
+    ROUTE_ALGO_BELLMAN_FORD,            // 1958
+    ROUTE_ALGO_DFS,                     // 1959
+    ROUTE_ALGO_BFS,                     // 1959
+    ROUTE_ALGO_DIJKSTRA,                // 1959
+    ROUTE_ALGO_FLOYD_WARSHALL,          // 1959~
+    ROUTE_ALGO_ASTAR,                   // 1968
+
+    // 1970s
+    ROUTE_ALGO_BIDIRECTIONAL_DIJKSTRA,  // 1971
+    ROUTE_ALGO_BIDIRECTIONAL_ASTAR,     // 1971
+    ROUTE_ALGO_WEIGHTED_ASTAR,          // 1977~
+    ROUTE_ALGO_JOHNSON,                 // 1977
+    ROUTE_ALGO_K_SHORTEST_PATH,         // 1977~
+    ROUTE_ALGO_DIAL,                    // 1969
+
+    // 1980s
+    ROUTE_ALGO_ITERATIVE_DEEPENING,     // 1980
+    ROUTE_ALGO_GREEDY_BEST_FIRST,       // 1985
+    ROUTE_ALGO_IDA_STAR,                // 1985
+
+    // 1990s
+    ROUTE_ALGO_RTA_STAR,                // 1990
+    ROUTE_ALGO_SMA_STAR,                // 1991
+    ROUTE_ALGO_DSTAR,                   // 1994
+    ROUTE_ALGO_FAST_MARCHING,           // 1996
+    ROUTE_ALGO_ANT_COLONY,              // 1996
+    ROUTE_ALGO_FRINGE_SEARCH,           // 1997
+
+    // 2000s
+    ROUTE_ALGO_FOCAL_SEARCH,            // 2001
+    ROUTE_ALGO_DSTAR_LITE,              // 2002
+    ROUTE_ALGO_LPA_STAR,                // 2004
+    ROUTE_ALGO_HPA_STAR,                // 2004
+    ROUTE_ALGO_ALT,                     // 2005
+    ROUTE_ALGO_ANY_ANGLE_ASTAR,         // 2005~
+    ROUTE_ALGO_HCA_STAR,                // 2005
+    ROUTE_ALGO_RTAA_STAR,               // 2006
+    ROUTE_ALGO_THETA_STAR,              // 2007
+    ROUTE_ALGO_CONTRACTION_HIERARCHIES,// 2008
+
+    // 2010s
+    ROUTE_ALGO_LAZY_THETA_STAR,         // 2010
+    ROUTE_ALGO_JUMP_POINT_SEARCH,       // 2011
+    ROUTE_ALGO_SIPP,                    // 2011
+    ROUTE_ALGO_JPS_PLUS,                // 2012
+    ROUTE_ALGO_EPEA_STAR,               // 2012
+    ROUTE_ALGO_MHA_STAR,                // 2012
+    ROUTE_ALGO_ANYA,                    // 2013
+
+    // 특수 목적 / 확장형
+    ROUTE_ALGO_DAG_SP,                  // 1960s (DAG 최단경로 O(V+E))
+    ROUTE_ALGO_MULTI_SOURCE_BFS,        // 2000s (복수 시작점 BFS)
+    ROUTE_ALGO_MCTS                     // 2006
+} route_algotype_t;
+
+
+const char* get_algo_name(route_algotype_t pa);
 
 /** 
  * @brief 정적 길찾기 설정 구조체
  */
 typedef struct s_algo {
-    route_algotype_t type;
     map_t* map;                        ///< 경로를 탐색할 지도
-    coord_t start;                     ///< 시작 좌표
-    coord_t goal;                      ///< 도착 좌표
+    route_algotype_t type;
+    coord_t* start;                     ///< 시작 좌표
+    coord_t* goal;                      ///< 도착 좌표
     cost_func cost_fn;                ///< 비용 함수
     heuristic_func heuristic_fn;      ///< 휴리스틱 함수
     int max_retry;                    ///< 최대 반복 횟수
@@ -101,35 +183,35 @@ typedef struct s_algo {
  *
  * @return 초기화된 algo_t 포인터 (heap에 생성되며, 사용 후 algo_free로 해제해야 함)
  */
-BYUL_API algo_t* algo_new(void);
+algo_t* algo_new(void);
 
-BYUL_API algo_t* algo_new_full(route_algotype_t type, map_t* map, 
-    coord_t start, coord_t goal,
+algo_t* algo_new_full(map_t* map, route_algotype_t type, 
+    coord_t* start, coord_t* goal,
     cost_func cost_fn, heuristic_func heuristic_fn,
     int max_retry, bool visited_logging, void* userdata);
 
-BYUL_API void algo_free(algo_t* a);
+void algo_free(algo_t* a);
 
-BYUL_API algo_t* algo_copy(const algo_t* src);
+algo_t* algo_copy(const algo_t* src);
 
 /**
  * @brief 설정값 세터/게터
  */
-BYUL_API void algo_set_map(algo_t* a, map_t* map);
-BYUL_API void algo_set_start(algo_t* a, coord_t start);
-BYUL_API void algo_set_goal(algo_t* a, coord_t goal);
+void algo_set_map(algo_t* a, map_t* map);
+void algo_set_start(algo_t* a, coord_t* start);
+void algo_set_goal(algo_t* a, coord_t* goal);
 
-BYUL_API map_t* algo_get_map(const algo_t* a);
-BYUL_API coord_t algo_get_start(const algo_t* a);
-BYUL_API coord_t algo_get_goal(const algo_t* a);
+map_t* algo_get_map(const algo_t* a);
+coord_t* algo_get_start(const algo_t* a);
+coord_t* algo_get_goal(const algo_t* a);
 
-BYUL_API void algo_set_userdata(algo_t* a, void* userdata);
-BYUL_API void* algo_get_userdata(algo_t* a);
+void algo_set_userdata(algo_t* a, void* userdata);
+void* algo_get_userdata(algo_t* a);
 
 /**
  * @brief 설정값 기본화 및 검증
  */
-BYUL_API void algo_clear(algo_t* a);
+void algo_clear(algo_t* a);
 
 /**
  * @brief algo_t 구조체의 기본값을 설정합니다.
@@ -141,23 +223,23 @@ BYUL_API void algo_clear(algo_t* a);
  *
  * @param a 기본값을 설정할 algo_t 포인터
  */
-BYUL_API void algo_set_defaults(algo_t* a);
+void algo_set_defaults(algo_t* a);
 
-BYUL_API bool algo_is_valid(const algo_t* a);
-BYUL_API void algo_print(const algo_t* a);
+bool algo_is_valid(const algo_t* a);
+void algo_print(const algo_t* a);
 
 /**
  * @brief 정적 길찾기 실행 (알고리즘 유형 분기 포함)
  */
-BYUL_API route_t* algo_find(const algo_t* a, route_algotype_t type);
+route_t* algo_find(const algo_t* a, route_algotype_t type);
 
 /**
  * @brief 알고리즘별 직접 실행 함수 (정적 길찾기 전용)
  */
-BYUL_API route_t* algo_find_astar(const algo_t* a);
-BYUL_API route_t* algo_find_bfs(const algo_t* a);
-BYUL_API route_t* algo_find_dfs(const algo_t* a);
-BYUL_API route_t* algo_find_dijkstra(const algo_t* a);
+route_t* algo_find_astar(const algo_t* a);
+route_t* algo_find_bfs(const algo_t* a);
+route_t* algo_find_dfs(const algo_t* a);
+route_t* algo_find_dijkstra(const algo_t* a);
 
 /**
  * @brief Fringe Search 알고리즘을 실행합니다.
@@ -172,10 +254,10 @@ BYUL_API route_t* algo_find_dijkstra(const algo_t* a);
  *
  * @return 계산된 경로(route_t*) 또는 실패 시 NULL
  */
-BYUL_API route_t* algo_find_fringe_search(const algo_t* a);
+route_t* algo_find_fringe_search(const algo_t* a);
 
-BYUL_API route_t* algo_find_greedy_best_first(const algo_t* a);
-BYUL_API route_t* algo_find_ida_star(const algo_t* a);
+route_t* algo_find_greedy_best_first(const algo_t* a);
+route_t* algo_find_ida_star(const algo_t* a);
 
 /**
  * @brief Real-Time A* (RTA*) 알고리즘을 실행합니다.
@@ -189,9 +271,9 @@ BYUL_API route_t* algo_find_ida_star(const algo_t* a);
  *
  * @return 계산된 경로(route_t*) 또는 실패 시 NULL
  */
-BYUL_API route_t* algo_find_rta_star(const algo_t* a);
+route_t* algo_find_rta_star(const algo_t* a);
 
-BYUL_API route_t* algo_find_sma_star(const algo_t* a);
+route_t* algo_find_sma_star(const algo_t* a);
 
 /**
  * @brief Weighted A* 알고리즘을 실행합니다.
@@ -205,16 +287,16 @@ BYUL_API route_t* algo_find_sma_star(const algo_t* a);
  *
  * @return 계산된 경로(route_t*) 또는 실패 시 NULL
  */
-BYUL_API route_t* algo_find_weighted_astar(const algo_t* a);
+route_t* algo_find_weighted_astar(const algo_t* a);
 
-BYUL_API route_t* algo_find_fast_marching(const algo_t* a);
+route_t* algo_find_fast_marching(const algo_t* a);
 
 """)
 
 class c_algo:
     def __init__(self, 
+                 map: c_map,
                  algotype: RouteAlgotype = RouteAlgotype.ROUTE_ALGO_ASTAR,
-                 m: c_map = None,
                  start: c_coord = None,
                  goal: c_coord = None,
                  cost_fn = None,
@@ -222,11 +304,11 @@ class c_algo:
                  max_retry: int = 10000,
                  visited_logging: bool = False,
                  userdata = None,
-                 raw_ptr = None,
-                 own: bool = True):
+                 raw_ptr = None, own=False):
         
         if raw_ptr:
             self._c = raw_ptr
+            self._own = own
         else:
             if not start or not goal:
                 start = start or c_coord(0, 0)
@@ -237,8 +319,8 @@ class c_algo:
                 heuristic_fn = C.euclidean_heuristic
 
             self._c = C.algo_new_full(
-                algotype,
-                m.ptr() if m else ffi.NULL,
+                map.ptr(),
+                algotype.value,
                 start._c,
                 goal._c,
                 cost_fn,
@@ -247,13 +329,13 @@ class c_algo:
                 visited_logging,
                 ffi.NULL if userdata is None else ffi.new_handle(userdata)
             )
+            self._own = True
         
         if not self._c:
             raise MemoryError("algo allocation failed")
 
-        self._own = own
         self._finalizer = weakref.finalize(
-            self, C.algo_free, self._c) if own else None
+            self, C.algo_free, self._c)
         
         self.algotype = algotype
 
@@ -268,8 +350,8 @@ class c_algo:
         ptr = C.algo_find(self._c, self.algotype)
         return c_route(raw_ptr=ptr, own=True) if ptr != ffi.NULL else None
 
-    def set_map(self, m: c_map):
-        C.algo_set_map(self._c, m.ptr())
+    def set_map(self, map: c_map):
+        C.algo_set_map(self._c, map.ptr())
 
     def set_start(self, coord: c_coord):
         C.algo_set_start(self._c, coord._c)

@@ -79,29 +79,42 @@ coord_list_t* map_clone_neighbors_at_degree_range(
 """)
 
 class c_map:
-    def __init__(self, raw_ptr=None, 
-            width=None, height=None, mode=MapNeighborMode.DIR_4, own=True):
+    def __init__(self, raw_ptr=None, own=False,
+            width=None, height=None, mode=MapNeighborMode.DIR_8):
         
         if raw_ptr:
             self._c = raw_ptr
+            self._own = own
         elif width is not None and height is not None:
-            self._c = C.map_new_full(width, height, mode)
+            self._c = C.map_new_full(width, height, mode.value)
+            self._own = True
         else:
             self._c = C.map_new()
+            self._own = True
 
         if not self._c:
             raise MemoryError("map allocation failed")
 
-        self._own = own
+
         self._finalizer = weakref.finalize(
-            self, C.map_free, self._c) if own else None
+            self, C.map_free, self._c)
 
     # ───── 속성 접근 ─────
+    @property
     def width(self):
         return C.map_get_width(self._c)
+    
+    @width.setter
+    def width(self, w):
+        return self.set_width(w)
 
+    @property
     def height(self):
         return C.map_get_height(self._c)
+    
+    @height.setter
+    def height(self, h):
+        self.set_height(h)
 
     def mode(self):
         return MapNeighborMode(C.map_get_mode(self._c))
@@ -113,7 +126,7 @@ class c_map:
         C.map_set_height(self._c, h)
 
     def set_mode(self, mode: MapNeighborMode):
-        C.map_set_mode(self._c, mode)
+        C.map_set_mode(self._c, mode.value)
 
     # ───── 장애물 관련 ─────
     def block(self, x, y):

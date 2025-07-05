@@ -49,16 +49,18 @@ void cost_coord_pq_trim_worst(cost_coord_pq_t* pq, int n);
 """)
 
 class c_cost_coord_pq:
-    def __init__(self, raw_ptr=None, own=True):
+    def __init__(self, raw_ptr=None, own=False):
         if raw_ptr:
             self._c = raw_ptr
+            self._own = own
         else:
             self._c = C.cost_coord_pq_new()
+            self._own = True
             if not self._c:
                 raise MemoryError("cost_coord_pq allocation failed")
-        self._own = own
+        
         self._finalizer = weakref.finalize(
-            self, C.cost_coord_pq_free, self._c) if own else None
+            self, C.cost_coord_pq_free, self._c)
 
     def push(self, cost: float, coord: c_coord):
         C.cost_coord_pq_push(self._c, cost, coord.ptr())

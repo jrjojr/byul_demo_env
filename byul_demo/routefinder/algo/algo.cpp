@@ -39,16 +39,17 @@ const char* get_algo_name(route_algotype_t pa) {
     }
 }
 
-algo_t* algo_new_full(route_algotype_t type, map_t* map, 
-    coord_t start, coord_t goal,
+algo_t* algo_new_full(map_t* map, 
+    route_algotype_t type, 
+    coord_t* start, coord_t* goal,
     cost_func cost_fn, heuristic_func heuristic_fn,
     int max_retry, bool visited_logging, void* userdata) {
 
     algo_t* a = new algo_t;
     a->type = type;
     a->map = map;
-    a->start = start;
-    a->goal = goal;
+    a->start = coord_copy(start);
+    a->goal = coord_copy(goal);
     a->cost_fn = cost_fn;
     a->heuristic_fn = heuristic_fn;
     a->max_retry = max_retry;
@@ -57,20 +58,25 @@ algo_t* algo_new_full(route_algotype_t type, map_t* map,
     return a;
 }
 
-algo_t* algo_new(void) {
-    return algo_new_full(ROUTE_ALGO_ASTAR, nullptr, {}, {}, 
+algo_t* algo_new(map_t* map) {
+    coord_t start;
+    start.x = 0;
+    start.y = 0;
+    return algo_new_full(map, ROUTE_ALGO_ASTAR, &start, &start, 
         default_cost, euclidean_heuristic, 10000, false, nullptr);
 }
 
 void algo_free(algo_t* a) {
+    if(a->start) coord_free(a->start);
+    if(a->goal) coord_free(a->goal);
     delete a;
 }
 
 algo_t* algo_copy(const algo_t* src) {
     if (!src) return nullptr;
     return algo_new_full(
-        src->type,
         src->map,
+        src->type,
         src->start,
         src->goal,
         src->cost_fn,
@@ -106,8 +112,8 @@ void algo_print(const algo_t* a) {
     printf("algo_t {\n");
     printf("  type:        %s\n", get_algo_name(a->type));
     printf("  map:         %p\n", (void*)a->map);
-    printf("  start:       (%d, %d)\n", a->start.x, a->start.y);
-    printf("  goal:        (%d, %d)\n", a->goal.x, a->goal.y);
+    printf("  start:       (%d, %d)\n", a->start->x, a->start->y);
+    printf("  goal:        (%d, %d)\n", a->goal->x, a->goal->y);
     printf("  cost_fn:     %p\n", (void*)a->cost_fn);
     printf("  heuristic_fn:%p\n", (void*)a->heuristic_fn);
     printf("  max_retry:   %d\n", a->max_retry);
@@ -120,11 +126,11 @@ void algo_set_map(algo_t* a, map_t* map) {
      a->map = map; 
 }
 
-void algo_set_start(algo_t* a, coord_t start) { 
+void algo_set_start(algo_t* a, coord_t* start) { 
     a->start = start; 
 }
 
-void algo_set_goal(algo_t* a, coord_t goal) { 
+void algo_set_goal(algo_t* a, coord_t* goal) { 
     a->goal = goal; 
 }
 
@@ -132,11 +138,11 @@ map_t* algo_get_map(const algo_t* a) {
     return a->map; 
 }
 
-coord_t algo_get_start(const algo_t* a) { 
+coord_t* algo_get_start(const algo_t* a) { 
     return a->start; 
 }
 
-coord_t algo_get_goal(const algo_t* a) { 
+coord_t* algo_get_goal(const algo_t* a) { 
     return a->goal; 
 }
 
@@ -167,22 +173,22 @@ route_t* algo_find(const algo_t* a, route_algotype_t type) {
 }
 
 route_t* algo_find_astar(const algo_t* a){
-    return find_astar(a->map, &a->start, &a->goal, 
+    return find_astar(a->map, a->start, a->goal, 
         a->cost_fn, a->heuristic_fn, a->max_retry, a->visited_logging);
 }
 
 route_t* algo_find_bfs(const algo_t* a){
-    return find_bfs(a->map, &a->start, &a->goal, 
+    return find_bfs(a->map, a->start, a->goal, 
         a->max_retry, a->visited_logging);
 }
 
 route_t* algo_find_dfs(const algo_t* a){
-    return find_dfs(a->map, &a->start, &a->goal, a->max_retry,
+    return find_dfs(a->map, a->start, a->goal, a->max_retry,
         a->visited_logging);
 }
 
 route_t* algo_find_dijkstra(const algo_t* a){
-    return find_dijkstra(a->map, &a->start, &a->goal, a->cost_fn,
+    return find_dijkstra(a->map, a->start, a->goal, a->cost_fn,
         a->max_retry, a->visited_logging);
 }
 
@@ -196,19 +202,19 @@ route_t* algo_find_fringe_search(const algo_t* a) {
         }
     }
 
-    return find_fringe_search(a->map, &a->start, &a->goal,
+    return find_fringe_search(a->map, a->start, a->goal,
         a->cost_fn, a->heuristic_fn, delta_epsilon,
         a->max_retry, a->visited_logging);
 }
 
 
 route_t* algo_find_greedy_best_first(const algo_t* a){
-    return find_greedy_best_first(a->map, &a->start, &a->goal,
+    return find_greedy_best_first(a->map, a->start, a->goal,
     a->heuristic_fn, a->max_retry, a->visited_logging);
 }
 
 route_t* algo_find_ida_star(const algo_t* a){
-    return find_ida_star(a->map, &a->start, &a->goal,
+    return find_ida_star(a->map, a->start, a->goal,
     a->cost_fn, a->heuristic_fn, a->max_retry, a->visited_logging);
 }
 
@@ -222,14 +228,14 @@ route_t* algo_find_rta_star(const algo_t* a) {
         }
     }
 
-    return find_rta_star(a->map, &a->start, &a->goal,
+    return find_rta_star(a->map, a->start, a->goal,
         a->cost_fn, a->heuristic_fn, depth_limit,
         a->max_retry, a->visited_logging);
 }
 
 route_t* algo_find_sma_star(const algo_t* a){
     int memory_limit = *(int*)a->userdata;
-    return find_sma_star(a->map, &a->start, &a->goal,
+    return find_sma_star(a->map, a->start, a->goal,
     a->cost_fn, a->heuristic_fn, memory_limit,
     a->max_retry, a->visited_logging);
 }
@@ -244,12 +250,12 @@ route_t* algo_find_weighted_astar(const algo_t* a) {
         }
     }
 
-    return find_weighted_astar(a->map, &a->start, &a->goal,
+    return find_weighted_astar(a->map, a->start, a->goal,
         a->cost_fn, a->heuristic_fn, weight,
         a->max_retry, a->visited_logging);
 }
 
 route_t* algo_find_fast_marching(const algo_t* a){
-    return find_fast_marching(a->map, &a->start, &a->goal,
+    return find_fast_marching(a->map, a->start, a->goal,
     a->cost_fn, a->max_retry, a->visited_logging);
 }

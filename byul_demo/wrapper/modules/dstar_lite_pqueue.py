@@ -54,16 +54,17 @@ bool dstar_lite_pqueue_contains(
 """)
 
 class c_dstar_lite_pqueue:
-    def __init__(self, raw_ptr=None, own=True):
+    def __init__(self, raw_ptr=None, own=False):
         if raw_ptr:
             self._c = raw_ptr
+            self._own = own
         else:
             self._c = C.dstar_lite_pqueue_new()
             if not self._c:
                 raise MemoryError("dstar_lite_pqueue allocation failed")
-        self._own = own
+            self._own = True
         self._finalizer = weakref.finalize(
-            self, C.dstar_lite_pqueue_free, self._c) if own else None
+            self, C.dstar_lite_pqueue_free, self._c)
 
     def push(self, key: c_dstar_lite_key, coord: c_coord):
         C.dstar_lite_pqueue_push(self._c, key.ptr(), coord.ptr())
@@ -74,7 +75,9 @@ class c_dstar_lite_pqueue:
 
     def pop(self):
         ptr = C.dstar_lite_pqueue_pop(self._c)
-        return c_coord(raw_ptr=ptr) if ptr != ffi.NULL else None
+        x = C.coord_get_x(ptr)
+        y = C.coord_get_y(ptr)
+        return c_coord(x, y) if ptr != ffi.NULL else None
 
     def top_key(self):
         ptr = C.dstar_lite_pqueue_top_key(self._c)

@@ -232,7 +232,9 @@ dstar_lite_t* dstar_lite_new_full(map_t* m, coord_t* start,
     dsl->real_loop_max_retry = auto_compute_max_retry(dsl->start, dsl->goal);
 
     dsl->compute_max_retry = auto_compute_max_retry(dsl->start, dsl->goal);
-    dsl->reconstruct_max_retry = auto_reconstruct_max_retry(dsl->start, dsl->goal);
+    
+    dsl->reconstruct_max_retry = auto_reconstruct_max_retry(
+        dsl->start, dsl->goal);
 
     dsl->cost_fn = cost_fn ? cost_fn : dstar_lite_cost;
     dsl->heuristic_fn = heuristic_fn ? heuristic_fn : dstar_lite_heuristic;

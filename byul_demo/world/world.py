@@ -16,7 +16,7 @@ from utils.log_to_panel import g_logger
 import time
 
 from queue import Queue, Empty
-from list import c_list
+from coord_list import c_coord_list
 
 FIRST_NPC_ID = 'first_npc'
 FIRST_VILLAGE_ID = 'first_village'
@@ -51,7 +51,6 @@ class World(QObject):
         # 기본 NPC 생성
         self.m_selected_npc = None        
         npc = self.spawn_npc(FIRST_NPC_ID, (0, 0))
-
 
         self.selected_village = village
         
@@ -477,11 +476,11 @@ class World(QObject):
     def changed_coords_cb(self, userdata):
         g_logger.log_debug_threadsafe('_changed_coords_cb 호출됨')
 
-        c_list_obj = c_list()
+        c_list_obj = c_coord_list()
 
         while not self._changed_q.empty():
             tu = self._changed_q.get_nowait()
             c = c_coord.from_tuple(tu)
             c._own = False
-            c_list_obj.append(c.ptr())
-        return c_list_obj.ptr()
+            c_list_obj.append(c)
+        return c_list_obj

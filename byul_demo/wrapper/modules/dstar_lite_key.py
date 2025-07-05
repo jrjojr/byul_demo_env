@@ -48,17 +48,18 @@ unsigned int dstar_lite_key_hash(const dstar_lite_key_t* key);
 """)
 
 class c_dstar_lite_key:
-    def __init__(self, k1=0.0, k2=0.0, raw_ptr=None, own=True):
+    def __init__(self, k1=0.0, k2=0.0, raw_ptr=None, own=False):
         if raw_ptr:
             self._c = raw_ptr
+            self._own = own
         else:
             self._c = C.dstar_lite_key_new_full(k1, k2)
             if not self._c:
                 raise MemoryError("dstar_lite_key allocation failed")
+            self._own = True
 
-        self._own = own
         self._finalizer = weakref.finalize(
-            self, C.dstar_lite_key_free, self._c) if own else None
+            self, C.dstar_lite_key_free, self._c)
 
     def copy(self):
         ptr = C.dstar_lite_key_copy(self._c)

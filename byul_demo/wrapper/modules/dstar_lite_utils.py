@@ -17,10 +17,10 @@ ffi.cdef("""
 // ------------------ 디버그용 테이블 출력 ------------------
 
 /// @brief g 테이블 출력 (좌표별 g값)
-BYUL_API void dsl_debug_print_g_table(const map_t* m, coord_hash_t* g_table);
+void dsl_debug_print_g_table(const map_t* m, coord_hash_t* g_table);
 
 /// @brief rhs 테이블 출력 (좌표별 rhs값)
-BYUL_API void dsl_debug_print_rhs_table(
+void dsl_debug_print_rhs_table(
     const map_t* m, coord_hash_t* rhs_table);
 
 // ------------------ D* Lite 상태 전체 출력 ------------------
@@ -36,7 +36,7 @@ BYUL_API void dsl_debug_print_rhs_table(
 /// @param retry_limit      최대 재시도 횟수
 /// @param debug_mode       디버그 모드 여부
 /// @param update_counter   update_vertex 횟수 테이블
-BYUL_API void dsl_debug_print_full_state(
+void dsl_debug_print_full_state(
     const dstar_lite_t* dsl,
     const coord_t* goal,
     float km,
@@ -51,7 +51,7 @@ BYUL_API void dsl_debug_print_full_state(
 // ------------------ 간략 출력 ------------------
 
 /// @brief 핵심 변수만 간략히 출력 (g/rhs/priority queue만)
-BYUL_API void dsl_debug_print_state(
+void dsl_debug_print_state(
     const dstar_lite_t* dsl,
     const coord_t* goal,
     float km,
@@ -62,14 +62,14 @@ BYUL_API void dsl_debug_print_state(
 // ------------------ ASCII 맵 출력 ------------------
 
 /// @brief 맵만 출력 (`#`, `.`만 표시)
-BYUL_API void dsl_print_ascii_only_map(const dstar_lite_t* dsl);
+void dsl_print_ascii_only_map(const dstar_lite_t* dsl);
 
 /// @brief 시작, 목표, 경로까지 포함한 맵 출력 (`S`, `G`, `*`, `.`, `#`)
-BYUL_API void dsl_print_ascii_route(
+void dsl_print_ascii_route(
     const dstar_lite_t* dsl, const route_t* route, int margin);
 
 /// @brief update_vertex 횟수 포함한 맵 출력 (`S`, `G`, `*`, `#`, 숫자 등)
-BYUL_API void dsl_print_ascii_update_count(
+void dsl_print_ascii_update_count(
     const dstar_lite_t* dsl, const route_t* route, int margin);
 
 """)

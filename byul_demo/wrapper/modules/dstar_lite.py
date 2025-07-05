@@ -362,26 +362,30 @@ void dstar_lite_set_force_quit(dstar_lite_t* dsl, bool v);
 
 class c_dstar_lite:
     def __init__(self, m: c_map = None, start: c_coord = None,
-                 cost_fn=None, heuristic_fn=None, debug=False, 
-                 raw_ptr=None, own=True):
+                cost_fn=None, heuristic_fn=None, debug=False, 
+                raw_ptr=None, own=False):
+        
         if raw_ptr:
             self._c = raw_ptr
-        elif start and cost_fn and heuristic_fn:
+            self._own = own            
+        elif start:
             self._c = C.dstar_lite_new_full(
-                m.ptr() if m else ffi.NULL,
+                m.ptr(),
                 start.ptr(),
-                cost_fn, heuristic_fn,
+                cost_fn if cost_fn is not None else ffi.NULL,
+                heuristic_fn if heuristic_fn is not None else ffi.NULL,
                 debug
             )
+            self._own = True
         else:
-            self._c = C.dstar_lite_new(m.ptr() if m else ffi.NULL)
+            self._c = C.dstar_lite_new(m.ptr())
+            self._own = True            
 
         if not self._c:
             raise MemoryError("dstar_lite allocation failed")
-
-        self._own = own
+        
         self._finalizer = weakref.finalize(
-            self, C.dstar_lite_free, self._c) if own else None
+            self, C.dstar_lite_free, self._c)
 
     def ptr(self):
         return self._c
@@ -427,6 +431,64 @@ class c_dstar_lite:
 
     def set_max_range(self, v):
         C.dstar_lite_set_max_range(self._c, v)
+
+    @property
+    def real_loop_max_retry(self):
+        # gint   dstar_lite_get_real_loop_max_retry(const dstar_lite dsl);
+        return C.dstar_lite_get_real_loop_max_retry(self.ptr())
+
+    @real_loop_max_retry.setter
+    def real_loop_max_retry(self, value:int):
+        # void   dstar_lite_set_real_loop_max_retry(
+        #     dstar_lite dsl, gint value);
+        C.dstar_lite_set_real_loop_max_retry(self.ptr(), value)
+
+    @property
+    def compute_max_retry(self):
+        # // 10x10의 맵에서 100은 되어야 잘 찾는거 같다.
+        # gint dstar_lite_get_compute_max_retry(const dstar_lite dsl);
+        return C.dstar_lite_get_compute_max_retry(self.ptr())
+
+    @compute_max_retry.setter
+    def compute_max_retry(self, value:int):
+        # void dstar_lite_set_compute_max_retry(
+        #     const dstar_lite dsl, gint v);
+        C.dstar_lite_set_compute_max_retry(self.ptr(), value)
+
+    @property
+    def reconstruct_max_retry(self):
+        # // proto route 생성할때 reconstruct_route한다. 여기에 사용하는 루프
+        # // 10x10에서 100은 오버고 10은 너무 작고 대충 40 정도면 되겠다.
+        # gint dstar_lite_get_reconstruct_max_retry(const dstar_lite dsl);
+        return C.dstar_lite_get_reconstruct_max_retry(self.ptr())
+
+    @reconstruct_max_retry.setter
+    def reconstruct_max_retry(self, value:int):
+        # void dstar_lite_set_reconstruct_max_retry(
+        #     const dstar_lite dsl, gint v);
+        C.dstar_lite_set_reconstruct_max_retry(self.ptr(), value)
+
+    
+    @property
+    def proto_compute_retry_count(self):
+        # gint dstar_lite_proto_compute_retry_count(dstar_lite dsl);
+        return C.dstar_lite_proto_compute_retry_count(self.ptr())
+
+    @property
+    def real_compute_retry_count(self):
+        # gint dstar_lite_real_compute_retry_count(dstar_lite dsl);
+        return C.dstar_lite_real_compute_retry_count(self.ptr())
+
+    @property
+    def real_loop_retry_count(self):
+        # gint dstar_lite_real_loop_retry_count(dstar_lite dsl);
+        return C.dstar_lite_real_loop_retry_count(self.ptr())
+
+    @property
+    def reconstruct_retry_count(self):
+        # gint dstar_lite_reconstruct_retry_count(dstar_lite dsl);         
+        return C.dstar_lite_reconstruct_retry_count(self.ptr())
+
 
     def set_interval_msec(self, v):
         C.dstar_lite_set_interval_msec(self._c, v)
@@ -546,7 +608,10 @@ start={self.get_start()}, goal={self.get_goal()}, km={self.get_km():.2f})'''
     def set_cost_func(self, py_func: callable, userdata: Any = None):
         self._py_cost_func = py_func
         self._cost_func_userdata = userdata
-        self._ffi_cost_func_userdata = ffi.new_handle(userdata)
+        # self._ffi_cost_func_userdata = ffi.new_handle(userdata)
+        self._ffi_cost_func_userdata = (
+            ffi.new_handle(userdata) if userdata is not None else ffi.NULL
+        )        
 
         @ffi.callback(
                 "float(const map_t*, const coord_t*, const coord_t*, void*)")
@@ -554,25 +619,31 @@ start={self.get_start()}, goal={self.get_goal()}, km={self.get_km():.2f})'''
             map_obj = c_map(raw_ptr=m_ptr, own=False)
             start = c_coord(raw_ptr=s_ptr)
             goal = c_coord(raw_ptr=g_ptr)
-            user = ffi.from_handle(udata_ptr)
+            # user = ffi.from_handle(udata_ptr)
+            user = ffi.from_handle(udata_ptr) if udata_ptr else None
             return py_func(map_obj, start, goal, user)
 
         self._ffi_cost_func = _wrapped
         C.dstar_lite_set_cost_func(self._c, _wrapped)
         C.dstar_lite_set_cost_func_userdata(
             self._c, self._ffi_cost_func_userdata)
+        
+
 
     # ───── 휴리스틱 함수 (heuristic_fn) 등록 ─────
     def set_heuristic_func(self, py_func: callable, userdata: Any = None):
         self._py_heuristic_func = py_func
         self._heuristic_func_userdata = userdata
-        self._ffi_heuristic_func_userdata = ffi.new_handle(userdata)
+        # self._ffi_heuristic_func_userdata = ffi.new_handle(userdata)
+        self._ffi_heuristic_func_userdata = (
+            ffi.new_handle(userdata) if userdata is not None else ffi.NULL
+        )                
 
         @ffi.callback("float(const coord_t*, const coord_t*, void*)")
         def _wrapped(s_ptr, g_ptr, udata_ptr):
             start = c_coord(raw_ptr=s_ptr)
             goal = c_coord(raw_ptr=g_ptr)
-            user = ffi.from_handle(udata_ptr)
+            user = ffi.from_handle(udata_ptr) if udata_ptr else None
             return py_func(start, goal, user)
 
         self._ffi_heuristic_func = _wrapped
@@ -584,12 +655,15 @@ start={self.get_start()}, goal={self.get_goal()}, km={self.get_km():.2f})'''
     def set_is_blocked_func(self, py_func: callable, userdata: Any = None):
         self._py_is_blocked_func = py_func
         self._is_blocked_func_userdata = userdata
-        self._ffi_is_blocked_func_userdata = ffi.new_handle(userdata)
+        # self._ffi_is_blocked_func_userdata = ffi.new_handle(userdata)
+        self._ffi_is_blocked_func_userdata = (
+            ffi.new_handle(userdata) if userdata is not None else ffi.NULL
+        )
 
         @ffi.callback("bool(const map_t*, int, int, void*)")
         def _wrapped(m_ptr, x, y, udata_ptr):
             map_obj = c_map(raw_ptr=m_ptr, own=False)
-            user = ffi.from_handle(udata_ptr)
+            user = ffi.from_handle(udata_ptr) if udata_ptr else None
             return bool(py_func(map_obj, x, y, user))
 
         self._ffi_is_blocked_func = _wrapped
@@ -601,12 +675,15 @@ start={self.get_start()}, goal={self.get_goal()}, km={self.get_km():.2f})'''
     def set_move_func(self, py_func: callable, userdata: Any = None):
         self._py_move_func = py_func
         self._move_func_userdata = userdata
-        self._ffi_move_func_userdata = ffi.new_handle(userdata)
+        # self._ffi_move_func_userdata = ffi.new_handle(userdata)
+        self._ffi_move_func_userdata = (
+            ffi.new_handle(userdata) if userdata is not None else ffi.NULL
+        )
 
         @ffi.callback("void(const coord_t*, void*)")
         def _wrapped(c_ptr, udata_ptr):
             coord = c_coord(raw_ptr=c_ptr)
-            user = ffi.from_handle(udata_ptr)
+            user = ffi.from_handle(udata_ptr) if udata_ptr else None
             py_func(coord, user)
 
         self._ffi_move_func = _wrapped
@@ -618,11 +695,14 @@ start={self.get_start()}, goal={self.get_goal()}, km={self.get_km():.2f})'''
     def set_changed_coords_func(self, py_func: callable, userdata: Any = None):
         self._py_changed_coords_func = py_func
         self._changed_coords_func_userdata = userdata
-        self._ffi_changed_coords_func_userdata = ffi.new_handle(userdata)
+        # self._ffi_changed_coords_func_userdata = ffi.new_handle(userdata)
+        self._ffi_changed_coords_func_userdata = (
+            ffi.new_handle(userdata) if userdata is not None else ffi.NULL
+        )
 
         @ffi.callback("coord_list_t*(void*)")
         def _wrapped(udata_ptr):
-            user = ffi.from_handle(udata_ptr)
+            user = ffi.from_handle(udata_ptr) if udata_ptr else None
             clist = py_func(user)
             if isinstance(clist, c_coord_list):
                 return clist.ptr()
