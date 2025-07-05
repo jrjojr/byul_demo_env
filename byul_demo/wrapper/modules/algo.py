@@ -12,62 +12,62 @@ import weakref
 from enum import IntEnum
 
 class RouteAlgotype(IntEnum):
-    ROUTE_ALGO_UNKNOWN = 0
+    UNKNOWN = 0
 
     # // 1950s~1960s
-    ROUTE_ALGO_BELLMAN_FORD = 1 #            // 1958
-    ROUTE_ALGO_DFS = 2 #                     // 1959
-    ROUTE_ALGO_BFS = 3 #                     // 1959
-    ROUTE_ALGO_DIJKSTRA = 4 #                // 1959
-    ROUTE_ALGO_FLOYD_WARSHALL = 5 #          // 1959~
-    ROUTE_ALGO_ASTAR = 6 #                   // 1968
+    BELLMAN_FORD = 1 #            // 1958
+    DFS = 2 #                     // 1959
+    BFS = 3 #                     // 1959
+    DIJKSTRA = 4 #                // 1959
+    FLOYD_WARSHALL = 5 #          // 1959~
+    ASTAR = 6 #                   // 1968
 
     # // 1970s
-    ROUTE_ALGO_BIDIRECTIONAL_DIJKSTRA = 7 # ,  // 1971
-    ROUTE_ALGO_BIDIRECTIONAL_ASTAR =8 #,     // 1971
-    ROUTE_ALGO_WEIGHTED_ASTAR = 9 #,          // 1977~
-    ROUTE_ALGO_JOHNSON = 10 #,                 // 1977
-    ROUTE_ALGO_K_SHORTEST_PATH = 11 #,         // 1977~
-    ROUTE_ALGO_DIAL = 12 #,                    // 1969
+    BIDIRECTIONAL_DIJKSTRA = 7 # ,  // 1971
+    BIDIRECTIONAL_ASTAR =8 #,     // 1971
+    WEIGHTED_ASTAR = 9 #,          // 1977~
+    JOHNSON = 10 #,                 // 1977
+    K_SHORTEST_PATH = 11 #,         // 1977~
+    DIAL = 12 #,                    // 1969
 
     # // 1980s
-    ROUTE_ALGO_ITERATIVE_DEEPENING = 13 #,     // 1980
-    ROUTE_ALGO_GREEDY_BEST_FIRST = 14 #,       // 1985
-    ROUTE_ALGO_IDA_STAR = 15 #,                // 1985
+    ITERATIVE_DEEPENING = 13 #,     // 1980
+    GREEDY_BEST_FIRST = 14 #,       // 1985
+    IDA_STAR = 15 #,                // 1985
 
     # // 1990s
-    ROUTE_ALGO_RTA_STAR = 16 #,                // 1990
-    ROUTE_ALGO_SMA_STAR = 17 #,                // 1991
-    ROUTE_ALGO_DSTAR = 18 #,                   // 1994
-    ROUTE_ALGO_FAST_MARCHING = 19 #,           // 1996
-    ROUTE_ALGO_ANT_COLONY = 20 #,              // 1996
-    ROUTE_ALGO_FRINGE_SEARCH = 21 #,           // 1997
+    RTA_STAR = 16 #,                // 1990
+    SMA_STAR = 17 #,                // 1991
+    DSTAR = 18 #,                   // 1994
+    FAST_MARCHING = 19 #,           // 1996
+    ANT_COLONY = 20 #,              // 1996
+    FRINGE_SEARCH = 21 #,           // 1997
 
     # // 2000s
-    ROUTE_ALGO_FOCAL_SEARCH = 22 #,            // 2001
-    ROUTE_ALGO_DSTAR_LITE = 23 #,              // 2002
-    ROUTE_ALGO_LPA_STAR = 24 #,                // 2004
-    ROUTE_ALGO_HPA_STAR = 25 #,                // 2004
-    ROUTE_ALGO_ALT = 26 #,                     // 2005
-    ROUTE_ALGO_ANY_ANGLE_ASTAR = 27 #,         // 2005~
-    ROUTE_ALGO_HCA_STAR = 28 #,                // 2005
-    ROUTE_ALGO_RTAA_STAR = 29 #,               // 2006
-    ROUTE_ALGO_THETA_STAR = 30 #,              // 2007
-    ROUTE_ALGO_CONTRACTION_HIERARCHIES = 31 # ,// 2008
+    FOCAL_SEARCH = 22 #,            // 2001
+    DSTAR_LITE = 23 #,              // 2002
+    LPA_STAR = 24 #,                // 2004
+    HPA_STAR = 25 #,                // 2004
+    ALT = 26 #,                     // 2005
+    ANY_ANGLE_ASTAR = 27 #,         // 2005~
+    HCA_STAR = 28 #,                // 2005
+    RTAA_STAR = 29 #,               // 2006
+    THETA_STAR = 30 #,              // 2007
+    CONTRACTION_HIERARCHIES = 31 # ,// 2008
 
     # // 2010s
-    ROUTE_ALGO_LAZY_THETA_STAR = 32 #,         // 2010
-    ROUTE_ALGO_JUMP_POINT_SEARCH = 33 #,       // 2011
-    ROUTE_ALGO_SIPP = 34 #,                    // 2011
-    ROUTE_ALGO_JPS_PLUS = 35 #,                // 2012
-    ROUTE_ALGO_EPEA_STAR = 36 #,               // 2012
-    ROUTE_ALGO_MHA_STAR = 37 #              // 2012
-    ROUTE_ALGO_ANYA = 38 #,                    // 2013
+    LAZY_THETA_STAR = 32 #,         // 2010
+    JUMP_POINT_SEARCH = 33 #,       // 2011
+    SIPP = 34 #,                    // 2011
+    JPS_PLUS = 35 #,                // 2012
+    EPEA_STAR = 36 #,               // 2012
+    MHA_STAR = 37 #              // 2012
+    ANYA = 38 #,                    // 2013
 
     # // 특수 목적 / 확장형
-    ROUTE_ALGO_DAG_SP = 39 #,                  // 1960s (DAG 최단경로 O(V+E))
-    ROUTE_ALGO_MULTI_SOURCE_BFS =40 #,        // 2000s (복수 시작점 BFS)
-    ROUTE_ALGO_MCTS =41 #                     // 2006
+    DAG_SP = 39 #,                  // 1960s (DAG 최단경로 O(V+E))
+    MULTI_SOURCE_BFS =40 #,        // 2000s (복수 시작점 BFS)
+    MCTS =41 #                     // 2006
 
 ffi.cdef("""
          
@@ -206,8 +206,23 @@ coord_t* algo_get_start(const algo_t* a);
 coord_t* algo_get_goal(const algo_t* a);
 
 void algo_set_userdata(algo_t* a, void* userdata);
-void* algo_get_userdata(algo_t* a);
+void* algo_get_userdata(const algo_t* a);
+         
+void algo_set_type(algo_t* a, route_algotype_t type);
+route_algotype_t algo_get_type(const algo_t* a);
+         
+void algo_set_visited_logging(algo_t* a, bool is_logging);
+bool algo_is_visited_logging(algo_t* a);         
+         
+void algo_set_cost_func(algo_t* a, cost_func cost_fn);
+cost_func algo_get_cost_func(algo_t* a);
 
+void algo_set_heuristic_func(algo_t* a, heuristic_func heuristic_fn);
+heuristic_func algo_get_heuristic_func(algo_t* a);
+
+void algo_set_max_retry(algo_t* a, int max_retry);
+int algo_get_max_retry(algo_t* a);         
+         
 /**
  * @brief 설정값 기본화 및 검증
  */
@@ -231,7 +246,9 @@ void algo_print(const algo_t* a);
 /**
  * @brief 정적 길찾기 실행 (알고리즘 유형 분기 포함)
  */
-route_t* algo_find(const algo_t* a, route_algotype_t type);
+route_t* algo_find_with_type(const algo_t* a, route_algotype_t type);
+
+route_t* algo_find(const algo_t* a);         
 
 /**
  * @brief 알고리즘별 직접 실행 함수 (정적 길찾기 전용)
@@ -296,7 +313,7 @@ route_t* algo_find_fast_marching(const algo_t* a);
 class c_algo:
     def __init__(self, 
                  map: c_map,
-                 algotype: RouteAlgotype = RouteAlgotype.ROUTE_ALGO_ASTAR,
+                 algotype: RouteAlgotype = RouteAlgotype.ASTAR,
                  start: c_coord = None,
                  goal: c_coord = None,
                  cost_fn = None,
@@ -346,9 +363,37 @@ class c_algo:
         ptr = C.algo_copy(self._c)
         return c_algo(raw_ptr=ptr, own=True)
 
-    def find(self):
-        ptr = C.algo_find(self._c, self.algotype)
+    def find_with_type(self, type:RouteAlgotype):
+        ptr = C.algo_find_with_type(self._c, type)
         return c_route(raw_ptr=ptr, own=True) if ptr != ffi.NULL else None
+            
+    def find(self):
+        ptr = C.algo_find(self._c)
+        return c_route(raw_ptr=ptr, own=True) if ptr != ffi.NULL else None
+
+    def set_type(self, type:RouteAlgotype):
+        # void algo_set_type(algo_t* a, route_algotype_t type);
+        C.algo_set_type(self.ptr(), type.value)
+
+    def get_type(self):
+        # route_algotype_t algo_get_type(algo_t* a);        
+        return RouteAlgotype(C.algo_get_type(self.ptr()))
+    
+    def is_visited_logging(self):
+        # bool algo_is_visited_logging(algo_t* a);         
+        return C.algo_is_visited_logging(self.ptr())
+
+    def set_visited_logging(self, is_logging:bool):
+        # void algo_set_visited_logging(algo_t* a, bool is_logging);
+        C.algo_set_visited_logging(self.ptr(), is_logging)
+
+    def set_max_retry(self, max_retry:int):
+        # void algo_set_max_retry(algo_t* a, int max_retry);
+        C.algo_set_max_retry(self.ptr(), max_retry)
+
+    def get_max_retry(self):
+        # int algo_get_max_retry(algo_t* a);         
+        return C.algo_get_max_retry(self.ptr())
 
     def set_map(self, map: c_map):
         C.algo_set_map(self._c, map.ptr())
@@ -435,4 +480,11 @@ class c_algo:
             algo = c_algo(a)
             if algo.name().lower() == name.lower():
                 return a
-        return RouteAlgotype.ROUTE_ALGO_UNKNOWN
+        return RouteAlgotype.UNKNOWN
+    
+    # def set_cost_func(self)
+        # void algo_set_cost_func(algo_t* a, cost_func cost_fn);
+        # cost_func algo_get_cost_func(algo_t* a);
+
+        # void algo_set_heuristic_func(algo_t* a, heuristic_func heuristic_fn);
+        # heuristic_func algo_get_heuristic_func(algo_t* a);

@@ -132,7 +132,22 @@ BYUL_API coord_t* algo_get_start(const algo_t* a);
 BYUL_API coord_t* algo_get_goal(const algo_t* a);
 
 BYUL_API void algo_set_userdata(algo_t* a, void* userdata);
-BYUL_API void* algo_get_userdata(algo_t* a);
+BYUL_API void* algo_get_userdata(const algo_t* a);
+
+BYUL_API void algo_set_type(algo_t* a, route_algotype_t type);
+BYUL_API route_algotype_t algo_get_type(const algo_t* a);
+
+BYUL_API void algo_set_visited_logging(algo_t* a, bool is_logging);
+BYUL_API bool algo_is_visited_logging(algo_t* a);
+
+BYUL_API void algo_set_cost_func(algo_t* a, cost_func cost_fn);
+BYUL_API cost_func algo_get_cost_func(algo_t* a);
+
+BYUL_API void algo_set_heuristic_func(algo_t* a, heuristic_func heuristic_fn);
+BYUL_API heuristic_func algo_get_heuristic_func(algo_t* a);
+
+BYUL_API void algo_set_max_retry(algo_t* a, int max_retry);
+BYUL_API int algo_get_max_retry(algo_t* a);
 
 /**
  * @brief 설정값 기본화 및 검증
@@ -157,15 +172,17 @@ BYUL_API void algo_print(const algo_t* a);
 /**
  * @brief 정적 길찾기 실행 (알고리즘 유형 분기 포함)
  */
-BYUL_API route_t* algo_find(const algo_t* a, route_algotype_t type);
+BYUL_API route_t* algo_find_with_type(algo_t* a, route_algotype_t type);
+
+BYUL_API route_t* algo_find(algo_t* a);
 
 /**
  * @brief 알고리즘별 직접 실행 함수 (정적 길찾기 전용)
  */
-BYUL_API route_t* algo_find_astar(const algo_t* a);
-BYUL_API route_t* algo_find_bfs(const algo_t* a);
-BYUL_API route_t* algo_find_dfs(const algo_t* a);
-BYUL_API route_t* algo_find_dijkstra(const algo_t* a);
+BYUL_API route_t* algo_find_astar(algo_t* a);
+BYUL_API route_t* algo_find_bfs(algo_t* a);
+BYUL_API route_t* algo_find_dfs(algo_t* a);
+BYUL_API route_t* algo_find_dijkstra(algo_t* a);
 
 /**
  * @brief Fringe Search 알고리즘을 실행합니다.
@@ -180,10 +197,11 @@ BYUL_API route_t* algo_find_dijkstra(const algo_t* a);
  *
  * @return 계산된 경로(route_t*) 또는 실패 시 NULL
  */
-BYUL_API route_t* algo_find_fringe_search(const algo_t* a);
+BYUL_API route_t* algo_find_fringe_search(algo_t* a);
 
-BYUL_API route_t* algo_find_greedy_best_first(const algo_t* a);
-BYUL_API route_t* algo_find_ida_star(const algo_t* a);
+BYUL_API route_t* algo_find_greedy_best_first(algo_t* a);
+
+BYUL_API route_t* algo_find_ida_star(algo_t* a);
 
 /**
  * @brief Real-Time A* (RTA*) 알고리즘을 실행합니다.
@@ -197,9 +215,22 @@ BYUL_API route_t* algo_find_ida_star(const algo_t* a);
  *
  * @return 계산된 경로(route_t*) 또는 실패 시 NULL
  */
-BYUL_API route_t* algo_find_rta_star(const algo_t* a);
+BYUL_API route_t* algo_find_rta_star(algo_t* a);
 
-BYUL_API route_t* algo_find_sma_star(const algo_t* a);
+/**
+* memory_limit은 맵 크기 및 난이도에 따라 달라져야 하며,
+ * 일반적으로 다음을 권장합니다:
+ *   - memory_limit ≈ max(L × (1 + ε), N × α)
+ *     (L: 예상 경로 길이, N: 맵 셀 수)
+ *     (ε ∈ [0.5, 1.0], α ∈ [0.01, 0.05])
+ *
+ * @par 권장 메모리 제한 예시
+ *   - 10x10 맵  : memory_limit ≈ 20 ~ 30
+ *   - 100x100 맵: memory_limit ≈ 500 ~ 1000
+ *   - 1000x1000 맵: memory_limit ≈ 50,000 ~ 100,000
+ *
+ */
+BYUL_API route_t* algo_find_sma_star(algo_t* a);
 
 /**
  * @brief Weighted A* 알고리즘을 실행합니다.
@@ -213,9 +244,9 @@ BYUL_API route_t* algo_find_sma_star(const algo_t* a);
  *
  * @return 계산된 경로(route_t*) 또는 실패 시 NULL
  */
-BYUL_API route_t* algo_find_weighted_astar(const algo_t* a);
+BYUL_API route_t* algo_find_weighted_astar(algo_t* a);
 
-BYUL_API route_t* algo_find_fast_marching(const algo_t* a);
+BYUL_API route_t* algo_find_fast_marching(algo_t* a);
 
 #ifdef __cplusplus
 }

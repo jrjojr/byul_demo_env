@@ -150,11 +150,51 @@ void algo_set_userdata(algo_t* a, void* userdata){
     a->userdata = userdata;
 }
 
-void* algo_get_userdata(algo_t* a){
+void* algo_get_userdata(const algo_t* a){
     return a->userdata;
 }
 
-route_t* algo_find(const algo_t* a, route_algotype_t type) {
+void algo_set_type(algo_t* a, route_algotype_t type){
+    a->type = type;
+}
+
+route_algotype_t algo_get_type(const algo_t* a){
+    return a->type;
+}
+
+void algo_set_visited_logging(algo_t* a, bool is_logging){
+    a->visited_logging = is_logging;
+}
+
+bool algo_is_visited_logging(algo_t* a){
+    return a->visited_logging;
+}
+
+void algo_set_cost_func(algo_t* a, cost_func cost_fn){
+    a->cost_fn = cost_fn;
+}
+
+cost_func algo_get_cost_func(algo_t* a){
+    return a->cost_fn;
+}
+
+void algo_set_heuristic_func(algo_t* a, heuristic_func heuristic_fn){
+    a->heuristic_fn = heuristic_fn;
+}
+
+heuristic_func algo_get_heuristic_func(algo_t* a){
+    return a->heuristic_fn;
+}
+
+void algo_set_max_retry(algo_t* a, int max_retry){
+    a->max_retry;
+}
+
+int algo_get_max_retry(algo_t* a){
+    return a->max_retry;
+}
+
+route_t* algo_find_with_type(algo_t* a, route_algotype_t type) {
     if (!a) return NULL;
     switch (type) {
         case ROUTE_ALGO_ASTAR: return algo_find_astar(a);
@@ -172,27 +212,32 @@ route_t* algo_find(const algo_t* a, route_algotype_t type) {
     }
 }
 
-route_t* algo_find_astar(const algo_t* a){
+route_t* algo_find(algo_t* a) {
+    if (!a) return NULL;
+    return algo_find_with_type(a, a->type);
+}
+
+route_t* algo_find_astar(algo_t* a){
     return find_astar(a->map, a->start, a->goal, 
         a->cost_fn, a->heuristic_fn, a->max_retry, a->visited_logging);
 }
 
-route_t* algo_find_bfs(const algo_t* a){
+route_t* algo_find_bfs(algo_t* a){
     return find_bfs(a->map, a->start, a->goal, 
         a->max_retry, a->visited_logging);
 }
 
-route_t* algo_find_dfs(const algo_t* a){
+route_t* algo_find_dfs(algo_t* a){
     return find_dfs(a->map, a->start, a->goal, a->max_retry,
         a->visited_logging);
 }
 
-route_t* algo_find_dijkstra(const algo_t* a){
+route_t* algo_find_dijkstra(algo_t* a){
     return find_dijkstra(a->map, a->start, a->goal, a->cost_fn,
         a->max_retry, a->visited_logging);
 }
 
-route_t* algo_find_fringe_search(const algo_t* a) {
+route_t* algo_find_fringe_search(algo_t* a) {
     float delta_epsilon = 0.3f;
 
     if (a->userdata) {
@@ -207,18 +252,19 @@ route_t* algo_find_fringe_search(const algo_t* a) {
         a->max_retry, a->visited_logging);
 }
 
-
-route_t* algo_find_greedy_best_first(const algo_t* a){
+route_t* algo_find_greedy_best_first(algo_t* a){
     return find_greedy_best_first(a->map, a->start, a->goal,
     a->heuristic_fn, a->max_retry, a->visited_logging);
 }
 
-route_t* algo_find_ida_star(const algo_t* a){
+route_t* algo_find_ida_star(algo_t* a){
+    // ida는 유클리드가 아니라 맨하탄으로 휴리스틱을 설정해야 한다.
+    algo_set_heuristic_func(a, manhattan_heuristic);
     return find_ida_star(a->map, a->start, a->goal,
     a->cost_fn, a->heuristic_fn, a->max_retry, a->visited_logging);
 }
 
-route_t* algo_find_rta_star(const algo_t* a) {
+route_t* algo_find_rta_star(algo_t* a) {
     int depth_limit = 5;
 
     if (a->userdata) {
@@ -233,14 +279,36 @@ route_t* algo_find_rta_star(const algo_t* a) {
         a->max_retry, a->visited_logging);
 }
 
-route_t* algo_find_sma_star(const algo_t* a){
-    int memory_limit = *(int*)a->userdata;
+route_t* algo_find_sma_star(algo_t* a) {
+    if (!a || !a->map) return NULL;
+
+    int memory_limit = 0;
+
+    if (a->userdata) {
+        int val = *(int*)a->userdata;
+        // 유효 범위 검사 (적당한 하한선 및 상한선 예시)
+        if (val >= 10 && val <= 1000000) {
+            memory_limit = val;
+        }
+    }
+
+    // 비정상적인 값이면 맵 크기로 기본값 계산
+    if (memory_limit <= 0) {
+        int w = map_get_width(a->map);
+        int h = map_get_height(a->map);
+        int n = w * h;
+
+        // 기본 권장값: α = 0.02
+        memory_limit = (int)(n * 0.02f);
+        if (memory_limit < 20) memory_limit = 20; // 최소 한도
+    }
+
     return find_sma_star(a->map, a->start, a->goal,
-    a->cost_fn, a->heuristic_fn, memory_limit,
-    a->max_retry, a->visited_logging);
+        a->cost_fn, a->heuristic_fn, memory_limit,
+        a->max_retry, a->visited_logging);
 }
 
-route_t* algo_find_weighted_astar(const algo_t* a) {
+route_t* algo_find_weighted_astar(algo_t* a) {
     float weight = 1.5f;
 
     if (a->userdata) {
@@ -255,7 +323,7 @@ route_t* algo_find_weighted_astar(const algo_t* a) {
         a->max_retry, a->visited_logging);
 }
 
-route_t* algo_find_fast_marching(const algo_t* a){
+route_t* algo_find_fast_marching(algo_t* a){
     return find_fast_marching(a->map, a->start, a->goal,
     a->cost_fn, a->max_retry, a->visited_logging);
 }

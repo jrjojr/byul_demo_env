@@ -70,8 +70,10 @@ class NPC(QObject):
         self.influence_range = influence_range
         self.max_range = max_range
 
-        c = c_coord.from_tuple(start)
-        self.finder = c_dstar_lite(self.world.map, c)
+        self.m_start = start
+        self.m_goal = self.m_start
+        start_coord = c_coord.from_tuple(start)
+        self.finder = c_dstar_lite(self.world.map, start_coord)
         
         self.compute_max_retry = compute_max_retry
         self.set_compute_max_retry(compute_max_retry)
@@ -107,7 +109,7 @@ class NPC(QObject):
         self.real_list = list()
         self.proto_list = list()
 
-        self.phantom_start = self.start
+        self.phantom_start = self.m_start
         self.anim_started = False
 
         self.next = None
@@ -181,7 +183,7 @@ class NPC(QObject):
         self.disp_dy_changed.emit(0.0)
 
         # 위치 추적 및 타이머
-        self.phantom_start = self.start
+        self.phantom_start = self.m_start
         self.total_elapsed_sec = 0.0
 
         # 스레드 상태
@@ -212,6 +214,7 @@ class NPC(QObject):
     @start.setter
     def start(self, coord:tuple):
         # self.finder.start = c_coord.from_tuple(coord)
+        self.m_start = coord
         c = c_coord.from_tuple(coord)
         self.finder.set_start(c)
         # self.world.add_changed_coord(coord)
@@ -226,6 +229,7 @@ class NPC(QObject):
     @goal.setter
     def goal(self, coord: tuple):
         # self.finder.goal = c_coord.from_tuple(coord)
+        self.m_goal = coord
         self.finder.set_goal(c_coord.from_tuple(coord))
         # self.world.add_changed_coord(coord)
         self.goal_changed_sig.emit(coord)
@@ -251,7 +255,7 @@ class NPC(QObject):
     @Slot(int, int)
     def set_start_from_int(self, x:int, y:int):
         s = (x, y)
-        self.start = s
+        self.m_start = s
 
     def append_goal(self, coord:tuple):
         # self._goal_q.put(coord)
@@ -351,9 +355,9 @@ start_delay_sec : {self.start_delay_sec}''')
 
             if self.is_anim_arrived():
                 self.anim_to_arrived_sig.emit(self.next)
-                self.start = self.next
+                self.m_start = self.next
                 self.world.add_changed_coord(self.next)
-                self.phantom_start = self.start
+                self.phantom_start = self.m_start
 
                 self.disp_dx = 0
                 self.disp_dy = 0
@@ -383,16 +387,16 @@ start_delay_sec : {self.start_delay_sec}''')
 
                     else:
                         if prev_goal is None:
-                            prev_goal = self.start
+                            prev_goal = self.m_start
 
-                        if prev_goal == self.start:
+                        if prev_goal == self.m_start:
                             if len(self.goal_list) <= 0:
                                 break
 
                             g = self.goal_list.pop(0)
                             self.goal = g
                             # self.world.add_changed_coord(g)
-                            self.start = prev_goal
+                            self.m_start = prev_goal
                             self.world.add_changed_coord(prev_goal)
                         else:
                             if prev_goal != self.goal:
@@ -490,7 +494,6 @@ start_delay_sec : {self.start_delay_sec}''')
 
         except Exception as e:
             g_logger.log_debug_threadsafe(f"[MOVE_CB] 예외 발생: {e}")
-
 
     # def _cost_cb(self, map_ptr, start_ptr, goal_ptr, userdata):
     #     if not map_ptr or not start_ptr or not goal_ptr:

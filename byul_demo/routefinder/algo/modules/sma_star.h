@@ -42,7 +42,12 @@ extern "C" {
  * 일반적으로 다음을 권장합니다:
  *   - memory_limit ≈ max(L × (1 + ε), N × α)
  *     (L: 예상 경로 길이, N: 맵 셀 수)
- *   - ε ∈ [0.5, 1.0], α ∈ [0.01, 0.05]
+ *     (ε ∈ [0.5, 1.0], α ∈ [0.01, 0.05])
+ *
+ * @par 권장 메모리 제한 예시
+ *   - 10x10 맵  : memory_limit ≈ 20 ~ 30
+ *   - 100x100 맵: memory_limit ≈ 500 ~ 1000
+ *   - 1000x1000 맵: memory_limit ≈ 50,000 ~ 100,000
  *
  */
 BYUL_API route_t* find_sma_star(const map_t* m,
