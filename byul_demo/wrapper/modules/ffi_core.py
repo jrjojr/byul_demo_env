@@ -5,85 +5,72 @@ import os
 import platform
 import sys
 
-from ctypes.util import find_library
-
 ffi = FFI()
 
 ffi.cdef("""
 #define TRUE 1
 #define FALSE 0
-         
-typedef int gint;
-typedef int guint;
-typedef int gboolean;
-typedef const void* gconstpointer;
-typedef void* gpointer;
-         
-typedef float gfloat;
-         
-typedef double gdouble;
-
-typedef struct _GQueue GQueue;
-
-typedef struct _GHashTableIter GHashTableIter;
-         
-typedef struct _GTree GTree;         
-
-typedef void (*GDestroyNotify)(void*);
-
-typedef gint            (*GCompareDataFunc)     (gconstpointer  a,
-                                                 gconstpointer  b,
-						 gpointer       user_data);         
-         
-typedef gint            (*GCompareFunc)         (gconstpointer  a,
-                                                 gconstpointer  b);         
-         
-typedef struct s_flud* flud;
 """)
 
 # --- 플랫폼 구분 및 libroutefinder 로딩 ---
 system = platform.system()
 root = Path.home() / "byul_demo"
 
+# if system == "Windows":
+#     routefinder_name = "libroutefinder.dll"
+#     routefinder_path = root / "bin" / routefinder_name
+
+#     os.add_dll_directory(str(routefinder_path.parent))  # 필수
+
+# elif system == "Linux":
+#     routefinder_name = "libroutefinder.so"
+#     routefinder_path = root / "lib" / routefinder_name
+
+# elif system == "Darwin":
+#     routefinder_name = "libroutefinder.dylib"
+#     routefinder_path = root / "lib" / routefinder_name
+
+# else:
+#     raise RuntimeError(f"❌ 지원되지 않는 플랫폼: {system}")
+
+# # --- libroutefinder 로드 ---
+# try:
+#     C = ffi.dlopen(str(routefinder_path))
+# except OSError as e:
+#     print(f"❌ [libroutefinder] 로딩 실패: {routefinder_path}")
+#     print(f"→ {e}")
+#     raise RuntimeError("libroutefinder 바이너리 확인 필요")
+
 if system == "Windows":
-    routefinder_name = "libroutefinder.dll"
-    routefinder_path = root / "bin" / routefinder_name
+    routefinder_path = root / "bin" / "libroutefinder.dll"
 
-    glib_path = "C:/msys64/clang64/bin/libglib-2.0-0.dll"    
+    # --- MinGW DLL 경로 추가 (자동) ---
+    mingw_path = Path("C:/msys64/mingw64/bin")  # 별이아빠님의 환경에 맞게
+    if mingw_path.exists():
+        if hasattr(os, "add_dll_directory"):
+            os.add_dll_directory(str(mingw_path))
+        else:
+            os.environ["PATH"] = str(mingw_path) + os.pathsep + os.environ["PATH"]
 
-    os.add_dll_directory(str(routefinder_path.parent))  # 필수
-    os.add_dll_directory("C:/msys64/clang64/bin")        # GLib DLL 탐색
+    # libroutefinder 경로도 추가
+    if hasattr(os, "add_dll_directory"):
+        os.add_dll_directory(str(routefinder_path.parent))
+    else:
+        os.environ["PATH"] = str(routefinder_path.parent) + os.pathsep + os.environ["PATH"]
 
 elif system == "Linux":
-    routefinder_name = "libroutefinder.so"
-    routefinder_path = root / "lib" / routefinder_name
-
-    glib_path = find_library("glib-2.0")    
+    routefinder_path = root / "lib" / "libroutefinder.so"
 
 elif system == "Darwin":
-    routefinder_name = "libroutefinder.dylib"
-    routefinder_path = root / "lib" / routefinder_name
-
-    glib_path = find_library("glib-2.0")    
+    routefinder_path = root / "lib" / "libroutefinder.dylib"
 
 else:
     raise RuntimeError(f"❌ 지원되지 않는 플랫폼: {system}")
 
-# --- libroutefinder 로드 ---
+# 라이브러리 로딩
 try:
     C = ffi.dlopen(str(routefinder_path))
 except OSError as e:
     print(f"❌ [libroutefinder] 로딩 실패: {routefinder_path}")
     print(f"→ {e}")
-    raise RuntimeError("libroutefinder 바이너리 확인 필요")
-
-# --- GLib 로딩 ---
-if not glib_path:
-    raise RuntimeError("GLib (glib-2.0) 라이브러리를 찾을 수 없습니다.")
-
-try:
-    C_glib = ffi.dlopen(glib_path)
-except OSError as e:
-    print(f"❌ [GLib] 로딩 실패: {glib_path}")
-    print(f"→ {e}")
-    raise RuntimeError("GLib DLL 또는 환경 설정을 확인하세요.")
+    raise RuntimeError("libroutefinder 바이너리 또는 의존 DLL 확인 필요")

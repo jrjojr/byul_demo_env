@@ -63,3 +63,9 @@ C:/Users/critl/docs/byul_demo_env/byul_demo/wrapper/modules `
 C:/Users/critl/byul_demo/include/internal/pqueue.h
 
 #+end_src
+
+* 1 사용하지 마라 gen_cdef.py를...
+CLOCK: [2025-7-5 Sat 11:48]
+초기 작품이라 오류가 아주 많다 
+그냥 사용하지마 
+헤더 복붙해라 그게 편하다

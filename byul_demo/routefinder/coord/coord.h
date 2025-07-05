@@ -29,11 +29,12 @@ BYUL_API unsigned coord_hash(const coord_t* c);
 BYUL_API bool     coord_equal(const coord_t* c1, const coord_t* c2);
 BYUL_API int      coord_compare(const coord_t* c1, const coord_t* c2);
 
-// ------------------------ 거리/각도 ------------------------
-
 /// 유클리드 거리 계산
 BYUL_API float      coord_distance(const coord_t* a, const coord_t* b);
+
 BYUL_API int coord_manhattan_distance(const coord_t* a, const coord_t* b);
+
+// 360도 반환 좌표들간의 각도를...
 BYUL_API double   coord_degree(const coord_t* a, const coord_t* b);
 
 // ------------------------ 좌표 접근자/설정자 ------------------------

@@ -1,47 +1,34 @@
-
-
-
 from ffi_core import ffi, C
 import weakref
-from pathlib import Path
-import os
-from typing import Any
 
 ffi.cdef("""
+    typedef struct s_coord coord_t;
+    
+    coord_t*    coord_new_full(int x, int y);
+    coord_t*    coord_new();
+    void     coord_free(coord_t* c);
+    coord_t* coord_copy(const coord_t* c);
 
-             typedef struct s_coord* coord;
-    typedef struct s_coord { int x ; int y ; } coord_t;
-     
-    coord    coord_new_full(int x, int y);
-     coord    coord_new();
-     void     coord_free(coord c);
-     unsigned int coord_hash(const coord c);
-     int coord_equal(const coord c1, const coord c2);
-     coord coord_copy(const coord c);
-     flud flud_new_coord(const coord s);
-     flud flud_wrap_coord(const coord s);
-     int flud_fetch_coord(const flud d, coord *out);
-     const coord flud_get_coord(const flud d);
-     int flud_set_coord(flud d, const coord s);
-     int flud_is_coord(const flud d);
-     int     coord_get_x(const coord c);
-     void     coord_set_x(coord c, int x);
-     int     coord_get_y(const coord c);
-     void     coord_set_y(coord c, int y);
-     unsigned long long  coord_pack(const coord c);
-     coord    coord_unpack(unsigned long long packed);
-     void     coord_set(coord c, int x, int y);
-     void     coord_fetch(coord c, int* out_x, int* out_y);
-     int coord_compare(const coord a, const coord b);
+    unsigned int coord_hash(const coord_t* c);
+    int coord_equal(const coord_t* c1, const coord_t* c2);
+    int      coord_compare(const coord_t* c1, const coord_t* c2);         
+
+    int     coord_get_x(const coord_t* c);
+    void     coord_set_x(coord_t* c, int x);
+    int     coord_get_y(const coord_t* c);
+    void     coord_set_y(coord_t* c, int y);
+    void     coord_set(coord_t* c, int x, int y);
+    void     coord_fetch(coord_t* c, int* out_x, int* out_y);
+
+    // 유클리드 거리 계산
+    float      coord_distance(const coord_t* a, const coord_t* b);
+
+    int coord_manhattan_distance(const coord_t* a, const coord_t* b);
+
+    // 360도 반환 좌표들간의 각도를...
+    double   coord_degree(const coord_t* a, const coord_t* b);
          
-    gdouble coord_degree(const coord a, const coord b);         
 """)
-
-def coord_pack(c: Any) -> Any:
-    return C.coord_pack(c)
-
-def coord_unpack(packed: Any) -> Any:
-    return C.coord_unpack(packed)
 
 class c_coord:
     def __init__(self, x=0, y=0, raw_ptr=None):
@@ -77,6 +64,15 @@ class c_coord:
         c._own = True
         c._finalizer = weakref.finalize(c, C.coord_free, c.ptr())
         return c
+
+    def distance(self, other:'c_coord'):
+        # // 유클리드 거리 계산
+        # float      coord_distance(const coord_t* a, const coord_t* b);
+        return C.coord_distance(self.ptr(), other.ptr())
+
+    def manhattan_distance(self, other:'c_coord'):
+        # int coord_manhattan_distance(const coord_t* a, const coord_t* b);
+        return C.coord_manhattan_distance(self.ptr(), other.ptr())
 
     def degree(self, other):
         return C.coord_degree(self._c, other._c)
