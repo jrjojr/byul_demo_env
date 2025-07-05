@@ -1,101 +1,129 @@
 # 🌟 Byul's World DEMO 0.1 – Pathfinding Simulator
 
-**Byul's World DEMO 0.1** is a lightweight real-time simulator
-where multiple Motiles set their own goals and navigate a 2D grid map.
-It visually demonstrates how Motiles follow their paths dynamically.
+**Byul's World DEMO 0.1** is a lightweight real-time simulator  
+where autonomous NPCs navigate a 2D grid toward their goals.
 
-The pathfinding algorithm is based on `D* Lite`,
-implemented in C and wrapped using CFFI for direct control in Python.
+Each NPC plans its own path, avoids obstacles, and moves independently.  
+This project was built to visualize pathfinding in action  
+and to lay the foundation for a living simulation world.
 
-> 💖 If you find this project interesting or helpful, you can support its development here: [paypal.me/jrjojr](https://paypal.me/jrjojr)
+> 💖 If you enjoy this project, consider supporting development at [paypal.me/jrjojr](https://paypal.me/jrjojr)
+
+---
+
+## 🧍 What is an NPC?
+
+In this simulation, an **NPC (Non-Player Character)** is an autonomous agent  
+that follows user-defined or system-assigned goals.
+
+Each NPC can:
+
+- Hold multiple goals in a queue  
+- Calculate and follow paths on its own  
+- React to obstacles placed on the map
 
 ---
 
 ## ✅ Key Features
 
-| Feature            | Description                                           |
-| ------------------ | ----------------------------------------------------- |
-| D\* Lite Algorithm | Real-time pathfinding using C-based logic             |
-| GridMap System     | Dynamic map structure with 100x100 cell blocks        |
-| Multiple Motiles      | Create and switch between multiple Motiles               |
-| Goal Queueing      | Shift + Right Click to set multiple goals in sequence |
-| Obstacle Toggle    | Spacebar toggles Motile-specific obstacles at cursor     |
-| Intuitive Controls | Fully mouse-driven control system                     |
+| Feature            | Description |
+|--------------------|-------------|
+| D\* Lite Algorithm | Lightweight real-time pathfinding core |
+| GridMap System     | Dynamic 100x100 cell-based grid structure |
+| Multiple NPCs      | Create, switch, and control several NPCs |
+| Goal Queueing      | Add multiple goals with Shift + Right Click |
+| Obstacle Toggling  | Toggle obstacles at the cursor with Spacebar |
+| Intuitive Controls | Fully mouse-driven interface |
 
 ---
 
-## 🎮 How to Use
+## 🎮 Controls
 
-| Action              | Description                                 |
-| ------------------- | ------------------------------------------- |
-| Left Click          | Select Motile (green glow indicates selection) |
-| Right Click         | Set immediate goal (clears previous goals)  |
-| Shift + Right Click | Add goal to queue (sequential movement)     |
-| Spacebar            | Toggle Motile-specific obstacle at cursor      |
-| ESC                 | Exit fullscreen mode                        |
-| Mouse Wheel         | Adjust cell size (min pixel to full window) |
-| Middle Click        | Center view on mouse position               |
-| Arrow Keys          | Move the entire map                         |
-| F11                 | Enter fullscreen (use ESC to exit)          |
+| Action              | Description |
+|---------------------|-------------|
+| Left Click          | Select an NPC (green glow indicates selection) |
+| Right Click         | Set a new goal (clears previous ones) |
+| Shift + Right Click | Add a goal to the queue |
+| Spacebar            | Toggle obstacle at the current cursor position |
+| ESC                 | Exit fullscreen |
+| Mouse Wheel         | Zoom in/out on grid cell size |
+| Middle Click        | Center view on cursor |
+| Arrow Keys          | Move the entire map |
+| F11                 | Enter fullscreen mode |
+
+---
+
+## 🧠 Technical Philosophy
+
+This project follows a clear principle:
+
+> **“Core logic in C, container structures in C++ STL.”**
+
+- All main logic is written in **pure C style**, using `struct`s and functions  
+- There are no classes, inheritance, or RAII  
+- Only the data containers (`std::map`, `std::vector`, `unordered_map`)  
+  are borrowed from C++ STL for safety and clarity
+- The C interface is designed to be easily accessible from Python
 
 ---
 
 ## 🧩 Architecture Overview
 
-* **GridViewer** – Main UI container
-* **GridCanvas** – Grid display and mouse input
-* **MouseInputHandler** – Dedicated mouse event processor
-* **GridMap** – Terrain and cell state manager
-* **Motile** – Goal and pathfinding logic
-* **BottomDockingPanel** – Logs and performance visualization
-* **Toolbar / MenuBar** – Configuration, reset, fullscreen toggle
+| Component            | Role |
+|----------------------|------|
+| `GridViewer`         | Top-level UI container |
+| `GridCanvas`         | Renders the grid and handles mouse events |
+| `MouseInputHandler`  | Dedicated mouse event processor |
+| `GridMap`            | Terrain and cell state manager |
+| `NPC`                | Goal logic and pathfinding per entity |
+| `BottomDockingPanel` | Logs and performance metrics |
+| `Toolbar`, `MenuBar` | Reset, configuration, fullscreen toggle |
 
 ---
 
 ## 🛠 Tech Stack
 
-* **C / GLib** – Core algorithm, data structures
-* **Python (CFFI)** – C wrapper integration
-* **PySide6 (Qt)** – GUI framework
-* **Multithreading** – Separate UI and pathfinding logic
+| Stack              | Description |
+|--------------------|-------------|
+| **C (with C++ STL)** | Core logic in C, with STL containers used only for data management |
+| **Python Integration** | Exposes C logic to Python directly |
+| **PySide6 (Qt)**    | GUI framework |
+| **Multithreading**  | Separate UI and pathfinding execution |
 
 ---
 
-## 🔮 Upcoming Features
+## 🔮 Planned Features
 
-* Enhanced path visualization
-* Motile interaction (collision, cooperation)
-* Smoother animations
-* Memory-based AI routines
-* Map editor and persistence
+- Better visual path tracing  
+- NPC collision / cooperation logic  
+- Smoother movement animations  
+- Memory-based AI routines  
+- In-editor map creation and persistence
 
 ---
 
 ## 💬 Developer Note
 
-This project is an experiment to create a world
-where Motiles live with purpose, memory, and routine.
-What started as a simple pathfinding simulator
-will grow into a living village simulation.
+This project began as a visual demo of pathfinding,  
+but it's gradually evolving into a small, living simulation.  
+NPCs are not just dots on a screen –  
+they are entities with purpose, logic, and reactivity.
 
-🙋‍♂️ Feel free to leave feedback or questions via Issues or Discussions!
+If you'd like to ask a question or leave feedback,  
+please open an Issue or start a Discussion.
 
 ---
 
-## ▶️ Run Example
+## ▶️ Run the Demo
 
-```bash
 python byul_demo.py
-```
-
----
 
 ## 📄 License
+This project is part of Byul's World,
+released for educational and research use only.
+Commercial use or redistribution is not allowed.
 
-This project is part of "Byul's World"
-and is released for **educational and research use only**.
-**Commercial use or redistribution is not permitted.**
-See the LICENSE file for full details.
+See the LICENSE file for full terms.
 
-© 2025 ByulPapa ([byuldev@outlook.kr](mailto:byuldev@outlook.kr))
+© 2025 ByulPapa (byuldev@outlook.kr)
 All rights reserved.
