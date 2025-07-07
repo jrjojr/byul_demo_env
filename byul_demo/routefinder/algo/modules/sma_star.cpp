@@ -21,18 +21,27 @@ route_t* find_sma_star(const map_t* m,
     if (!heuristic_fn) heuristic_fn = default_heuristic;
 
     route_t* result = route_new();
-    coord_hash_t* cost_so_far = coord_hash_new();
-    coord_hash_t* came_from = coord_hash_new();
+    coord_hash_t* cost_so_far = coord_hash_new_full(
+        (coord_hash_copy_func) float_copy,
+        (coord_hash_free_func) float_free
+    );
+
+    coord_hash_t* came_from = coord_hash_new_full(
+        (coord_hash_copy_func) coord_copy,
+        (coord_hash_free_func) coord_free
+    );
+
     cost_coord_pq_t* frontier = cost_coord_pq_new();
 
     float* zero = new float(0.0f);
-    coord_hash_replace(cost_so_far, coord_copy(start), zero);
+    coord_hash_replace(cost_so_far, start, zero);
+    delete zero;
 
     float h_start = heuristic_fn(start, goal, nullptr);
-    cost_coord_pq_push(frontier, h_start, coord_copy(start));
+    cost_coord_pq_push(frontier, h_start, start);
 
     if (visited_logging)
-        route_add_visited(result, coord_copy(start));
+        route_add_visited(result, start);
 
     int retry = 0;
     coord_t* final = nullptr;
@@ -42,6 +51,7 @@ route_t* find_sma_star(const map_t* m,
         if (!current) break;
 
         if (coord_equal(current, goal)) {
+            if (final) coord_free(final);
             final = coord_copy(current);
             delete current;
             break;
@@ -50,7 +60,7 @@ route_t* find_sma_star(const map_t* m,
         float* g_ptr = (float*)coord_hash_get(cost_so_far, current);
         float g = g_ptr ? *g_ptr : 0.0f;
 
-        coord_list_t* neighbors = map_clone_neighbors(
+        coord_list_t* neighbors = map_make_neighbors(
             m, current->x, current->y);
 
         int len = coord_list_length(neighbors);
@@ -63,18 +73,19 @@ route_t* find_sma_star(const map_t* m,
 
             float* known_cost = (float*)coord_hash_get(cost_so_far, next);
             if (!known_cost || new_cost < *known_cost) {
-                coord_hash_replace(
-                    cost_so_far, coord_copy(next), new float(new_cost));
 
-                coord_hash_replace(
-                    came_from, coord_copy(next), coord_copy(current));
+                float* new_float = new float(new_cost);
+                coord_hash_replace(cost_so_far, next, new_float);
+                delete new_float;
+
+                coord_hash_replace(came_from, next, current);
 
                 float h = heuristic_fn(next, goal, nullptr);
                 float f = new_cost + h;
-                cost_coord_pq_push(frontier, f, coord_copy(next));
+                cost_coord_pq_push(frontier, f, next);
 
                 if (visited_logging)
-                    route_add_visited(result, coord_copy(next));
+                    route_add_visited(result, next);
             }
         }
 
@@ -107,16 +118,6 @@ route_t* find_sma_star(const map_t* m,
     }
 
     route_set_total_retry_count(result, retry);
-
-    // 메모리 해제
-    coord_list_t* keys = coord_hash_keys(cost_so_far);
-    int n = coord_list_length(keys);
-    for (int i = 0; i < n; ++i) {
-        const coord_t* key = coord_list_get(keys, i);
-        float* val = (float*)coord_hash_get(cost_so_far, key);
-        delete val;
-    }
-    coord_list_free(keys);
 
     coord_hash_free(cost_so_far);
     coord_hash_free(came_from);

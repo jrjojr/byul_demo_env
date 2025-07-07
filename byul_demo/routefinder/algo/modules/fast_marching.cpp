@@ -10,6 +10,32 @@
 #include <cmath>
 #include <stdio.h>
 
+void* fmm_cell_copy(const void* p) {
+    if (!p) return nullptr;
+    auto* in = static_cast<const fmm_cell_t*>(p);
+    auto* out = new fmm_cell_t;
+    *out = *in;
+    return out;
+}
+
+void fmm_cell_free(void* p) {
+    delete static_cast<fmm_cell_t*>(p);
+}
+
+fmm_cell_t* fmm_cell_new() {
+    auto* cell = new fmm_cell_t;
+    cell->state = FMM_FAR;
+    cell->value = 0.0f;
+    return cell;
+}
+
+fmm_cell_t* fmm_cell_new_full(fmm_state_t state, float value) {
+    auto* cell = new fmm_cell_t;
+    cell->state = state;
+    cell->value = value;
+    return cell;
+}
+
 fmm_grid_t* fmm_compute(const map_t* m, const coord_t* start, 
     cost_func cost_fn, float radius_limit, int max_retry) {
     if (!m || !start) return nullptr;
@@ -22,16 +48,21 @@ fmm_grid_t* fmm_compute(const map_t* m, const coord_t* start,
     fmm_grid_t* grid = new fmm_grid_t();
     grid->width = m->width;
     grid->height = m->height;
-    grid->cells = coord_hash_new();
+    grid->cells = coord_hash_new_full(
+        (coord_hash_copy_func) fmm_cell_copy,
+        (coord_hash_free_func) fmm_cell_free
+    );
+
     grid->visit_order = coord_list_new();
 
     cost_coord_pq_t* narrow_band = cost_coord_pq_new();
 
     fmm_cell_t* start_cell = new fmm_cell_t{FMM_NARROW, 0.0f};
-    coord_t* start_cp = coord_copy(start);
-    coord_hash_replace(grid->cells, start_cp, start_cell);
-    coord_list_push_back(grid->visit_order, coord_copy(start_cp));
-    cost_coord_pq_push(narrow_band, 0.0f, coord_copy(start_cp));
+    coord_hash_replace(grid->cells, start, start_cell);
+    fmm_cell_free(start_cell);
+
+    coord_list_push_back(grid->visit_order, start);
+    cost_coord_pq_push(narrow_band, 0.0f, start);
 
     int retry = 0;
     while (!cost_coord_pq_is_empty(narrow_band)) {
@@ -44,16 +75,17 @@ fmm_grid_t* fmm_compute(const map_t* m, const coord_t* start,
 
         if (!current_cell) current_cell = new fmm_cell_t{FMM_KNOWN, FLT_MAX};
         current_cell->state = FMM_KNOWN;
-        coord_hash_replace(grid->cells, coord_copy(current), current_cell);
+        coord_hash_replace(grid->cells, current, current_cell);
+        // fmm_cell_free(current_cell);
 
         if (current_cell->value > radius_limit) {
             coord_free(current);
             continue;
         }
 
-        coord_list_push_back(grid->visit_order, coord_copy(current));
+        coord_list_push_back(grid->visit_order, current);
 
-        coord_list_t* neighbors = map_clone_neighbors(
+        coord_list_t* neighbors = map_make_neighbors(
             m, current->x, current->y);
 
         int len = coord_list_length(neighbors);
@@ -103,8 +135,10 @@ fmm_grid_t* fmm_compute(const map_t* m, const coord_t* start,
 
             if (!next_cell || T < next_cell->value) {
                 fmm_cell_t* new_cell = new fmm_cell_t{FMM_NARROW, T};
-                coord_hash_replace(grid->cells, coord_copy(next), new_cell);
-                cost_coord_pq_push(narrow_band, T, coord_copy(next));
+                coord_hash_replace(grid->cells, next, new_cell);
+                fmm_cell_free(new_cell);
+
+                cost_coord_pq_push(narrow_band, T, next);
             }
         }
 
@@ -117,20 +151,11 @@ fmm_grid_t* fmm_compute(const map_t* m, const coord_t* start,
     return grid;
 }
 
-
 void fmm_grid_free(fmm_grid_t* grid) {
     if (!grid) return;
 
-    coord_list_t* keys = coord_hash_keys(grid->cells);
-    int len = coord_list_length(keys);
-    for (int i = 0; i < len; ++i) {
-        const coord_t* k = coord_list_get(keys, i);
-        fmm_cell_t* v = (fmm_cell_t*)coord_hash_get(grid->cells, k);
-        delete v;
-    }
-    coord_list_free(keys);
-
     coord_hash_free(grid->cells);
+    coord_list_free(grid->visit_order);
     delete grid;
 }
 
@@ -152,76 +177,6 @@ void fmm_dump_ascii(const fmm_grid_t* grid) {
     printf("\n");
 }
 
-// route_t* find_fast_marching(const map_t* m, 
-//     const coord_t* start, const coord_t* goal,
-//     cost_func cost_fn, int max_retry, bool visited_logging) {
-
-//     float radius = coord_distance(start, goal) * 1.5;
-//     fmm_grid_t* grid = fmm_compute(m, start, cost_fn, radius, max_retry);
-//     if (!grid) return nullptr;
-
-//     route_t* route = route_new();
-
-//     // 방문한 셀 순서대로 기록
-//     if (visited_logging && grid->visit_order) {
-//         int vlen = coord_list_length(grid->visit_order);
-//         for (int i = 0; i < vlen; ++i) {
-//             const coord_t* c = coord_list_get(grid->visit_order, i);
-//             route_add_visited(route, coord_copy(c));
-//         }
-//     }
-
-//     fmm_cell_t* goal_cell = (fmm_cell_t*)coord_hash_get(grid->cells, goal);
-//     if (!goal_cell) {
-//         route_set_success(route, false);
-//         fmm_grid_free(grid);
-//         return route;
-//     }
-
-//     // 역추적 시작
-//     coord_t* current = coord_copy(goal);
-//     route_insert(route, 0, coord_copy(current));
-
-//     while (!coord_equal(current, start)) {
-//         coord_list_t* neighbors = map_clone_neighbors(m, current->x, current->y);
-//         int len = coord_list_length(neighbors);
-
-//         float best_val = FLT_MAX;
-//         const coord_t* best_neighbor = nullptr;
-
-//         for (int i = 0; i < len; ++i) {
-//             const coord_t* n = coord_list_get(neighbors, i);
-//             fmm_cell_t* n_cell = (fmm_cell_t*)coord_hash_get(grid->cells, n);
-//             if (!n_cell) continue;
-
-//             if (n_cell->value < best_val) {
-//                 best_val = n_cell->value;
-//                 best_neighbor = n;
-//             }
-//         }
-
-//         if (!best_neighbor) {
-//             route_set_success(route, false);
-//             coord_free(current);
-//             coord_list_free(neighbors);
-//             fmm_grid_free(grid);
-//             return route;
-//         }
-
-//         route_insert(route, 0, coord_copy(best_neighbor));
-//         coord_free(current);
-//         current = coord_copy(best_neighbor);
-//         coord_list_free(neighbors);
-//     }
-
-//     route_set_total_retry_count(route, grid->total_retry_count);
-//     coord_free(current);
-//     fmm_grid_free(grid);
-//     route_set_success(route, true);
-
-//     return route;
-// }
-
 route_t* find_fast_marching(const map_t* m,
     const coord_t* start, const coord_t* goal,
     cost_func cost_fn, int max_retry, bool visited_logging) {
@@ -237,7 +192,7 @@ route_t* find_fast_marching(const map_t* m,
         int vlen = coord_list_length(grid->visit_order);
         for (int i = 0; i < vlen; ++i) {
             const coord_t* c = coord_list_get(grid->visit_order, i);
-            route_add_visited(route, coord_copy(c));
+            route_add_visited(route, c);
         }
     }
 
@@ -261,10 +216,10 @@ route_t* find_fast_marching(const map_t* m,
 
     // 역추적 시작
     coord_t* current = coord_copy(goal);
-    route_insert(route, 0, coord_copy(current));
+    route_insert(route, 0, current);
 
     while (!coord_equal(current, start)) {
-        coord_list_t* neighbors = map_clone_neighbors(m, current->x, current->y);
+        coord_list_t* neighbors = map_make_neighbors(m, current->x, current->y);
         int len = coord_list_length(neighbors);
 
         float best_val = FLT_MAX;
@@ -289,7 +244,7 @@ route_t* find_fast_marching(const map_t* m,
             return route;
         }
 
-        route_insert(route, 0, coord_copy(best_neighbor));
+        route_insert(route, 0, best_neighbor);
         coord_free(current);
         current = coord_copy(best_neighbor);
         coord_list_free(neighbors);

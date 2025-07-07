@@ -17,13 +17,14 @@ static float rta_iterative_eval(const map_t* m,
 
     if (!cost_fn) cost_fn = default_cost;
     if (!heuristic_fn) heuristic_fn = default_heuristic;
+    // coord_t* current = const_cast<coord_t*>(start);
     coord_t* current = coord_copy(start);
     float g = 0.0f;
 
     for (int d = 0; d < max_depth; ++d) {
         if (coord_equal(current, goal)) break;
 
-        coord_list_t* neighbors = map_clone_neighbors(m, current->x, current->y);
+        coord_list_t* neighbors = map_make_neighbors(m, current->x, current->y);
         coord_t* best = nullptr;
         float best_f = FLT_MAX;
 
@@ -40,15 +41,17 @@ static float rta_iterative_eval(const map_t* m,
                 best_f = f;
                 if (best) coord_free(best);
                 best = coord_copy(next);
+                // best = const_cast<coord_t*>(next);
             }
         }
 
         coord_list_free(neighbors);
         if (!best) break;
 
-        if (visited_logging) route_add_visited(route, coord_copy(best));        
+        if (visited_logging) route_add_visited(route, best);        
 
         g += cost_fn(m, current, best, nullptr);
+
         coord_free(current);
         current = best;
     }
@@ -72,15 +75,19 @@ route_t* find_rta_star(const map_t* m,
 
     route_t* result = route_new();
     coord_t* current = coord_copy(start);
-    route_add_coord(result, coord_copy(current));
+    route_add_coord(result, current);
 
     coord_hash_t* visited = coord_hash_new();
-    coord_hash_replace(visited, coord_copy(current), (void*)1);
-    if (visited_logging) route_add_visited(result, coord_copy(current));
+
+    int* new_int = new int(1);
+    coord_hash_replace(visited, current, new_int);
+    delete new_int;
+
+    if (visited_logging) route_add_visited(result, current);
 
     int retry = 0;
     while (!coord_equal(current, goal) && retry++ < max_retry) {
-        coord_list_t* neighbors = map_clone_neighbors(m, current->x, current->y);
+        coord_list_t* neighbors = map_make_neighbors(m, current->x, current->y);
         coord_t* best = nullptr;
         float best_f = FLT_MAX;
 
@@ -96,6 +103,7 @@ route_t* find_rta_star(const map_t* m,
                 best_f = eval;
                 if (best) coord_free(best);
                 best = coord_copy(next);
+                // best = const_cast<coord_t*>(next);
             }
         }
 
@@ -104,9 +112,13 @@ route_t* find_rta_star(const map_t* m,
 
         coord_free(current);
         current = best;
-        route_add_coord(result, coord_copy(current));
-        coord_hash_replace(visited, coord_copy(current), (void*)1);
-        if (visited_logging) route_add_visited(result, coord_copy(current));
+        route_add_coord(result, current);
+
+        int* new_int = new int(1);
+        coord_hash_replace(visited, current, new_int);
+        delete new_int;
+
+        if (visited_logging) route_add_visited(result, current);
     }
 
     if (coord_equal(current, goal)) {

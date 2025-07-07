@@ -85,7 +85,7 @@ float coord_distance(const coord_t* a, const coord_t* b) {
     if (!a || !b) return 0.0f;
     int dx = a->x - b->x;
     int dy = a->y - b->y;
-    return std::sqrtf(dx * dx + dy * dy);
+    return std::sqrt(dx * dx + dy * dy);
 }
 
 int coord_manhattan_distance(const coord_t* a, const coord_t* b) {
@@ -102,4 +102,11 @@ double coord_degree(const coord_t* a, const coord_t* b) {
     double deg = rad * (180.0 / M_PI);
     if (deg < 0.0) deg += 360.0;
     return deg;
+}
+
+const coord_t* make_tmp_coord(int x, int y) {
+    static thread_local coord_t temp;
+    temp.x = x;
+    temp.y = y;
+    return &temp;
 }

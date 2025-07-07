@@ -124,8 +124,8 @@ BYUL_API algo_t* algo_copy(const algo_t* src);
  * @brief 설정값 세터/게터
  */
 BYUL_API void algo_set_map(algo_t* a, map_t* map);
-BYUL_API void algo_set_start(algo_t* a, coord_t* start);
-BYUL_API void algo_set_goal(algo_t* a, coord_t* goal);
+BYUL_API void algo_set_start(algo_t* a, const coord_t* start);
+BYUL_API void algo_set_goal(algo_t* a, const coord_t* goal);
 
 BYUL_API map_t* algo_get_map(const algo_t* a);
 BYUL_API coord_t* algo_get_start(const algo_t* a);

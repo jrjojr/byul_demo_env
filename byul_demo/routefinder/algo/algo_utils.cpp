@@ -41,7 +41,7 @@ static const char* get_map_string(
     const coord_hash_t* route_coords,
     const coord_hash_t* visited_count
 ) {
-    static char buf[5];
+    static char buf[16];
 
     if (start && coord_get_x(start) == x && coord_get_y(start) == y)
         return "  S";
@@ -120,7 +120,7 @@ void map_print_ascii_with_route(const map_t* m, const route_t* p, int margin) {
 
     for (int i = 0; i < coord_list_length(list); ++i) {
         const coord_t* c = coord_list_get(list, i);
-        coord_hash_replace(route_coords, coord_copy(c), NULL);
+        coord_hash_replace(route_coords, c, NULL);
 
         int x = coord_get_x(c);
         int y = coord_get_y(c);
@@ -181,7 +181,7 @@ void map_print_ascii_with_visited_count(
     int len = coord_list_length(list);
     for (int i = 0; i < len; ++i) {
         const coord_t* c = coord_list_get(list, i);
-        coord_hash_replace(route_coords, coord_copy(c), NULL);
+        coord_hash_replace(route_coords, c, NULL);
 
         int x = coord_get_x(c);
         int y = coord_get_y(c);

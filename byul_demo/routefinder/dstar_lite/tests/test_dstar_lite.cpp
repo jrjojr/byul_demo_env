@@ -1,4 +1,3 @@
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
 
 #include "internal/dstar_lite.h"
@@ -516,7 +515,7 @@ for (int i = 0; i < 5; i++) {
     map_block_coord(dsl->m, coord_get_x(coord_i), coord_get_y(coord_i));
 
     if (i == 2) {
-        coord_list_push_back(changed_coords, coord_copy(coord_i));
+        coord_list_push_back(changed_coords, coord_i);
         dsl->changed_coords_fn = get_changed_coords;
         dsl->changed_coords_fn_userdata = changed_coords;
     }
@@ -772,4 +771,33 @@ TEST_CASE("test_dstar_lite_block_all_around_start") {
     dstar_lite_free(dsl);
     map_free(m);
      
+}
+
+TEST_CASE("test_dstar_lite_find_proto") {
+    printf("test_dstar_lite_find_proto\n.");
+    coord_t* start = coord_new_full(0, 0);
+    coord_t* goal = coord_new_full(9, 9);
+
+    map_t* m = map_new_full(0, 0, MAP_NEIGHBOR_8);
+    dstar_lite_t* dsl = dstar_lite_new_full(m, start,
+        dstar_lite_cost, dstar_lite_heuristic, true);
+
+        dstar_lite_set_start(dsl, start);
+        dstar_lite_set_goal(dsl, goal);
+
+    for (int y = 1; y < 10; y++) {
+        map_block_coord(dsl->m, 5, y);    
+    }
+
+    // route_t* p = dstar_lite_find(dsl);
+    dstar_lite_find_proto(dsl);
+    CHECK(dsl->proto_route);
+    CHECK(route_get_success(dsl->proto_route));
+    route_print(dsl->proto_route);
+    dsl_print_ascii_update_count(dsl, dsl->proto_route, 5);
+
+    coord_free(start);
+    coord_free(goal);
+    dstar_lite_free(dsl);
+    map_free(m);
 }

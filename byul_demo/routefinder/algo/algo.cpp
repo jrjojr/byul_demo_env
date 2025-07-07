@@ -126,12 +126,12 @@ void algo_set_map(algo_t* a, map_t* map) {
      a->map = map; 
 }
 
-void algo_set_start(algo_t* a, coord_t* start) { 
-    a->start = start; 
+void algo_set_start(algo_t* a, const coord_t* start) { 
+    coord_set(a->start, start->x, start->y);
 }
 
-void algo_set_goal(algo_t* a, coord_t* goal) { 
-    a->goal = goal; 
+void algo_set_goal(algo_t* a, const coord_t* goal) { 
+    coord_set(a->goal, goal->x, goal->y); 
 }
 
 map_t* algo_get_map(const algo_t* a) { 

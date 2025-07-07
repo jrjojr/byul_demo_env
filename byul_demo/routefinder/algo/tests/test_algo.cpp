@@ -13,6 +13,7 @@
 
 TEST_CASE("BFS: simple route") {
     // map_t* m = map_new();
+    std::cout << "BFS: simple route\n";
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
     coord_t* goal = coord_new_full(9, 9);
@@ -32,6 +33,7 @@ TEST_CASE("BFS: simple route") {
 }
 
 TEST_CASE("BFS: blocked route") {
+    std::cout << "BFS: blocked route\n";
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -59,6 +61,7 @@ TEST_CASE("BFS: blocked route") {
 }
 
 TEST_CASE("BFS: blocked route force failed") {
+    std::cout << "BFS: blocked route force failed\n";
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -158,8 +161,8 @@ TEST_CASE("DFS: blocked route force failed") {
 }
 
 TEST_CASE("dijkstra: simple route") {
-    map_t* m = map_new();
-    // map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    // map_t* m = map_new();
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
     coord_t* goal = coord_new_full(9, 9);
 
@@ -178,8 +181,8 @@ TEST_CASE("dijkstra: simple route") {
 }
 
 TEST_CASE("dijkstra: blocked route") {
-    map_t* m = map_new();
-    // map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    // map_t* m = map_new();
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
     coord_t* goal = coord_new_full(9, 9);
 
@@ -204,8 +207,8 @@ TEST_CASE("dijkstra: blocked route") {
 }
 
 TEST_CASE("dijkstra: blocked route force failed") {
-    map_t* m = map_new();
-    // map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    // map_t* m = map_new();
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
     coord_t* goal = coord_new_full(9, 9);
 
@@ -230,8 +233,8 @@ TEST_CASE("dijkstra: blocked route force failed") {
 }
 
 TEST_CASE("astar: simple route") {
-    map_t* m = map_new();
-    // map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    // map_t* m = map_new();
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
     coord_t* goal = coord_new_full(9, 9);
 
@@ -251,8 +254,8 @@ TEST_CASE("astar: simple route") {
 }
 
 TEST_CASE("astar: blocked route") {
-    map_t* m = map_new();
-    // map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    // map_t* m = map_new();
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
     coord_t* goal = coord_new_full(9, 9);
 
@@ -278,8 +281,8 @@ TEST_CASE("astar: blocked route") {
 }
 
 TEST_CASE("astar: blocked route force failed ") {
-    map_t* m = map_new();
-    // map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
+    // map_t* m = map_new();
+    map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
     coord_t* goal = coord_new_full(9, 9);
 
@@ -290,7 +293,7 @@ TEST_CASE("astar: blocked route force failed ") {
         map_block_coord(m, 5, y);
 
     route_t* p = find_astar(m, start, goal, default_cost, default_heuristic, 
-        50, true);
+        20, true);
 
     REQUIRE(p != nullptr);
     CHECK(route_get_success(p) == false);
@@ -305,6 +308,7 @@ TEST_CASE("astar: blocked route force failed ") {
 }
 
 TEST_CASE("fast_marching: simple route") {
+    std::cout << "fast_marching: simple route\n";
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -327,6 +331,8 @@ TEST_CASE("fast_marching: simple route") {
 
 TEST_CASE("fast_marching: blocked route") {
     // map_t* m = map_new();
+    std::cout << "fast_marching: blocked route\n";
+
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
     coord_t* goal = coord_new_full(9, 9);
@@ -353,6 +359,7 @@ TEST_CASE("fast_marching: blocked route") {
 }
 
 TEST_CASE("fast_marching: blocked route force failed ") {
+    std::cout << "fast_marching: blocked route force failed\n";
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -380,6 +387,8 @@ TEST_CASE("fast_marching: blocked route force failed ") {
 }
 
 TEST_CASE("greedy_best_first: simple route") {
+    std::cout << "greedy_best_first: simple route\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -401,6 +410,8 @@ TEST_CASE("greedy_best_first: simple route") {
 }
 
 TEST_CASE("greedy_best_first: blocked route") {
+    std::cout << "greedy_best_first: blocked route\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -428,6 +439,8 @@ TEST_CASE("greedy_best_first: blocked route") {
 }
 
 TEST_CASE("greedy_best_first: blocked route force failed ") {
+    std::cout << "greedy_best_first: blocked route force failed\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -455,6 +468,8 @@ TEST_CASE("greedy_best_first: blocked route force failed ") {
 }
 
 TEST_CASE("ida_star: simple route") {
+    std::cout << "ida_star: simple route\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -476,6 +491,8 @@ TEST_CASE("ida_star: simple route") {
 }
 
 TEST_CASE("ida_star: blocked route") {
+    std::cout << "ida_star: blocked route\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -503,6 +520,8 @@ TEST_CASE("ida_star: blocked route") {
 }
 
 TEST_CASE("ida_star: blocked route force failed ") {
+    std::cout << "ida_star: blocked route force failed\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -530,6 +549,8 @@ TEST_CASE("ida_star: blocked route force failed ") {
 }
 
 TEST_CASE("fringe_search: simple route") {
+    std::cout << "fringe_search: simple route\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -552,6 +573,8 @@ TEST_CASE("fringe_search: simple route") {
 }
 
 TEST_CASE("fringe_search: blocked route") {
+    std::cout << "fringe_search: blocked route\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -581,6 +604,8 @@ TEST_CASE("fringe_search: blocked route") {
 }
 
 TEST_CASE("fringe_search: blocked route force failed ") {
+    std::cout << "fringe_search: blocked route force failed\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -610,6 +635,8 @@ TEST_CASE("fringe_search: blocked route force failed ") {
 }
 
 TEST_CASE("weighted_astar: simple route") {
+    std::cout << "weighted_astar: simple route\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -632,6 +659,8 @@ TEST_CASE("weighted_astar: simple route") {
 }
 
 TEST_CASE("weighted_astar: blocked route") {
+    std::cout << "weighted_astar: blocked route\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -661,6 +690,8 @@ TEST_CASE("weighted_astar: blocked route") {
 }
 
 TEST_CASE("weighted_astar: blocked route force failed ") {
+    std::cout << "weighted_astar: blocked route force failed\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -690,6 +721,8 @@ TEST_CASE("weighted_astar: blocked route force failed ") {
 }
 
 TEST_CASE("rta_star: simple route") {
+    std::cout << "rta_star: simple route\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -712,6 +745,8 @@ TEST_CASE("rta_star: simple route") {
 }
 
 TEST_CASE("rta_star: blocked route") {
+    std::cout << "rta_star: blocked route\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -741,6 +776,8 @@ TEST_CASE("rta_star: blocked route") {
 }
 
 TEST_CASE("rta_star: blocked route force failed ") {
+    std::cout << "rta_star: blocked route force failed\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -770,6 +807,8 @@ TEST_CASE("rta_star: blocked route force failed ") {
 }
 
 TEST_CASE("sma_star: simple route") {
+    std::cout << "sma_star: simple route\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -792,6 +831,8 @@ TEST_CASE("sma_star: simple route") {
 }
 
 TEST_CASE("sma_star: blocked route") {
+    std::cout << "sma_star: blocked route\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -821,6 +862,8 @@ TEST_CASE("sma_star: blocked route") {
 }
 
 TEST_CASE("sma_star: blocked route force failed ") {
+    std::cout << "sma_star: blocked route force failed\n";
+
     // map_t* m = map_new();
     map_t* m = map_new_full(10, 10, MAP_NEIGHBOR_8);
     coord_t* start = coord_new_full(0, 0);
@@ -875,6 +918,7 @@ TEST_CASE("algo_all: blocked route") {
     CHECK(route_get_success(p) == true);
     route_print(p);
     map_print_ascii_with_visited_count(m, p, 5);
+    route_free(p);
 
     // #include "internal/bfs.h"
     std::cout << "bfs.h\n";
@@ -884,6 +928,7 @@ TEST_CASE("algo_all: blocked route") {
     CHECK(route_get_success(p) == true);
     route_print(p);
     map_print_ascii_with_visited_count(m, p, 5);
+    route_free(p);
 
     // #include "internal/dfs.h"
     std::cout << "dfs.h\n";
@@ -893,6 +938,7 @@ TEST_CASE("algo_all: blocked route") {
     CHECK(route_get_success(p) == true);
     route_print(p);
     map_print_ascii_with_visited_count(m, p, 5);
+    route_free(p);
 
     // #include "internal/dijkstra.h"
     std::cout << "dijkstra.h\n";
@@ -902,6 +948,7 @@ TEST_CASE("algo_all: blocked route") {
     CHECK(route_get_success(p) == true);
     route_print(p);
     map_print_ascii_with_visited_count(m, p, 5);
+    route_free(p);
 
     // #include "internal/fast_marching.h"
     std::cout << "fast_marching.h\n";
@@ -911,6 +958,7 @@ TEST_CASE("algo_all: blocked route") {
     CHECK(route_get_success(p) == true);
     route_print(p);
     map_print_ascii_with_visited_count(m, p, 5);
+    route_free(p);
 
     // #include "internal/fringe_search.h"
     std::cout << "fringe_search.h\n";
@@ -920,6 +968,7 @@ TEST_CASE("algo_all: blocked route") {
     CHECK(route_get_success(p) == true);
     route_print(p);
     map_print_ascii_with_visited_count(m, p, 5);
+    route_free(p);
 
     // #include "internal/greedy_best_first.h"
     std::cout << "greedy_best_first.h\n";
@@ -929,6 +978,7 @@ TEST_CASE("algo_all: blocked route") {
     CHECK(route_get_success(p) == true);
     route_print(p);
     map_print_ascii_with_visited_count(m, p, 5);
+    route_free(p);
 
     // #include "internal/ida_star.h"
     std::cout << "ida_star.h\n";
@@ -938,6 +988,7 @@ TEST_CASE("algo_all: blocked route") {
     CHECK(route_get_success(p) == true);
     route_print(p);
     map_print_ascii_with_visited_count(m, p, 5);
+    route_free(p);
 
     // #include "internal/rta_star.h"
     std::cout << "rta_star.h\n";
@@ -947,6 +998,7 @@ TEST_CASE("algo_all: blocked route") {
     CHECK(route_get_success(p) == true);
     route_print(p);
     map_print_ascii_with_visited_count(m, p, 5);
+    route_free(p);
 
     // #include "internal/sma_star.h"
     std::cout << "sma_star.h\n";
@@ -956,6 +1008,7 @@ TEST_CASE("algo_all: blocked route") {
     CHECK(route_get_success(p) == true);
     route_print(p);
     map_print_ascii_with_visited_count(m, p, 5);
+    route_free(p);
 
     // #include "internal/weighted_astar.h"        
     std::cout << "weighted_astar.h\n";
@@ -965,8 +1018,8 @@ TEST_CASE("algo_all: blocked route") {
     CHECK(route_get_success(p) == true);
     route_print(p);
     map_print_ascii_with_visited_count(m, p, 5);    
-
     route_free(p);
+
     coord_free(start);
     coord_free(goal);
     map_free(m);

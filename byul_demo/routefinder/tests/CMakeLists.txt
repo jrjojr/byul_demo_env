@@ -46,3 +46,22 @@ message(STATUS "${PROJECT_NAME}: ✅ routefinder.dll만 링크하고 glib은 절
 enable_testing()
 add_test(NAME AllTests COMMAND ${PROJECT_NAME})
 
+# 컴파일·링크 옵션에 ASan 추가
+# win11과 우분투는 다르다
+if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+    message(STATUS 
+    "${PROJECT_NAME} No apply ASan for Windows because error.")
+
+else()
+    message(STATUS "${PROJECT_NAME} Applying ASan + LSan for Unix-like")
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        -fsanitize=address
+        -fsanitize=leak
+        -g
+        -O1
+    )
+    target_link_options(${PROJECT_NAME} PRIVATE
+        -fsanitize=address
+        -fsanitize=leak
+    )
+endif()

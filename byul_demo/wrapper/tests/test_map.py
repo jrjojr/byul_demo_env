@@ -11,7 +11,7 @@ import unittest
 from coord import c_coord
 from map import c_map, MapNeighborMode
 
-class TestMapCloneAtDegree(unittest.TestCase):
+class TestMapMakeAtDegree(unittest.TestCase):
     def setUp(self):
         self.map = c_map(width=5, height=5, mode=MapNeighborMode.DIR_8)
 

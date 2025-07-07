@@ -127,12 +127,13 @@ void route_set_total_retry_count(route_t* p, int retry_count) {
 
 int route_add_visited(route_t* p, const coord_t* c) {
     if (!p) return 0;
-    coord_list_push_back(p->visited_order, coord_copy(c));
+    coord_list_push_back(p->visited_order, c);
 
     int* old_val = static_cast<int*>(coord_hash_get(p->visited_count, c));
     int count = (old_val ? *old_val : 0) + 1;
     int* count_ptr = new int(count);
-    coord_hash_replace(p->visited_count, coord_copy(c), count_ptr);
+    coord_hash_replace(p->visited_count, c, count_ptr);
+    delete count_ptr;
 
     return 1;
 }
@@ -222,7 +223,7 @@ void route_print(const route_t* p) {
     printf("\n");
 }
 
-coord_t* route_look_at(route_t* p, int index) {
+coord_t* route_make_direction(route_t* p, int index) {
     if (!p || coord_list_length(p->coords) < 2) return coord_new_full(0, 0);
     int len = coord_list_length(p->coords);
     if (index < 0 || index >= len) return coord_new_full(0, 0);
@@ -267,8 +268,11 @@ route_dir_t route_get_direction_by_coord(const coord_t* dxdy) {
 }
 
 route_dir_t route_get_direction_by_index(route_t* p, int index) {
-    coord_t* vec = route_look_at(p, index);
-    return route_get_direction_by_coord(vec);
+    route_dir_t dir;
+    coord_t* vec = route_make_direction(p, index);
+    dir = route_get_direction_by_coord(vec);
+    coord_free(vec);
+    return dir;
 }
 
 route_dir_t route_calc_average_facing(route_t* p, int history) {
@@ -314,7 +318,7 @@ float route_calc_average_dir(route_t* p, int history) {
     int dy = coord_get_y(c_to) - coord_get_y(c_from);
 
     if (dx == 0 && dy == 0) return 0.0f;
-    return std::atan2f((float)dy, (float)dx) * (180.0f / M_PI);
+    return std::atan2((float)dy, (float)dx) * (180.0f / M_PI);
 }
 
 route_dir_t calc_direction(const coord_t* start, const coord_t* goal) {
@@ -474,23 +478,25 @@ bool route_reconstruct_path(route_t* route, const coord_hash_t* came_from,
     if (!route || !came_from || !start || !goal) return false;
 
     coord_list_t* reversed = coord_list_new();
-    coord_t* current = coord_copy(goal);
+    // coord_t* current = coord_copy(goal);
+    const coord_t* current = goal;
 
     while (!coord_equal(current, start)) {
-        coord_list_insert(reversed, 0, coord_copy(current));
+        coord_list_insert(reversed, 0, current);
 
         const coord_t* prev = (const coord_t*)coord_hash_get(came_from, current);
-        coord_free(current);
+        // coord_free(current);
 
         if (!prev) {
             coord_list_free(reversed);
             return false;  // 복원 실패
         }
 
-        current = coord_copy(prev);
+        // current = coord_copy(prev);
+        current = prev;
     }
 
-    coord_list_insert(reversed, 0, coord_copy(start));
+    coord_list_insert(reversed, 0, start);
 
     int len = coord_list_length(reversed);
     for (int i = 0; i < len; ++i) {
@@ -498,6 +504,6 @@ bool route_reconstruct_path(route_t* route, const coord_hash_t* came_from,
     }
 
     coord_list_free(reversed);
-    coord_free(current);
+    // coord_free(current);
     return true;
 }

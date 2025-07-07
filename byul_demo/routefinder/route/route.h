@@ -92,7 +92,7 @@ BYUL_API void route_slice(route_t* p, int start, int end);
 BYUL_API void route_print(const route_t* p);
 
 /** 방향 계산 **/
-BYUL_API coord_t* route_look_at(route_t* p, int index);
+BYUL_API coord_t* route_make_direction(route_t* p, int index);
 BYUL_API route_dir_t route_get_direction_by_coord(const coord_t* dxdy);
 BYUL_API route_dir_t route_get_direction_by_index(route_t* p, int index);
 BYUL_API route_dir_t route_calc_average_facing(route_t* p, int history);

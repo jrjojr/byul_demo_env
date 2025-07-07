@@ -13,8 +13,26 @@ extern "C" {
 
 typedef struct s_coord_hash coord_hash_t;
 
+typedef void* (*coord_hash_copy_func)(const void* value);
+typedef void  (*coord_hash_free_func)(void* value);
+
+BYUL_API void* int_copy(const void* p);
+BYUL_API void int_free(void* p);
+
+BYUL_API void* float_copy(const void* p);
+BYUL_API void float_free(void* p);
+
+BYUL_API void* double_copy(const void* p);
+BYUL_API void double_free(void* p);
+
 // 생성/해제
-BYUL_API coord_hash_t* coord_hash_new(void);
+
+// 기본형 (int)
+BYUL_API coord_hash_t* coord_hash_new();  
+
+BYUL_API coord_hash_t* coord_hash_new_full(coord_hash_copy_func copy_func,
+                                  coord_hash_free_func free_func);
+    
 BYUL_API void          coord_hash_free(coord_hash_t* hash);
 BYUL_API coord_hash_t* coord_hash_copy(const coord_hash_t* original);
 

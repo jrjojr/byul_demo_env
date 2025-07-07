@@ -22,19 +22,33 @@ route_t* find_fringe_search(const map_t* m,
 
     float threshold = heuristic_fn(start, goal, nullptr);
 
-    coord_hash_t* cost_so_far = coord_hash_new();
-    coord_hash_t* came_from = coord_hash_new();
+    coord_hash_t* cost_so_far = coord_hash_new_full(
+        (coord_hash_copy_func) float_copy,
+        (coord_hash_free_func) float_free
+    );
+
+    coord_hash_t* came_from = coord_hash_new_full(
+        (coord_hash_copy_func) coord_copy,
+        (coord_hash_free_func) coord_free
+    );
+
     coord_hash_t* visited = coord_hash_new();
     cost_coord_pq_t* frontier = cost_coord_pq_new();
 
     float g_start = 0.0f;
     float f_start = g_start + threshold;
 
-    coord_hash_replace(cost_so_far, coord_copy(start), new float(g_start));
-    coord_hash_replace(visited, coord_copy(start), (void*)1);
-    cost_coord_pq_push(frontier, f_start, coord_copy(start));
+    float* new_float = new float(g_start);
+    coord_hash_replace(cost_so_far, start, new_float);
+    delete new_float;
+
+    int* new_int = new int(1);
+    coord_hash_replace(visited, start, new_int);
+    delete new_int;
+
+    cost_coord_pq_push(frontier, f_start, start);
     if (visited_logging)
-        route_add_visited(result, coord_copy(start));
+        route_add_visited(result, start);
 
     bool found = false;
     coord_t* final = nullptr;
@@ -44,11 +58,15 @@ route_t* find_fringe_search(const map_t* m,
 
     cost_coord_pq_t* next_frontier = cost_coord_pq_new();
 
-    while (!cost_coord_pq_is_empty(frontier) && (max_retry <= 0 || total_retry < max_retry)) {
+    while (!cost_coord_pq_is_empty(frontier) && 
+        (max_retry <= 0 || total_retry < max_retry)) {
+
         float next_threshold = FLT_MAX;
         bool expanded = false;
 
-        while (!cost_coord_pq_is_empty(frontier) && (max_retry <= 0 || total_retry < max_retry)) {
+        while (!cost_coord_pq_is_empty(frontier) && 
+            (max_retry <= 0 || total_retry < max_retry)) {
+
             ++total_retry;
             coord_t* current = cost_coord_pq_pop(frontier);
             float* g_ptr = (float*)coord_hash_get(cost_so_far, current);
@@ -58,7 +76,7 @@ route_t* find_fringe_search(const map_t* m,
 
             if (f > threshold + delta) {
                 if (f < next_threshold) next_threshold = f;
-                cost_coord_pq_push(next_frontier, f, coord_copy(current));
+                cost_coord_pq_push(next_frontier, f, current);
                 coord_free(current);
                 continue;
             }
@@ -74,7 +92,7 @@ route_t* find_fringe_search(const map_t* m,
                 break;
             }
 
-            coord_list_t* neighbors = map_clone_neighbors(m, current->x, current->y);
+            coord_list_t* neighbors = map_make_neighbors(m, current->x, current->y);
             int len = coord_list_length(neighbors);
             for (int j = 0; j < len; ++j) {
                 const coord_t* next = coord_list_get(neighbors, j);
@@ -83,13 +101,21 @@ route_t* find_fringe_search(const map_t* m,
                 float* old_g = (float*)coord_hash_get(cost_so_far, next);
 
                 if (!old_g || new_g < *old_g) {
-                    coord_hash_replace(cost_so_far, coord_copy(next), new float(new_g));
-                    coord_hash_replace(came_from, coord_copy(next), coord_copy(current));
+                    float* new_float = new float(new_g);
+                    coord_hash_replace(cost_so_far, next, new_float);
+                    delete new_float;
+
+                    coord_hash_replace(came_from, next, current);
+
                     float new_f = new_g + heuristic_fn(next, goal, nullptr);
-                    cost_coord_pq_push(frontier, new_f, coord_copy(next));
-                    coord_hash_replace(visited, coord_copy(next), (void*)1);
+                    cost_coord_pq_push(frontier, new_f, next);
+
+                    int* new_int = new int(1);
+                    coord_hash_replace(visited, next, new_int);
+                    delete new_int;
+
                     if (visited_logging)
-                        route_add_visited(result, coord_copy(next));
+                        route_add_visited(result, next);
                     expanded = true;
                 }
             }
@@ -118,14 +144,6 @@ route_t* find_fringe_search(const map_t* m,
         route_set_success(result, false);
     }
 
-    // 정리
-    coord_list_t* keys = coord_hash_keys(cost_so_far);
-    for (int i = 0; i < coord_list_length(keys); ++i) {
-        const coord_t* k = coord_list_get(keys, i);
-        float* v = (float*)coord_hash_get(cost_so_far, k);
-        delete v;
-    }
-    coord_list_free(keys);
     coord_hash_free(cost_so_far);
     coord_hash_free(came_from);
     coord_hash_free(visited);

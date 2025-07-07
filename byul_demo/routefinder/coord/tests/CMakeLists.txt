@@ -8,7 +8,29 @@ set(CMAKE_CXX_STANDARD 17)
 # ------------------- 테스트 실행 파일 -------------------
 add_executable(${PROJECT_NAME}
     test_coord.cpp
+    test_module_coord_list.cpp
+    test_module_coord_hash.cpp
 )
+
+# 컴파일·링크 옵션에 ASan 추가
+# win11과 우분투는 다르다
+if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+    message(STATUS 
+    "${PROJECT_NAME} No apply ASan for Windows because error.")
+
+else()
+    message(STATUS "${PROJECT_NAME} Applying ASan + LSan for Unix-like")
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        -fsanitize=address
+        -fsanitize=leak
+        -g
+        -O1
+    )
+    target_link_options(${PROJECT_NAME} PRIVATE
+        -fsanitize=address
+        -fsanitize=leak
+    )
+endif()
 
 # 외부 include 경로 설정
 set(EXTERNAL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/../../external)

@@ -101,7 +101,7 @@ void route_slice(route_t* p, int start, int end);
 void route_print(const route_t* p);
 
 /** 방향 계산 **/
-coord_t* route_look_at(route_t* p, int index);
+coord_t* route_make_direction(route_t* p, int index);
 route_dir_t route_get_direction_by_coord(const coord_t* dxdy);
 route_dir_t route_get_direction_by_index(route_t* p, int index);
 route_dir_t route_calc_average_facing(route_t* p, int history);
@@ -246,7 +246,7 @@ class c_route:
 
     # ───── 방향 처리 ─────
     def look_at(self, index):
-        ptr = C.route_look_at(self._c, index)
+        ptr = C.route_make_direction(self._c, index)
         return c_coord(raw_ptr=ptr) if ptr != ffi.NULL else None
 
     def get_direction_by_coord(self, dxdy: c_coord):

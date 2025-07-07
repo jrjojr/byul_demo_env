@@ -41,7 +41,7 @@ bool dstar_lite_pqueue_remove_full(
     const coord_t* c);
 
 /// @brief coord에 해당하는 key 복사본 반환 (없으면 NULL)
-dstar_lite_key_t* dstar_lite_pqueue_find_key_by_coord(
+dstar_lite_key_t* dstar_lite_pqueue_get_key_by_coord(
     dstar_lite_pqueue_t* q, const coord_t* c);
 
 /// @brief top 우선순위의 key 복사본 반환
@@ -85,7 +85,7 @@ class c_dstar_lite_pqueue:
             raw_ptr=ptr, own=True) if ptr != ffi.NULL else None
 
     def find_key_by_coord(self, coord: c_coord):
-        ptr = C.dstar_lite_pqueue_find_key_by_coord(self._c, coord.ptr())
+        ptr = C.dstar_lite_pqueue_get_key_by_coord(self._c, coord.ptr())
         return c_dstar_lite_key(
             raw_ptr=ptr, own=True) if ptr != ffi.NULL else None
 

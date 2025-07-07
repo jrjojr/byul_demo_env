@@ -30,6 +30,18 @@ inline std::ostream& operator<<(std::ostream& os, const coord_t& c) {
     return os << "(" << x << ", " << y << ")";
 }
 
+struct CoordHash {
+    size_t operator()(const coord_t* c) const {
+        return coord_hash(c);
+    }
+};
+
+struct CoordEqual {
+    bool operator()(const coord_t* a, const coord_t* b) const {
+        return coord_equal(a, b);
+    }
+};
+
 // ------------------------ 해시 연산자는 std에 있어야 함 ------------------------
 
 namespace std {

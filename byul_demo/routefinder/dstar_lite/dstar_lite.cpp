@@ -165,7 +165,7 @@ coord_list_t* get_changed_coords(void* userdata) {
     int len = coord_list_length(original);
     for (int i =0 ; i < len; i++){
         const coord_t* c = coord_list_get(original, i);
-        coord_list_push_back(copy, coord_copy(c));
+        coord_list_push_back(copy, c);
     }
 
     printf("changed_coords: %d changed coords copied and returned.\n",
@@ -241,9 +241,15 @@ dstar_lite_t* dstar_lite_new_full(map_t* m, coord_t* start,
 
     dsl->debug_mode_enabled = debug_mode_enabled;
 
-    dsl->g_table = coord_hash_new();
+    dsl->g_table = coord_hash_new_full(
+        (coord_hash_copy_func) float_copy,
+        (coord_hash_free_func) float_free
+    );
 
-    dsl->rhs_table = coord_hash_new();
+    dsl->rhs_table = coord_hash_new_full(
+        (coord_hash_copy_func) float_copy,
+        (coord_hash_free_func) float_free        
+    );
 
     dsl->update_count_table = coord_hash_new();
 
@@ -446,7 +452,8 @@ void dstar_lite_add_update_count(dstar_lite_t* dsl, const coord_t* c) {
     if (!val) {
         int* count =  new int(1);
         *count = 1;
-        coord_hash_replace(dsl->update_count_table, coord_copy(c), count);
+        coord_hash_replace(dsl->update_count_table, c, count);
+        delete count;
     } else {
         (*(int*)val)++;
     }
@@ -483,8 +490,16 @@ void dstar_lite_reset(dstar_lite_t* dsl) {
     coord_hash_free(dsl->rhs_table);
     coord_hash_free(dsl->update_count_table);
 
-    dsl->g_table = coord_hash_new();
-    dsl->rhs_table = coord_hash_new();
+    dsl->g_table = coord_hash_new_full(
+        (coord_hash_copy_func) float_copy,
+        (coord_hash_free_func) float_free        
+    );
+
+    dsl->rhs_table = coord_hash_new_full(
+        (coord_hash_copy_func) float_copy,
+        (coord_hash_free_func) float_free        
+    );
+
     dsl->update_count_table = coord_hash_new();
 
     if (dsl->proto_route) {
@@ -561,7 +576,8 @@ void dstar_lite_init(dstar_lite_t* dsl) {
     // rhs[goal] = 0    
     float* rhs_goal_ptr = new float();
     *rhs_goal_ptr = 0.0f;
-    coord_hash_replace(dsl->rhs_table, coord_copy(dsl->goal), rhs_goal_ptr);
+    coord_hash_replace(dsl->rhs_table, dsl->goal, rhs_goal_ptr);
+    delete rhs_goal_ptr;
     
     // U.insert(goal, calculate_key(goal))
     dstar_lite_key_t* calc_key_goal = dstar_lite_calculate_key(dsl, dsl->start);
@@ -591,7 +607,7 @@ void dstar_lite_update_vertex(dstar_lite_t* dsl, const coord_t* u) {
     float rhs_u = FLT_MAX;
 
     if (!coord_equal(u, dsl->goal)) {
-        successors_s = map_clone_neighbors_all(dsl->m, u->x, u->y);
+        successors_s = map_make_neighbors_all(dsl->m, u->x, u->y);
         int len = coord_list_length(successors_s);
         for(int i=0; i<len; i++){
             const coord_t* s = coord_list_get(successors_s, i);
@@ -610,9 +626,10 @@ void dstar_lite_update_vertex(dstar_lite_t* dsl, const coord_t* u) {
         }
         coord_list_free(successors_s);
 
-        float* new_rhs_ptr = new float(1);        
+        float* new_rhs_ptr = new float(1.0);        
         *new_rhs_ptr = min_rhs;
-        coord_hash_replace(dsl->rhs_table, coord_copy(u), new_rhs_ptr);
+        coord_hash_replace(dsl->rhs_table, u, new_rhs_ptr);
+        delete new_rhs_ptr;
     }
 
     if (dstar_lite_pqueue_contains(dsl->frontier, u)) 
@@ -649,7 +666,7 @@ void dstar_lite_update_vertex_range(dstar_lite_t* dsl,
         return;
     }    
 
-    coord_list_t* neighbors = map_clone_neighbors_all_range(dsl->m, 
+    coord_list_t* neighbors = map_make_neighbors_all_range(dsl->m, 
         s->x, s->y, max_range);
 
     int len = coord_list_length(neighbors);
@@ -765,11 +782,12 @@ void dstar_lite_compute_shortest_route(dstar_lite_t* dsl) {
             
             float* new_g = new float();
             *new_g = rhs_u;
-            coord_hash_replace(dsl->g_table, coord_copy(u), new_g);
+            coord_hash_replace(dsl->g_table, u, new_g);
+            delete new_g;
 
             // for s in predecessors(u):
             //     update_vertex(s)
-            predecessors_u = map_clone_neighbors_all(
+            predecessors_u = map_make_neighbors_all(
                 dsl->m, u->x, u->y);
 
             int len = coord_list_length(predecessors_u);
@@ -789,12 +807,13 @@ void dstar_lite_compute_shortest_route(dstar_lite_t* dsl) {
 
             float* new_g = new float();
             *new_g = FLT_MAX;
-            coord_hash_replace(dsl->g_table, coord_copy(u), new_g);
+            coord_hash_replace(dsl->g_table, u, new_g);
+            delete new_g;
 
             // for s in predecessors(u) | {u}:            
-            predecessors_u = map_clone_neighbors_all(
+            predecessors_u = map_make_neighbors_all(
                 dsl->m, u->x, u->y);
-            coord_list_push_back(predecessors_u, coord_copy(u));
+            coord_list_push_back(predecessors_u, u);
 
             int len = coord_list_length(predecessors_u);
             for (int i=0; i<len; i++){
@@ -812,7 +831,7 @@ void dstar_lite_compute_shortest_route(dstar_lite_t* dsl) {
                 if (float_equal(rhs_s, cost_s_u + g_old)) {
                     if (!coord_equal(s, dsl->goal)) {
 
-                        successors_s = map_clone_neighbors_all(
+                        successors_s = map_make_neighbors_all(
                             dsl->m, s->x, s->y);
                         
                         int len = coord_list_length(successors_s);
@@ -831,9 +850,10 @@ void dstar_lite_compute_shortest_route(dstar_lite_t* dsl) {
 
                             min = fminf(min, cost_s_s_prime + g_s_prime);
 
-                            float* min_ptr = new float(1);
+                            float* min_ptr = new float(1.0);
                             *min_ptr = min;
-                coord_hash_replace(dsl->rhs_table, coord_copy(s), min_ptr);
+                            coord_hash_replace(dsl->rhs_table, s, min_ptr);
+                            delete min_ptr;
                         }
                         coord_list_free(successors_s);
                     }
@@ -844,6 +864,7 @@ void dstar_lite_compute_shortest_route(dstar_lite_t* dsl) {
         }
         coord_free(u);
 
+        if (top_key) dstar_lite_key_free(top_key);
         top_key = dstar_lite_pqueue_top_key(dsl->frontier);
         if (!top_key) break;
 
@@ -885,6 +906,7 @@ void dstar_lite_compute_shortest_route(dstar_lite_t* dsl) {
         dstar_lite_key_free(calc_key);
         calc_key = NULL;
     }
+    if(top_key) dstar_lite_key_free(top_key);
 
     // if dsl->proto_route == NULL
     if (dsl->proto_route == NULL) {
@@ -902,8 +924,8 @@ route_t* dstar_lite_reconstruct_route(dstar_lite_t* dsl) {
 
     float* g_start_ptr = (float*) coord_hash_get(dsl->g_table, dsl->start);
     if (!g_start_ptr || float_equal(*g_start_ptr, FLT_MAX)) {
-        if (dsl->debug_mode_enabled)
-        p->visited_count = coord_hash_copy(dsl->update_count_table);
+        // if (dsl->debug_mode_enabled)
+        // p->visited_count = coord_hash_copy(dsl->update_count_table);
         return p;
     }
 
@@ -918,7 +940,7 @@ route_t* dstar_lite_reconstruct_route(dstar_lite_t* dsl) {
         // printf("dstar_lite_reconstruct_route "
         //     "내부에서 루프 %d 시작.\n", loop);
 
-        coord_list_t* neighbors = map_clone_neighbors_all(
+        coord_list_t* neighbors = map_make_neighbors_all(
             dsl->m, current->x, current->y);
 
         int len = coord_list_length(neighbors);
@@ -1045,7 +1067,7 @@ void dstar_lite_find_loop(dstar_lite_t* dsl) {
         
         // 다음 이동 위치 선택
         min_cost = FLT_MAX;
-        successors_start = map_clone_neighbors_all(
+        successors_start = map_make_neighbors_all(
             dsl->m, start->x, start->y);
 
         int len = coord_list_length(successors_start);

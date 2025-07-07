@@ -26,7 +26,7 @@ BYUL_API void dstar_lite_pqueue_push(
     const dstar_lite_key_t* key,
     const coord_t* c);
 
-BYUL_API coord_t* dstar_lite_pqueue_peek(dstar_lite_pqueue_t* q);
+BYUL_API const coord_t* dstar_lite_pqueue_peek(dstar_lite_pqueue_t* q);
 
 BYUL_API coord_t* dstar_lite_pqueue_pop(dstar_lite_pqueue_t* q);
 
@@ -44,7 +44,7 @@ BYUL_API bool dstar_lite_pqueue_remove_full(
     const coord_t* c);
 
 /// @brief coord에 해당하는 key 복사본 반환 (없으면 NULL)
-BYUL_API dstar_lite_key_t* dstar_lite_pqueue_find_key_by_coord(
+BYUL_API dstar_lite_key_t* dstar_lite_pqueue_get_key_by_coord(
     dstar_lite_pqueue_t* q, const coord_t* c);
 
 /// @brief top 우선순위의 key 복사본 반환

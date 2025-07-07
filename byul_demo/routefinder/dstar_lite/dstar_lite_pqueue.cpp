@@ -1,37 +1,33 @@
 #include "internal/dstar_lite_pqueue.h"
 #include "internal/coord.h"
-#include "dstar_lite_key.hpp"  // C++ 비교자 사용
+#include "dstar_lite_key.hpp"
 #include "internal/core.h"
+#include "internal/coord_hash.h"
 
 #include <map>
 #include <vector>
 #include <algorithm>
 
-#include "internal/coord_hash.h"
-
-typedef struct s_dstar_lite_pqueue {
-    std::map<dstar_lite_key_t*, std::vector<coord_t*>, 
-        dstar_lite_key_ptr_less> key_to_coords;
-        
+struct s_dstar_lite_pqueue {
+    std::map<dstar_lite_key_t*, std::vector<coord_t*>, DstarLiteKeyLess> key_to_coords;
     coord_hash_t* coord_to_key;
-} dstar_lite_pqueue_t;
+};
 
 dstar_lite_pqueue_t* dstar_lite_pqueue_new() {
     auto* q = new dstar_lite_pqueue_t{};
-    q->coord_to_key = coord_hash_new();
+    q->coord_to_key = coord_hash_new_full(
+        (coord_hash_copy_func)dstar_lite_key_copy,
+        (coord_hash_free_func)dstar_lite_key_free
+    );
     return q;
 }
 
 void dstar_lite_pqueue_free(dstar_lite_pqueue_t* q) {
     if (!q) return;
-
-    for (auto& pair : q->key_to_coords) {
-        delete pair.first;
-        for (auto* c : pair.second) {
-            coord_free(c);
-        }
+    for (auto& [key, vec] : q->key_to_coords) {
+        for (coord_t* c : vec) coord_free(c);
+        dstar_lite_key_free(key);
     }
-
     coord_hash_free(q->coord_to_key);
     delete q;
 }
@@ -43,37 +39,39 @@ dstar_lite_pqueue_t* dstar_lite_pqueue_copy(const dstar_lite_pqueue_t* src) {
     copy->coord_to_key = coord_hash_copy(src->coord_to_key);
 
     for (const auto& [key, coords] : src->key_to_coords) {
-        dstar_lite_key_t* copied_key = dstar_lite_key_copy(key);
         std::vector<coord_t*> copied_coords;
-        for (auto* c : coords)
+        for (coord_t* c : coords)
             copied_coords.push_back(coord_copy(c));
-
+        dstar_lite_key_t* copied_key = dstar_lite_key_copy(key);
         copy->key_to_coords[copied_key] = std::move(copied_coords);
     }
 
     return copy;
 }
 
-void dstar_lite_pqueue_push(
-    dstar_lite_pqueue_t* q,
-    const dstar_lite_key_t* key,
-    const coord_t* c) {
+void dstar_lite_pqueue_push(dstar_lite_pqueue_t* q,
+    const dstar_lite_key_t* key, const coord_t* c) {
     if (!q || !key || !c) return;
 
-    auto* key_copy = dstar_lite_key_copy(key);
-    auto* coord_copy_ptr = coord_copy(c);
+    for (auto& [k, vec] : q->key_to_coords) {
+        if (dstar_lite_key_equal(k, key)) {
+            vec.push_back(coord_copy(c));
+            coord_hash_replace(q->coord_to_key, c, k);
+            return;
+        }
+    }
 
-    q->key_to_coords[key_copy].push_back(coord_copy_ptr);
-    coord_hash_insert(q->coord_to_key, coord_copy_ptr, key_copy);
+    dstar_lite_key_t* new_key = dstar_lite_key_copy(key);
+    std::vector<coord_t*> vec;
+    vec.push_back(coord_copy(c));
+    q->key_to_coords[new_key] = vec;
+    coord_hash_replace(q->coord_to_key, c, new_key);
 }
 
-coord_t* dstar_lite_pqueue_peek(dstar_lite_pqueue_t* q) {
+const coord_t* dstar_lite_pqueue_peek(dstar_lite_pqueue_t* q) {
     if (!q || q->key_to_coords.empty()) return nullptr;
-
     const auto& entry = *q->key_to_coords.begin();
-    if (entry.second.empty()) return nullptr;
-
-    return coord_copy(entry.second.front());
+    return entry.second.empty() ? nullptr : entry.second.front();
 }
 
 coord_t* dstar_lite_pqueue_pop(dstar_lite_pqueue_t* q) {
@@ -81,14 +79,19 @@ coord_t* dstar_lite_pqueue_pop(dstar_lite_pqueue_t* q) {
 
     auto it = q->key_to_coords.begin();
     auto& vec = it->second;
-    if (vec.empty()) return nullptr;
-
-    coord_t* popped = vec.front();
-    coord_hash_remove(q->coord_to_key, popped);
-    vec.erase(vec.begin());
 
     if (vec.empty()) {
-        delete it->first;
+        dstar_lite_key_free(it->first);
+        q->key_to_coords.erase(it);
+        return nullptr;
+    }
+
+    coord_t* popped = vec.front();
+    vec.erase(vec.begin());
+    coord_hash_remove(q->coord_to_key, popped);
+
+    if (vec.empty()) {
+        dstar_lite_key_free(it->first);
         q->key_to_coords.erase(it);
     }
 
@@ -101,60 +104,56 @@ bool dstar_lite_pqueue_is_empty(dstar_lite_pqueue_t* q) {
 
 bool dstar_lite_pqueue_remove(dstar_lite_pqueue_t* q, const coord_t* u) {
     if (!q || !u) return false;
-
     auto* key_ptr = static_cast<dstar_lite_key_t*>(coord_hash_get(q->coord_to_key, u));
     if (!key_ptr) return false;
 
-    auto it = q->key_to_coords.find(key_ptr);
-    if (it == q->key_to_coords.end()) return false;
-
-    auto& vec = it->second;
-    auto found = std::find_if(vec.begin(), vec.end(),
-        [&](coord_t* c) { return coord_equal(c, u); });
-
-    if (found != vec.end()) {
-        coord_free(*found);
-        vec.erase(found);
-        coord_hash_remove(q->coord_to_key, u);
-        if (vec.empty()) {
-            delete key_ptr;
-            q->key_to_coords.erase(it);
+    for (auto it = q->key_to_coords.begin(); it != q->key_to_coords.end(); ++it) {
+        if (dstar_lite_key_equal(it->first, key_ptr)) {
+            auto& vec = it->second;
+            auto found = std::find_if(vec.begin(), vec.end(), [&](coord_t* c) {
+                return coord_equal(c, u);
+            });
+            if (found != vec.end()) {
+                coord_free(*found);
+                vec.erase(found);
+                coord_hash_remove(q->coord_to_key, u);
+                if (vec.empty()) {
+                    dstar_lite_key_free(it->first);
+                    q->key_to_coords.erase(it);
+                }
+                return true;
+            }
         }
-        return true;
     }
-
     return false;
 }
 
-bool dstar_lite_pqueue_remove_full(
-    dstar_lite_pqueue_t* q,
-    const dstar_lite_key_t* key,
-    const coord_t* c) {
+bool dstar_lite_pqueue_remove_full(dstar_lite_pqueue_t* q,
+    const dstar_lite_key_t* key, const coord_t* c) {
     if (!q || !key || !c) return false;
 
-    auto it = q->key_to_coords.find(const_cast<dstar_lite_key_t*>(key));
-    if (it == q->key_to_coords.end()) return false;
-
-    auto& vec = it->second;
-    auto found = std::find_if(vec.begin(), vec.end(),
-        [&](coord_t* item) { return coord_equal(item, c); });
-
-    if (found != vec.end()) {
-        coord_free(*found);
-        vec.erase(found);
-        coord_hash_remove(q->coord_to_key, c);
-        if (vec.empty()) {
-            delete it->first;
-            q->key_to_coords.erase(it);
+    for (auto it = q->key_to_coords.begin(); it != q->key_to_coords.end(); ++it) {
+        if (dstar_lite_key_equal(it->first, key)) {
+            auto& vec = it->second;
+            auto found = std::find_if(vec.begin(), vec.end(), [&](coord_t* item) {
+                return coord_equal(item, c);
+            });
+            if (found != vec.end()) {
+                coord_free(*found);
+                vec.erase(found);
+                coord_hash_remove(q->coord_to_key, c);
+                if (vec.empty()) {
+                    dstar_lite_key_free(it->first);
+                    q->key_to_coords.erase(it);
+                }
+                return true;
+            }
         }
-        return true;
     }
-
     return false;
 }
 
-dstar_lite_key_t* dstar_lite_pqueue_find_key_by_coord(
-    dstar_lite_pqueue_t* q, const coord_t* c) {
+dstar_lite_key_t* dstar_lite_pqueue_get_key_by_coord(dstar_lite_pqueue_t* q, const coord_t* c) {
     if (!q || !c) return nullptr;
     return static_cast<dstar_lite_key_t*>(coord_hash_get(q->coord_to_key, c));
 }

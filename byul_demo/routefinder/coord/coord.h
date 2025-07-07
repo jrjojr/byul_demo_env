@@ -48,6 +48,8 @@ BYUL_API void     coord_set_y(coord_t* c, int y);
 BYUL_API void     coord_set(coord_t* c, int x, int y);
 BYUL_API void     coord_fetch(const coord_t* c, int* out_x, int* out_y);
 
+BYUL_API const coord_t* make_tmp_coord(int x, int y);
+
 #ifdef __cplusplus
 }
 #endif

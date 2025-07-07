@@ -25,17 +25,27 @@ route_t* find_weighted_astar(const map_t* m,
     route_t* result = route_new();
 
     cost_coord_pq_t* frontier = cost_coord_pq_new();
-    coord_hash_t* cost_so_far = coord_hash_new();
-    coord_hash_t* came_from = coord_hash_new();
 
-    coord_hash_replace(cost_so_far, coord_copy(start), new float(0.0f));
+    coord_hash_t* cost_so_far = coord_hash_new_full(
+        (coord_hash_copy_func) float_copy,
+        (coord_hash_free_func) float_free
+    );
+
+    coord_hash_t* came_from = coord_hash_new_full(
+        (coord_hash_copy_func) coord_copy,
+        (coord_hash_free_func) coord_free
+    );
+
+    float* new_float = new float(0.0);
+    coord_hash_replace(cost_so_far, start, new_float);
+    delete new_float;
 
     float h_start = heuristic_fn(start, goal, nullptr);
     float f_start = weight * h_start;
-    cost_coord_pq_push(frontier, f_start, coord_copy(start));
+    cost_coord_pq_push(frontier, f_start, start);
 
     if (visited_logging)
-        route_add_visited(result, coord_copy(start));
+        route_add_visited(result, start);
 
     bool found = false;
     coord_t* final = nullptr;
@@ -46,6 +56,7 @@ route_t* find_weighted_astar(const map_t* m,
 
         if (coord_equal(current, goal)) {
             found = true;
+            if (final) coord_free(final);
             final = coord_copy(current);
             delete current;
             break;
@@ -54,7 +65,7 @@ route_t* find_weighted_astar(const map_t* m,
         float* g_ptr = (float*)coord_hash_get(cost_so_far, current);
         float g = g_ptr ? *g_ptr : 0.0f;
 
-        coord_list_t* neighbors = map_clone_neighbors(m, current->x, current->y);
+        coord_list_t* neighbors = map_make_neighbors(m, current->x, current->y);
         int len = coord_list_length(neighbors);
 
         for (int i = 0; i < len; ++i) {
@@ -64,15 +75,19 @@ route_t* find_weighted_astar(const map_t* m,
 
             float* known_g = (float*)coord_hash_get(cost_so_far, next);
             if (!known_g || new_g < *known_g) {
-                coord_hash_replace(cost_so_far, coord_copy(next), new float(new_g));
-                coord_hash_replace(came_from, coord_copy(next), coord_copy(current));
+
+                float* new_float = new float(new_g);
+                coord_hash_replace(cost_so_far, next, new_float);
+                delete new_float;
+
+                coord_hash_replace(came_from, next, current);
 
                 float h = heuristic_fn(next, goal, nullptr);
                 float f = new_g + weight * h;
-                cost_coord_pq_push(frontier, f, coord_copy(next));
+                cost_coord_pq_push(frontier, f, next);
 
                 if (visited_logging)
-                    route_add_visited(result, coord_copy(next));
+                    route_add_visited(result, next);
             }
         }
 
@@ -94,14 +109,6 @@ route_t* find_weighted_astar(const map_t* m,
 
     coord_free(final);
 
-    coord_list_t* keys = coord_hash_keys(cost_so_far);
-    int n = coord_list_length(keys);
-    for (int i = 0; i < n; ++i) {
-        const coord_t* k = coord_list_get(keys, i);
-        float* v = (float*)coord_hash_get(cost_so_far, k);
-        delete v;
-    }
-    coord_list_free(keys);
     coord_hash_free(cost_so_far);
     coord_hash_free(came_from);
     cost_coord_pq_free(frontier);

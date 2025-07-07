@@ -13,15 +13,21 @@ route_t* find_bfs(const map_t* m, const coord_t* start, const coord_t* goal,
 
     coord_list_t* frontier = coord_list_new();  // 큐
     coord_hash_t* visited = coord_hash_new();
-    coord_hash_t* came_from = coord_hash_new();
+    coord_hash_t* came_from = coord_hash_new_full(
+        (coord_hash_copy_func)coord_copy, 
+        (coord_hash_free_func) coord_free);
     route_t* result = route_new_full(0.0f);
 
-    coord_list_push_back(frontier, coord_copy(start));
-    coord_hash_replace(visited, coord_copy(start), (void*)(intptr_t)1);
-    if (visited_logging) route_add_visited(result, coord_copy(start));
+    coord_list_push_back(frontier, start);
+
+    int* new_int = new int(1);
+    coord_hash_replace(visited, start, new_int);
+    delete new_int;
+
+    if (visited_logging) route_add_visited(result, start);
 
     bool found = false;
-    coord_t* final = NULL;
+    coord_t* final = nullptr;
     int retry = 0;
 
     while (!coord_list_empty(frontier) && retry++ < max_retry) {
@@ -29,21 +35,26 @@ route_t* find_bfs(const map_t* m, const coord_t* start, const coord_t* goal,
 
         if (coord_equal(current, goal)) {
             found = true;
+            if (final) coord_free(final);
             final = coord_copy(current);
             coord_free(current);
             break;
         }
 
-        coord_list_t* neighbors = map_clone_neighbors(m, current->x, current->y);
+        coord_list_t* neighbors = map_make_neighbors(m, current->x, current->y);
         int len = coord_list_length(neighbors);
         for (int i = 0; i < len; ++i) {
             const coord_t* next = coord_list_get(neighbors, i);
 
             if (!coord_hash_contains(visited, next)) {
-                coord_list_push_back(frontier, coord_copy(next)); // push_back
-                coord_hash_replace(visited, coord_copy(next), (void*)(intptr_t)1);
-                coord_hash_replace(came_from, coord_copy(next), coord_copy(current));
-                if (visited_logging) route_add_visited(result, coord_copy(next));
+                coord_list_push_back(frontier, next); // push_back
+
+                int* new_int = new int(1);
+                coord_hash_replace(visited, next, new_int);
+                delete new_int;
+
+                coord_hash_replace(came_from, next, current);
+                if (visited_logging) route_add_visited(result, next);
             }
         }
 

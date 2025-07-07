@@ -61,9 +61,10 @@ TEST_CASE("route direction and angle") {
     route_add_coord(p, b);
     route_add_coord(p, c);
 
-    coord_t* dir = route_look_at(p, 0);
+    coord_t* dir = route_make_direction(p, 0);
     CHECK(coord_get_x(dir) == 1);
     CHECK(coord_get_y(dir) == 0);
+    coord_free(dir);
 
     CHECK(route_get_direction_by_coord(dir) == ROUTE_DIR_RIGHT);
     CHECK(route_get_direction_by_index(p, 0) == ROUTE_DIR_RIGHT);

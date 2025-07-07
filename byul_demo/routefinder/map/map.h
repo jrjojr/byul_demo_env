@@ -57,18 +57,18 @@ BYUL_API void map_clear(map_t* m);
 BYUL_API const coord_hash_t* map_get_blocked_coords(const map_t* m);
 
 // 이웃 탐색
-BYUL_API coord_list_t* map_clone_neighbors(const map_t* m, int x, int y);
-BYUL_API coord_list_t* map_clone_neighbors_all(const map_t* m, int x, int y);
-BYUL_API coord_list_t* map_clone_neighbors_all_range(
+BYUL_API coord_list_t* map_make_neighbors(const map_t* m, int x, int y);
+BYUL_API coord_list_t* map_make_neighbors_all(const map_t* m, int x, int y);
+BYUL_API coord_list_t* map_make_neighbors_all_range(
     map_t* m, int x, int y, int range);
 
-BYUL_API coord_t* map_clone_neighbor_at_degree(const map_t* m, 
+BYUL_API coord_t* map_make_neighbor_at_degree(const map_t* m, 
     int x, int y, double degree);
     
-BYUL_API coord_t* map_clone_neighbor_at_goal(const map_t* m, 
+BYUL_API coord_t* map_make_neighbor_at_goal(const map_t* m, 
     const coord_t* center, const coord_t* goal);
 
-BYUL_API coord_list_t* map_clone_neighbors_at_degree_range(
+BYUL_API coord_list_t* map_make_neighbors_at_degree_range(
     const map_t* m,
     const coord_t* center, const coord_t* goal,
     double start_deg, double end_deg,

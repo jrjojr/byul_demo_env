@@ -10,21 +10,26 @@
 #include <vector>
 #include <map>
 
-// ------------------------ 값 기반 연산자 오버로딩 ------------------------
+struct DstarLiteKeyHash {
+    std::size_t operator()(const dstar_lite_key_t* key) const {
+        return dstar_lite_key_hash(key);
+    }
+};
 
-/// @brief std::map / std::set용 정렬 비교자
-inline bool operator<(const dstar_lite_key_t& a, const dstar_lite_key_t& b) {
-    return dstar_lite_key_compare(&a, &b) < 0;
-}
+struct DstarLiteKeyEqual {
+    bool operator()(const dstar_lite_key_t* a, const dstar_lite_key_t* b) const {
+        return dstar_lite_key_equal(a, b);
+    }
+};
 
-/// @brief 동등 비교 (unordered_map 등에서 사용)
-inline bool operator==(const dstar_lite_key_t& a, const dstar_lite_key_t& b) {
-    return dstar_lite_key_equal(&a, &b);
-}
+struct DstarLiteKeyLess {
+    bool operator()(const dstar_lite_key_t* a, const dstar_lite_key_t* b) const {
+        if (a->k1 < b->k1) return true;
+        if (a->k1 > b->k1) return false;
+        return a->k2 < b->k2;
+    }
+};
 
-inline bool operator!=(const dstar_lite_key_t& a, const dstar_lite_key_t& b) {
-    return !dstar_lite_key_equal(&a, &b);
-}
 
 // ------------------------ 해시 함수 (std namespace) ------------------------
 

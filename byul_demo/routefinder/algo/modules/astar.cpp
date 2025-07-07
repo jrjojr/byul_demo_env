@@ -17,18 +17,28 @@ route_t* find_astar(const map_t* m, const coord_t* start, const coord_t* goal,
     if(!heuristic_fn) heuristic_fn = default_heuristic;
 
     cost_coord_pq_t* pq = cost_coord_pq_new();
-    coord_hash_t* cost_so_far = coord_hash_new();   // coord_t* → float*
-    coord_hash_t* came_from = coord_hash_new();     // coord_t* → coord_t*
+    coord_hash_t* cost_so_far = coord_hash_new_full(
+        (coord_hash_copy_func) float_copy,
+        (coord_hash_free_func) float_free
+    );   // coord_t* → float*
+    
+    // coord_t* → coord_t*
+    coord_hash_t* came_from = coord_hash_new_full(
+        (coord_hash_copy_func) coord_copy, 
+        (coord_hash_free_func) coord_free
+    );
+
     route_t* result = route_new();
 
     float* zero = new float(0.0f);
-    coord_hash_replace(cost_so_far, coord_copy(start), zero);
+    coord_hash_replace(cost_so_far, start, zero);
+    delete zero;
 
     float h_start = heuristic_fn(start, goal, nullptr);
-    cost_coord_pq_push(pq, h_start, coord_copy(start));
+    cost_coord_pq_push(pq, h_start, start);
 
     if (visited_logging)
-        route_add_visited(result, coord_copy(start));
+        route_add_visited(result, start);
 
     bool found = false;
     coord_t* final = nullptr;
@@ -39,6 +49,7 @@ route_t* find_astar(const map_t* m, const coord_t* start, const coord_t* goal,
 
         if (coord_equal(current, goal)) {
             found = true;
+            if (final) coord_free(final);
             final = coord_copy(current);
             delete current;
             break;
@@ -47,7 +58,7 @@ route_t* find_astar(const map_t* m, const coord_t* start, const coord_t* goal,
         float* current_cost_ptr = (float*)coord_hash_get(cost_so_far, current);
         float current_cost = current_cost_ptr ? *current_cost_ptr : 0.0f;
 
-        coord_list_t* neighbors = map_clone_neighbors(m, current->x, current->y);
+        coord_list_t* neighbors = map_make_neighbors(m, current->x, current->y);
         int len = coord_list_length(neighbors);
 
         for (int i = 0; i < len; ++i) {
@@ -58,15 +69,16 @@ route_t* find_astar(const map_t* m, const coord_t* start, const coord_t* goal,
             float* known_cost = (float*)coord_hash_get(cost_so_far, next);
             if (!known_cost || new_cost < *known_cost) {
                 float* new_cost_ptr = new float(new_cost);
-                coord_hash_replace(cost_so_far, coord_copy(next), new_cost_ptr);
+                coord_hash_replace(cost_so_far, next, new_cost_ptr);
+                delete new_cost_ptr;
 
                 float h = heuristic_fn(next, goal, nullptr);
                 float f = new_cost + h;
-                cost_coord_pq_push(pq, f, coord_copy(next));
+                cost_coord_pq_push(pq, f, next);
 
-                coord_hash_replace(came_from, coord_copy(next), coord_copy(current));
+                coord_hash_replace(came_from, next, current);
                 if (visited_logging)
-                    route_add_visited(result, coord_copy(next));
+                    route_add_visited(result, next);
             }
         }
 
@@ -92,14 +104,14 @@ route_t* find_astar(const map_t* m, const coord_t* start, const coord_t* goal,
     cost_coord_pq_free(pq);
 
     // 수동 해제: float* 값들
-    coord_list_t* keys = coord_hash_keys(cost_so_far);
-    int n = coord_list_length(keys);
-    for (int i = 0; i < n; ++i) {
-        const coord_t* key = coord_list_get(keys, i);
-        float* val = (float*)coord_hash_get(cost_so_far, key);
-        delete val;
-    }
-    coord_list_free(keys);
+    // coord_list_t* keys = coord_hash_keys(cost_so_far);
+    // int n = coord_list_length(keys);
+    // for (int i = 0; i < n; ++i) {
+    //     const coord_t* key = coord_list_get(keys, i);
+    //     float* val = (float*)coord_hash_get(cost_so_far, key);
+    //     delete val;
+    // }
+    // coord_list_free(keys);
 
     coord_hash_free(cost_so_far);
     coord_hash_free(came_from);
