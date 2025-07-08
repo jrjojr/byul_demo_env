@@ -128,7 +128,6 @@ if __name__ == "__main__":
     with finder.find() as result:
         result.print()
         c_dstar_lite_utils.print_ascii_update_count(finder, result)        
-        
 
     start_x = 2
     start_y = 2
@@ -151,4 +150,28 @@ if __name__ == "__main__":
         result.print()
         c_dstar_lite_utils.print_ascii_update_count(finder, result)
 
+
+    print('finder1, proto_ route')
+    # map1 = c_map(width=20, height=20)
+    map1 = c_map()
+    start1 = c_coord(-10, -10)
+    finder1 = c_dstar_lite(map1, start1)
+
+    finder1.set_goal(goal)
+    # finder1.set_debug_mode_enabled(True)
+    finder1.find_proto()
+    proto = finder1.get_proto_route()
+    proto.print()
+    c_dstar_lite_utils.print_ascii_update_count(finder1, proto, 5 )
+
+    finder1.set_start(c_coord(0,0))
+    finder1.set_goal(c_coord(13,13))
+    # finder1.set_debug_mode_enabled(True)
+    finder1.find_proto()
+    proto = finder1.get_proto_route()
+    proto.print()
+    c_dstar_lite_utils.print_ascii_update_count(finder1, proto, 5 )    
+
     print('c_dstar_lite 테스트 종료된다.')
+
+

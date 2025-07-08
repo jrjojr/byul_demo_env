@@ -3,6 +3,7 @@
 #include "internal/route.h"
 #include "coord.hpp"
 #include "internal/core.h"
+#include "internal/coord_list.h"
 
 #include <vector>
 #include <cmath>
@@ -211,7 +212,7 @@ void route_slice(route_t* p, int start, int end) {
 
 void route_print(const route_t* p) {
     if (!p) return;
-    printf("Route: ");
+    printf("Route(len : %d): ", coord_list_length(route_get_coords(p)));
     int len = coord_list_length(p->coords);
     for (int i = 0; i < len; ++i) {
         const coord_t* c = coord_list_get(p->coords, i);

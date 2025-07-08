@@ -351,8 +351,11 @@ class c_algo:
         if not self._c:
             raise MemoryError("algo allocation failed")
 
-        self._finalizer = weakref.finalize(
-            self, C.algo_free, self._c)
+        if own:
+            self._finalizer = weakref.finalize(
+                self, C.algo_free, self._c)
+        else:
+            self._finalizer = None        
         
         self.algotype = algotype
 

@@ -83,8 +83,11 @@ class c_coord_hash:
                 raise MemoryError("coord_hash allocation failed")
             self._own = True
 
-        self._finalizer = weakref.finalize(
-            self, C.coord_hash_free, self._c)
+        if own:
+            self._finalizer = weakref.finalize(
+                self, C.coord_hash_free, self._c)
+        else:
+            self._finalizer = None        
 
     def __len__(self):
         return C.coord_hash_length(self._c)

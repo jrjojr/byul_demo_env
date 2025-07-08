@@ -27,14 +27,14 @@ static int auto_compute_max_retry(const coord_t* start, const coord_t* goal) {
     int dx = abs(goal->x - start->x);
     int dy = abs(goal->y - start->y);
     int r = dx * dy;
-    return r ? r : 100;
+    return r;
 }
 
 static int auto_reconstruct_max_retry(const coord_t* start, const coord_t* goal) {
     int dx = abs(goal->x - start->x);
     int dy = abs(goal->y - start->y);
     int r = dx * 2 + dy * 2;
-    return r ? r : 40;
+    return r;
 }
 
 float dstar_lite_cost(
@@ -227,14 +227,13 @@ dstar_lite_t* dstar_lite_new_full(map_t* m, coord_t* start,
     dsl->goal = coord_copy(start);
     
     dsl->km = 0.0f;
-    dsl->max_range = auto_max_range(dsl->start, dsl->goal);
+    dsl->max_range = 100;
     
-    dsl->real_loop_max_retry = auto_compute_max_retry(dsl->start, dsl->goal);
+    dsl->real_loop_max_retry = 3000;
 
-    dsl->compute_max_retry = auto_compute_max_retry(dsl->start, dsl->goal);
+    dsl->compute_max_retry = 3000;
     
-    dsl->reconstruct_max_retry = auto_reconstruct_max_retry(
-        dsl->start, dsl->goal);
+    dsl->reconstruct_max_retry = 300;
 
     dsl->cost_fn = cost_fn ? cost_fn : dstar_lite_cost;
     dsl->heuristic_fn = heuristic_fn ? heuristic_fn : dstar_lite_heuristic;
@@ -924,8 +923,10 @@ route_t* dstar_lite_reconstruct_route(dstar_lite_t* dsl) {
 
     float* g_start_ptr = (float*) coord_hash_get(dsl->g_table, dsl->start);
     if (!g_start_ptr || float_equal(*g_start_ptr, FLT_MAX)) {
-        // if (dsl->debug_mode_enabled)
-        // p->visited_count = coord_hash_copy(dsl->update_count_table);
+        if (dsl->debug_mode_enabled) {
+            // p->visited_count = coord_hash_copy(dsl->update_count_table);
+            p->total_retry_count = dstar_lite_proto_compute_retry_count(dsl);
+        }
         return p;
     }
 
@@ -970,6 +971,10 @@ route_t* dstar_lite_reconstruct_route(dstar_lite_t* dsl) {
             coord_free(current);
             // route_free(p);
             route_set_success(p, false);
+            if (dsl->debug_mode_enabled){
+                // p->visited_count = coord_hash_copy(dsl->update_count_table);
+    p->total_retry_count = dstar_lite_proto_compute_retry_count(dsl);                
+            }
             return p;
         }
 
@@ -979,6 +984,10 @@ route_t* dstar_lite_reconstruct_route(dstar_lite_t* dsl) {
             coord_free(next);
             // route_free(p);
             route_set_success(p, false);
+            if (dsl->debug_mode_enabled){
+                // p->visited_count = coord_hash_copy(dsl->update_count_table);  
+p->total_retry_count = dstar_lite_proto_compute_retry_count(dsl);                
+            }          
             return p;
         }
 
@@ -991,6 +1000,10 @@ route_t* dstar_lite_reconstruct_route(dstar_lite_t* dsl) {
 
     coord_free(current);
     route_set_success(p, true);    
+    if (dsl->debug_mode_enabled){
+        // p->visited_count = coord_hash_copy(dsl->update_count_table);    
+p->total_retry_count = dstar_lite_proto_compute_retry_count(dsl);        
+    }
     return p;
 }
 

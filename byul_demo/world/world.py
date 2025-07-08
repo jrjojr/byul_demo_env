@@ -41,7 +41,7 @@ class World(QObject):
         self.block_mgr = GridBlockManager(block_size)
         self.npc_mgr = NPCManager(self)
         # self.block_mgr.on_after_block_loaded = self.on_after_block_loaded
-        self.block_mgr.on_before_block_evicted = self.on_before_block_evicted
+        # self.block_mgr.on_before_block_evicted = self.on_before_block_evicted
         
         self.villages: dict[str, Village] = {}
 

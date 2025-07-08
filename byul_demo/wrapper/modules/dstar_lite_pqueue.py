@@ -63,8 +63,12 @@ class c_dstar_lite_pqueue:
             if not self._c:
                 raise MemoryError("dstar_lite_pqueue allocation failed")
             self._own = True
-        self._finalizer = weakref.finalize(
-            self, C.dstar_lite_pqueue_free, self._c)
+
+        if own:
+            self._finalizer = weakref.finalize(
+                self, C.dstar_lite_pqueue_free, self._c)
+        else:
+            self._finalizer = None        
 
     def push(self, key: c_dstar_lite_key, coord: c_coord):
         C.dstar_lite_pqueue_push(self._c, key.ptr(), coord.ptr())

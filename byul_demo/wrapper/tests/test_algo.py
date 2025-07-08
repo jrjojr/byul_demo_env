@@ -30,85 +30,97 @@ class TestAlgo(unittest.TestCase):
     def tearDown(self):
         self.algo.close()
 
-    # def test_find_default(self):
-    #     route = self.algo.find()
-    #     route.print()
-    #     c_algo_utils.map_print_with_visited(self.map, route)
+    def test_find_default(self):
+        print("test_find_default")
+        route = self.algo.find()
+        route.print()
+        c_algo_utils.map_print_with_visited(self.map, route)
 
     def test_find_bfs(self):
+        print('test_find_bfs')
         self.algo.set_type(RouteAlgotype.BFS)
         route = self.algo.find()
         route.print()
         c_algo_utils.map_print_with_visited(self.map, route)
 
     def test_find_astar(self):
+        print('test_find_astar')
         self.algo.set_type(RouteAlgotype.ASTAR)
         route = self.algo.find()
         route.print()
         c_algo_utils.map_print_with_visited(self.map, route)        
 
     def test_find_dfs(self):
+        print('test_find_dfs')
         #include "internal/dfs.h"
         self.algo.set_type(RouteAlgotype.DFS)
         route = self.algo.find()
         route.print()
         c_algo_utils.map_print_with_visited(self.map, route)        
 
-    # def test_find_dijkstra(self):
-    #     #include "internal/dijkstra.h"
-    #     self.algo.set_type(RouteAlgotype.DIJKSTRA)
-    #     route = self.algo.find()
-    #     route.print()
-    #     c_algo_utils.map_print_with_visited(self.map, route)        
+    def test_find_dijkstra(self):
+        print('test_find_dijkstra')
+        #include "internal/dijkstra.h"
+        self.algo.set_type(RouteAlgotype.DIJKSTRA)
+        route = self.algo.find()
+        route.print()
+        c_algo_utils.map_print_with_visited(self.map, route)        
 
-    # def test_find_fast_marching(self):
-    #     #include "internal/fast_marching.h"
-    #     self.algo.set_type(RouteAlgotype.FAST_MARCHING)
-    #     route = self.algo.find()
-    #     route.print()
-    #     c_algo_utils.map_print_with_visited(self.map, route)        
+    def test_find_fast_marching(self):
+        print('test_find_fast_marching')
+        #include "internal/fast_marching.h"
+        self.algo.set_type(RouteAlgotype.FAST_MARCHING)
+        route = self.algo.find()
+        route.print()
+        c_algo_utils.map_print_with_visited(self.map, route)        
 
-    # def test_find_fringe_search(self):
-    #     #include "internal/fringe_search.h"
-    #     self.algo.set_type(RouteAlgotype.FRINGE_SEARCH)
-    #     route = self.algo.find()
-    #     route.print()
-    #     c_algo_utils.map_print_with_visited(self.map, route)        
+    def test_find_fringe_search(self):
+        print('test_find_fringe_search')
+        #include "internal/fringe_search.h"
+        self.algo.set_type(RouteAlgotype.FRINGE_SEARCH)
+        route = self.algo.find()
+        route.print()
+        c_algo_utils.map_print_with_visited(self.map, route)        
 
-    # def test_find_greedy_best_first(self):
-    #     #include "internal/greedy_best_first.h"
-    #     self.algo.set_type(RouteAlgotype.GREEDY_BEST_FIRST)
-    #     route = self.algo.find()
-    #     route.print()
-    #     c_algo_utils.map_print_with_visited(self.map, route)        
+    def test_find_greedy_best_first(self):
+        print('test_find_greedy_best_first')
+        #include "internal/greedy_best_first.h"
+        self.algo.set_type(RouteAlgotype.GREEDY_BEST_FIRST)
+        route = self.algo.find()
+        route.print()
+        c_algo_utils.map_print_with_visited(self.map, route)        
 
-    # def test_find_ida_star(self):
-    #     #include "internal/ida_star.h"
-    #     self.algo.set_type(RouteAlgotype.IDA_STAR)
-    #     route = self.algo.find()
-    #     route.print()
-    #     c_algo_utils.map_print_with_visited(self.map, route)        
+    def test_find_ida_star(self):
+        print('test_find_ida_star')
+        #include "internal/ida_star.h"
+        self.algo.set_type(RouteAlgotype.IDA_STAR)
+        route = self.algo.find()
+        route.print()
+        c_algo_utils.map_print_with_visited(self.map, route)        
 
-    # def test_find_rta_star(self):
-    #     #include "internal/rta_star.h"
-    #     self.algo.set_type(RouteAlgotype.RTA_STAR)
-    #     route = self.algo.find()
-    #     route.print()
-    #     c_algo_utils.map_print_with_visited(self.map, route)        
+    def test_find_rta_star(self):
+        print('test_find_rta_star')
+        #include "internal/rta_star.h"
+        self.algo.set_type(RouteAlgotype.RTA_STAR)
+        route = self.algo.find()
+        route.print()
+        c_algo_utils.map_print_with_visited(self.map, route)        
 
-    # def test_find_sma_star(self):
-    #     #include "internal/sma_star.h"
-    #     self.algo.set_type(RouteAlgotype.SMA_STAR)
-    #     route = self.algo.find()
-    #     route.print()
-    #     c_algo_utils.map_print_with_visited(self.map, route)        
+    def test_find_sma_star(self):
+        print('test_find_sma_star')
+        #include "internal/sma_star.h"
+        self.algo.set_type(RouteAlgotype.SMA_STAR)
+        route = self.algo.find()
+        route.print()
+        c_algo_utils.map_print_with_visited(self.map, route)        
 
-    # def test_find_weighted_astar(self):
-    #     #include "internal/weighted_astar.h"        
-    #     self.algo.set_type(RouteAlgotype.WEIGHTED_ASTAR)
-    #     route = self.algo.find()
-    #     route.print()
-    #     c_algo_utils.map_print_with_visited(self.map, route)                
+    def test_find_weighted_astar(self):
+        print('/.test_find_weighted_astar')
+        #include "internal/weighted_astar.h"        
+        self.algo.set_type(RouteAlgotype.WEIGHTED_ASTAR)
+        route = self.algo.find()
+        route.print()
+        c_algo_utils.map_print_with_visited(self.map, route)                
 
 # 🔽 여기서부터 직접 실행 시 동작
 if __name__ == '__main__':

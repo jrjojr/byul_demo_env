@@ -72,7 +72,7 @@ void dsl_print_ascii_route(
 void dsl_print_ascii_update_count(
     const dstar_lite_t* dsl, const route_t* route, int margin);
 
-""")
+""", override=True)
 
 class c_dstar_lite_utils:
     # ───── g / rhs 테이블 출력 ─────

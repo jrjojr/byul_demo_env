@@ -487,10 +487,11 @@ start_delay_sec : {self.start_delay_sec}''')
 
     #     except Exception as e:
     #         g_logger.log_debug_threadsafe(f"[MOVE_CB] 예외 발생: {e}")
-    def _move_cb(self, coord_c, userdata):
+    def _move_cb(self, coord_c:'c_coord', userdata):
         try:
             g_logger.log_debug_threadsafe(f"[MOVE_CB] 받은 이동 좌표: {coord_c}")
-            self.next_history.append(coord_c)
+            c = coord_c.to_tuple()
+            self.next_history.append(c)
 
         except Exception as e:
             g_logger.log_debug_threadsafe(f"[MOVE_CB] 예외 발생: {e}")

@@ -27,7 +27,10 @@ struct s_map {
 typedef struct s_map map_t;
 
 // 생성자 및 소멸자
+
+// 0 x 0 , MAP_NEIGHBOR_8
 BYUL_API map_t* map_new();
+
 BYUL_API map_t* map_new_full(int width, int height, map_neighbor_mode_t mode);
 BYUL_API void map_free(map_t* m);
 

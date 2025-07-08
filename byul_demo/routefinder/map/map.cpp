@@ -9,7 +9,7 @@
 #include "internal/coord_hash.h"
 
 map_t* map_new() {
-    return map_new_full(0, 0, MAP_NEIGHBOR_4);
+    return map_new_full(0, 0, MAP_NEIGHBOR_8);
 }
 
 map_t* map_new_full(int width, int height, map_neighbor_mode_t mode) {

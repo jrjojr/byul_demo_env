@@ -59,8 +59,11 @@ class c_cost_coord_pq:
             if not self._c:
                 raise MemoryError("cost_coord_pq allocation failed")
         
-        self._finalizer = weakref.finalize(
-            self, C.cost_coord_pq_free, self._c)
+        if own:
+            self._finalizer = weakref.finalize(
+                self, C.cost_coord_pq_free, self._c)
+        else:
+            self._finalizer = None        
 
     def push(self, cost: float, coord: c_coord):
         C.cost_coord_pq_push(self._c, cost, coord.ptr())

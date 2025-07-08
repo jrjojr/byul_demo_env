@@ -358,7 +358,7 @@ void dstar_lite_force_quit(dstar_lite_t* dsl);
 bool dstar_lite_is_quit_forced(dstar_lite_t* dsl);
 
 void dstar_lite_set_force_quit(dstar_lite_t* dsl, bool v);
-""")
+""", override=True)
 
 class c_dstar_lite:
     def __init__(self, m: c_map = None, start: c_coord = None,
@@ -384,8 +384,11 @@ class c_dstar_lite:
         if not self._c:
             raise MemoryError("dstar_lite allocation failed")
         
-        self._finalizer = weakref.finalize(
-            self, C.dstar_lite_free, self._c)
+        if own:
+            self._finalizer = weakref.finalize(
+                self, C.dstar_lite_free, self._c)
+        else:
+            self._finalizer = None        
 
     def ptr(self):
         return self._c

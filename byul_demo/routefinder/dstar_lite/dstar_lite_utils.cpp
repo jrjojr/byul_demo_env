@@ -54,6 +54,16 @@ void dsl_print_ascii_update_count(
     const dstar_lite_t* dsl, const route_t* p, int margin) {
 
     if (!dsl || !p) return;
+    
+    printf("print dsl info\n");
+    printf("dsl->max_range : %d\n", dsl->max_range);
+    printf("dsl->compute_max_retry : %d\n", dsl->compute_max_retry);
+    printf("dsl->real_loop_max_retry : %d\n", dsl->real_loop_max_retry);
+    printf("dsl->reconstruct_max_retry : %d\n", dsl->reconstruct_max_retry);
 
+    printf("dsl->proto_compute_retry_count : %d\n", dsl->proto_compute_retry_count);
+    printf("dsl->real_compute_retry_count : %d\n", dsl->real_compute_retry_count);
+    printf("dsl->reconstruct_retry_count : %d\n", dsl->reconstruct_retry_count);
+    printf("dsl->real_loop_retry_count : %d\n", dsl->real_loop_retry_count);
     map_print_ascii_with_visited_count(dsl->m, p, margin);
 }

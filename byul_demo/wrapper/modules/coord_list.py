@@ -60,8 +60,11 @@ class c_coord_list:
                 raise MemoryError("coord_list allocation failed")
             self._own = True
 
-        self._finalizer = weakref.finalize(
-            self, C.coord_list_free, self._c)
+        if own:
+            self._finalizer = weakref.finalize(
+                self, C.coord_list_free, self._c)
+        else:
+            self._finalizer = None        
 
     def __len__(self):
         return C.coord_list_length(self._c)

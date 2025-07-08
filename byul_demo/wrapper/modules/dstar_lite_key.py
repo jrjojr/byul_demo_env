@@ -58,8 +58,11 @@ class c_dstar_lite_key:
                 raise MemoryError("dstar_lite_key allocation failed")
             self._own = True
 
-        self._finalizer = weakref.finalize(
-            self, C.dstar_lite_key_free, self._c)
+        if own:
+            self._finalizer = weakref.finalize(
+                self, C.dstar_lite_key_free, self._c)
+        else:
+            self._finalizer = None        
 
     def copy(self):
         ptr = C.dstar_lite_key_copy(self._c)

@@ -95,9 +95,10 @@ class c_map:
         if not self._c:
             raise MemoryError("map allocation failed")
 
-
-        self._finalizer = weakref.finalize(
-            self, C.map_free, self._c)
+        if own:
+            self._finalizer = weakref.finalize(self, C.map_free, self._c)
+        else:
+            self._finalizer = None
 
     # ───── 속성 접근 ─────
     @property

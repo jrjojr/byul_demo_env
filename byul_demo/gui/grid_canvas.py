@@ -304,9 +304,9 @@ class GridCanvas(QWidget):
                     for npc_id in cell.npc_ids:
                         if self.world.npc_mgr.has_npc(npc_id):
                             npc = self.world.npc_mgr.get_npc(npc_id)
-                        else:
-                            npc = self.world.spawn_npc(npc_id, (gx, gy))
-                            pass
+                        # else:
+                        #     npc = self.world.spawn_npc(npc_id, (gx, gy))
+                        #     pass
                         if npc:
                             if npc.anim_started:
                                 image = ImageManager.get_empty_image()

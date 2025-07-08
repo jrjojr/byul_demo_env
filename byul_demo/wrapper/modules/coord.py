@@ -41,7 +41,11 @@ class c_coord:
             if not self._c:
                 raise MemoryError("coord allocation failed")
             self._own = True
+
+        if own:
             self._finalizer = weakref.finalize(self, C.coord_free, self._c)
+        else:
+            self._finalizer = None            
 
     @property
     def x(self):

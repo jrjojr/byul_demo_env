@@ -24,9 +24,16 @@ void coord_free(coord_t* c) {
     delete c;
 }
 
+// unsigned coord_hash(const coord_t* c) {
+//     if (!c) return 0u;
+//     return (static_cast<unsigned>(c->x) << 16) ^ static_cast<unsigned>(c->y);
+// }
+
 unsigned coord_hash(const coord_t* c) {
     if (!c) return 0u;
-    return (static_cast<unsigned>(c->x) << 16) ^ static_cast<unsigned>(c->y);
+    int x = c->x;
+    int y = c->y;
+    return static_cast<unsigned>(x * 73856093 ^ y * 19349663);
 }
 
 bool coord_equal(const coord_t* c1, const coord_t* c2) {

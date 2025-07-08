@@ -1,26 +1,41 @@
-//test_coord.cpp
-
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
 #include <locale.h>
 #include <iostream>
 
-int main(int argc, char** argv) {
-    // setlocale(LC_ALL, "ko_KR.UTF-8");  // 💥 별이아빠님 핵심
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
-    std::cout << "🌟 UTF-8 로케일로 테스트를 시작합니다!\n";
+int main(int argc, char** argv) {
+#ifdef _WIN32
+    UINT original_cp = GetConsoleOutputCP();
+    SetConsoleOutputCP(65001);                          // UTF-8 출력용
+    setlocale(LC_ALL, "ko_KR.UTF-8");                   // UTF-8 로케일
+#else
+    setlocale(LC_ALL, "ko_KR.UTF-8");                   // 리눅스/맥에서도 설정
+#endif
+
+    std::cout << u8"🌟 UTF-8 콘솔 코드페이지로 전환하고 테스트 시작!\n";
 
     doctest::Context context;
-
     context.applyCommandLine(argc, argv);
-
-    int res = context.run();  // 테스트 실행
+    int res = context.run();
 
     if (context.shouldExit()) {
-        return res;  // early return if test-only mode
+        std::cout << u8"🌙 테스트 끝! 콘솔 코드페이지 원래대로 복구했습니다.\n";
+#ifdef _WIN32
+        SetConsoleOutputCP(original_cp);                // 원래 코드페이지 복원
+        setlocale(LC_ALL, "");                          // 기본 로케일로 복귀
+#endif
+        return res;
     }
 
-    // 여기서 테스트 이후 추가 로직 가능
+    std::cout << u8"🌙 테스트 종료. 콘솔 상태 복원 완료.\n";
+#ifdef _WIN32
+    SetConsoleOutputCP(original_cp);
+    setlocale(LC_ALL, "");                              // 로케일 복원
+#endif
 
     return res;
 }

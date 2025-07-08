@@ -52,8 +52,18 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE BYUL_STATIC)
 # 컴파일·링크 옵션에 ASan 추가
 # win11과 우분투는 다르다
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-    message(STATUS 
-    "${PROJECT_NAME} No apply ASan for Windows because error.")
+    if (MSVC)
+        message(STATUS "${PROJECT_NAME} MSVC: Enabling ASan (/fsanitize=address)")
+        target_compile_options(${PROJECT_NAME} PRIVATE /fsanitize=address /Zi /Od)
+        target_link_options(${PROJECT_NAME} PRIVATE /fsanitize=address /INCREMENTAL:NO)
+
+        # 추천: MSVC에서는 Release 대신 Debug로 빌드해야 정상 작동
+        set_target_properties(${PROJECT_NAME} PROPERTIES
+            MSVC_RUNTIME_LIBRARY "MultiThreadedDebug"
+        )
+    else()
+        message(STATUS "${PROJECT_NAME} ASan not configured: unknown compiler on Windows")
+    endif()
 
 else()
     message(STATUS "${PROJECT_NAME} Applying ASan + LSan for Unix-like")
