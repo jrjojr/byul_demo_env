@@ -8,16 +8,29 @@
 #include "internal/coord_list.h"
 #include "internal/coord_hash.h"
 
-map_t* map_new() {
-    return map_new_full(0, 0, MAP_NEIGHBOR_8);
+bool is_coord_blocked(const coord_hash_t* blocked_coords, 
+    int x, int y, void* userdata) {
+
+    if (!blocked_coords) return false;
+    coord_t* c = coord_new_full(x, y);
+    bool result = coord_hash_contains(blocked_coords, c);
+    coord_free(c);
+    return result;
 }
 
-map_t* map_new_full(int width, int height, map_neighbor_mode_t mode) {
+map_t* map_new() {
+    return map_new_full(0, 0, MAP_NEIGHBOR_8, is_coord_blocked);
+}
+
+map_t* map_new_full(int width, int height, map_neighbor_mode_t mode, 
+    is_coord_blocked_func is_coord_blocked_fn) {
+
     map_t* m = new map_t();
     m->width = width;
     m->height = height;
     m->mode = mode;
     m->blocked_coords = coord_hash_new();
+    m->is_coord_blocked_fn = is_coord_blocked_fn;
     return m;
 }
 
@@ -29,7 +42,9 @@ void map_free(map_t* m) {
 
 map_t* map_copy(const map_t* m) {
     if (!m) return nullptr;
-    map_t* c = map_new_full(m->width, m->height, m->mode);
+    map_t* c = map_new_full(m->width, m->height, m->mode, 
+        m->is_coord_blocked_fn);
+
     c->blocked_coords = coord_hash_copy(m->blocked_coords);
     return c;
 }
@@ -81,19 +96,14 @@ bool map_unblock_coord(map_t* m, int x, int y) {
     return result;
 }
 
-bool map_is_blocked(const map_t* m, int x, int y) {
-    if (!m) return false;
-    coord_t* c = coord_new_full(x, y);
-    bool result = coord_hash_contains(m->blocked_coords, c);
-    coord_free(c);
-    return result;
-}
-
 bool map_is_inside(const map_t* m, int x, int y) {
     if (!m) return false;
     bool x_ok = (m->width == 0 || (x >= 0 && x < m->width));
     bool y_ok = (m->height == 0 || (y >= 0 && y < m->height));
     return x_ok && y_ok;
+}
+BYUL_API bool map_is_blocked(const map_t* m, int x, int y){
+    return is_coord_blocked(m->blocked_coords, x, y, nullptr);
 }
 
 void map_clear(map_t* m) {
@@ -121,7 +131,8 @@ coord_list_t* map_make_neighbors(const map_t* m, int x, int y) {
         int nx = x + dx[i];
         int ny = y + dy[i];
         if (!map_is_inside(m, nx, ny)) continue;
-        if (map_is_blocked(m, nx, ny)) continue;
+        if (m->is_coord_blocked_fn(m->blocked_coords, nx, ny, nullptr)) 
+            continue;
         coord_list_push_back(list, make_tmp_coord(nx, ny));
     }
     return list;

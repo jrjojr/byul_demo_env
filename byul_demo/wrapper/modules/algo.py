@@ -78,6 +78,18 @@ typedef float (*heuristic_func)(const coord_t*, const coord_t*, void*);
          
 float default_cost(
     const map_t*, const coord_t*, const coord_t*, void*);         
+         
+/**
+ * @brief 0을 반환하는 비용 함수 (모든 경로 동일 비용)
+ */
+float zero_cost(const map_t*, const coord_t*, const coord_t*, void*);
+
+/**
+ * @brief 대각선 이동 비용 함수 (√2 근사값 사용)
+ */
+float diagonal_cost(
+    const map_t*, const coord_t*, const coord_t*, void*);
+
                   
 /**
  * @brief 유클리드 거리 휴리스틱
@@ -90,9 +102,25 @@ float euclidean_heuristic(const coord_t*, const coord_t*, void*);
 float manhattan_heuristic(const coord_t*, const coord_t*, void*);
          
 /**
+ * @brief 체비셰프 거리 휴리스틱
+ */
+float chebyshev_heuristic(const coord_t*, const coord_t*, void*);
+                  
+/**
+ * @brief 옥타일 거리 휴리스틱 (8방향 이동)
+ */
+float octile_heuristic(const coord_t*, const coord_t*, void*);
+
+/**
+ * @brief 항상 0을 반환하는 휴리스틱 (탐색 최소화용)
+ */
+float zero_heuristic(const coord_t*, const coord_t*, void*);
+
+/**
  * @brief 기본 휴리스틱 ( 유클리드)
  */
-float default_heuristic(const coord_t*, const coord_t*, void*);         
+float default_heuristic(const coord_t*, const coord_t*, void*);
+
                   
 typedef enum e_route_algotype{
     ROUTE_ALGO_UNKNOWN = 0,
@@ -313,7 +341,7 @@ route_t* algo_find_fast_marching(const algo_t* a);
 class c_algo:
     def __init__(self, 
                  map: c_map,
-                 algotype: RouteAlgotype = RouteAlgotype.ASTAR,
+                 type: RouteAlgotype = RouteAlgotype.ASTAR,
                  start: c_coord = None,
                  goal: c_coord = None,
                  cost_fn = None,
@@ -337,7 +365,7 @@ class c_algo:
 
             self._c = C.algo_new_full(
                 map.ptr(),
-                algotype.value,
+                type.value,
                 start._c,
                 goal._c,
                 cost_fn,
@@ -357,7 +385,7 @@ class c_algo:
         else:
             self._finalizer = None        
         
-        self.algotype = algotype
+        self.type = type
 
     def ptr(self):
         return self._c

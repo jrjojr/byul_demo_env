@@ -76,13 +76,13 @@ bool dstar_lite_is_blocked(
     return map_is_blocked(dsl->m, x, y);
 }
 
-dsl_is_blocked_func dstar_lite_get_is_blocked_func(dstar_lite_t* dsl) {
+is_coord_blocked_func dstar_lite_get_is_blocked_func(dstar_lite_t* dsl) {
     if (!dsl) return NULL;
     return dsl->is_blocked_fn;
 }
 
 void dstar_lite_set_is_blocked_func(
-    dstar_lite_t* dsl, dsl_is_blocked_func fn) {
+    dstar_lite_t* dsl, is_coord_blocked_func fn) {
     if (!dsl) return;
     dsl->is_blocked_fn = fn;
 }

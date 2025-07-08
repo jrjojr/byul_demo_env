@@ -10,6 +10,12 @@
 extern "C" {
 #endif
 
+typedef bool (*is_coord_blocked_func)(
+    const coord_hash_t* blocked_coords, int x, int y, void* userdata);
+
+BYUL_API bool is_coord_blocked(const coord_hash_t* blocked_coords, 
+    int x, int y, void* userdata);    
+
 typedef enum {
     MAP_NEIGHBOR_4,
     MAP_NEIGHBOR_8
@@ -21,17 +27,22 @@ struct s_map {
     map_neighbor_mode_t mode;
 
     coord_hash_t* blocked_coords;
-  
+
+    is_coord_blocked_func is_coord_blocked_fn;
 };
 
 typedef struct s_map map_t;
+
+
 
 // 생성자 및 소멸자
 
 // 0 x 0 , MAP_NEIGHBOR_8
 BYUL_API map_t* map_new();
 
-BYUL_API map_t* map_new_full(int width, int height, map_neighbor_mode_t mode);
+BYUL_API map_t* map_new_full(int width, int height, map_neighbor_mode_t mode,
+    is_coord_blocked_func is_coord_blocked_fn);
+
 BYUL_API void map_free(map_t* m);
 
 // 복사 및 비교
@@ -52,8 +63,8 @@ BYUL_API void map_set_mode(map_t* m);
 // 장애물 관련
 BYUL_API bool map_block_coord(map_t* m, int x, int y);
 BYUL_API bool map_unblock_coord(map_t* m, int x, int y);
-BYUL_API bool map_is_blocked(const map_t* m, int x, int y);
 BYUL_API bool map_is_inside(const map_t* m, int x, int y);
+BYUL_API bool map_is_blocked(const map_t* m, int x, int y);
 BYUL_API void map_clear(map_t* m);
 
 // 차단 좌표 집합 반환

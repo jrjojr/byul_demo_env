@@ -6,17 +6,17 @@
 TEST_CASE("map blocking and checking") {
     map_t* m = map_new();
     CHECK(map_block_coord(m, 6, 6));
-    CHECK(map_is_blocked(m, 6, 6));
-    CHECK_FALSE(map_is_blocked(m, 5, 5));
+    CHECK(is_coord_blocked(m->blocked_coords, 6, 6, nullptr));
+    CHECK_FALSE(is_coord_blocked(m->blocked_coords, 5, 5, nullptr));
     map_free(m);
 }
 
 TEST_CASE("map unblock") {
     map_t* m = map_new();
     CHECK(map_block_coord(m, 4, 4));
-    CHECK(map_is_blocked(m, 4, 4));
+    CHECK(is_coord_blocked(m->blocked_coords, 4, 4, nullptr));
     CHECK(map_unblock_coord(m, 4, 4));
-    CHECK_FALSE(map_is_blocked(m, 4, 4));
+    CHECK_FALSE(is_coord_blocked(m->blocked_coords, 4, 4, nullptr));
     map_free(m);
 }
 
@@ -56,7 +56,7 @@ TEST_CASE("map neighbors filtering") {
 }
 
 TEST_CASE("map neighbor at degree") {
-    map_t* m = map_new_full(5, 5, MAP_NEIGHBOR_8);
+    map_t* m = map_new_full(5, 5, MAP_NEIGHBOR_8, is_coord_blocked);
     coord_t* c = map_make_neighbor_at_degree(m, 2, 2, 0.0);
     REQUIRE(c);
     CHECK(coord_get_x(c) == 3);
@@ -66,7 +66,7 @@ TEST_CASE("map neighbor at degree") {
 }
 
 TEST_CASE("map neighbor at goal") {
-    map_t* m = map_new_full(5, 5, MAP_NEIGHBOR_8);
+    map_t* m = map_new_full(5, 5, MAP_NEIGHBOR_8, is_coord_blocked);
     coord_t* center = coord_new_full(2, 2);
     coord_t* goal = coord_new_full(4, 1);
     coord_t* c = map_make_neighbor_at_goal(m, center, goal);
@@ -80,7 +80,7 @@ TEST_CASE("map neighbor at goal") {
 }
 
 TEST_CASE("map cone neighbor range") {
-    map_t* m = map_new_full(5, 5, MAP_NEIGHBOR_8);
+    map_t* m = map_new_full(5, 5, MAP_NEIGHBOR_8, is_coord_blocked);
     coord_t* center = coord_new_full(2, 2);
     coord_t* goal = coord_new_full(4, 2);
 

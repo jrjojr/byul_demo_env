@@ -21,7 +21,7 @@ static char get_map_char(
     if (goal && coord_get_x(goal) == x && coord_get_y(goal) == y) 
         return 'G';
 
-    if (map_is_blocked(m, x, y)) return '#';
+    if (is_coord_blocked(m->blocked_coords, x, y, nullptr)) return '#';
 
     coord_t* tmp = coord_new_full(x, y);
 
@@ -48,7 +48,7 @@ static const char* get_map_string(
     if (goal && coord_get_x(goal) == x && coord_get_y(goal) == y)
         return "  G";
 
-    if (map_is_blocked(m, x, y)) return "  #";
+    if (is_coord_blocked(m->blocked_coords, x, y, nullptr)) return "  #";
 
     coord_t* tmp = coord_new_full(x, y);
 

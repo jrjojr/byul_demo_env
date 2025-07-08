@@ -68,7 +68,7 @@ class NpcPropertyWidget(QWidget):
 
         self.retry_spin = QSpinBox()
         self.retry_spin.setRange(0, 10000)
-        self.retry_spin.setValue(self.npc.compute_max_retry)
+        self.retry_spin.setValue(self.npc.max_retry)
         self.form.addRow("🔁 최대 재시도:", self.retry_spin)
 
         # ── 그래픽 설정 ──
@@ -157,10 +157,10 @@ class NpcPropertyWidget(QWidget):
                 npc.set_route_capacity(self.capacity_spin.value())
             )
 
-            npc.compute_max_retry_changed.connect(self.retry_spin.setValue)
-            self.retry_spin.valueChanged.connect(npc.set_compute_max_retry)
+            npc.max_retry_changed.connect(self.retry_spin.setValue)
+            self.retry_spin.valueChanged.connect(npc.set_max_retry)
             self.retry_spin.editingFinished.connect(lambda:
-                npc.set_compute_max_retry(self.retry_spin.value())
+                npc.set_max_retry(self.retry_spin.value())
             )
 
             npc.disp_dx_changed.connect(self.disp_dx_spin.setValue)

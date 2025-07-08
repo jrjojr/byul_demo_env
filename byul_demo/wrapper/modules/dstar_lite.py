@@ -25,7 +25,7 @@ typedef float (*cost_func)(
 typedef float (*heuristic_func)(
     const coord_t* start, const coord_t* goal, void* userdata);
 
-typedef bool (*dsl_is_blocked_func)(
+typedef bool (*is_coord_blocked_func)(
     const map_t* m, int x, int y, void* userdata);
 
 typedef struct s_dstar_lite {
@@ -46,7 +46,7 @@ typedef struct s_dstar_lite {
     cost_func cost_fn;
     void* cost_fn_userdata;
 
-    dsl_is_blocked_func is_blocked_fn;
+    is_coord_blocked_func is_blocked_fn;
     void* is_blocked_fn_userdata;
 
     // 휴리스틱 함수
@@ -230,9 +230,9 @@ void dstar_lite_set_cost_func_userdata(
 
 bool dstar_lite_is_blocked(
     dstar_lite_t* dsl, int x, int y, void* userdata);    
-dsl_is_blocked_func dstar_lite_get_is_blocked_func(dstar_lite_t* dsl);
+is_coord_blocked_func dstar_lite_get_is_blocked_func(dstar_lite_t* dsl);
 void dstar_lite_set_is_blocked_func(
-    dstar_lite_t* dsl, dsl_is_blocked_func fn);
+    dstar_lite_t* dsl, is_coord_blocked_func fn);
 void* dstar_lite_get_is_blocked_func_userdata(dstar_lite_t* dsl);
 void dstar_lite_set_is_blocked_func_userdata(
     dstar_lite_t* dsl, void* userdata);

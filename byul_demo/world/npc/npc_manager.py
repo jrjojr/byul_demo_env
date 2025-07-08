@@ -31,7 +31,7 @@ class NPCManager(QObject):
         if self.has_npc(npc_id):
             return None
 
-        npc = NPC(npc_id, self.world, coord)
+        npc = NPC(npc_id=npc_id, world= self.world, start= coord)
         self.npc_dict[npc_id] = npc
 
         self.npc_created.emit(npc_id)

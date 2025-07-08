@@ -8,6 +8,7 @@ from grid.grid_block_manager import GridBlockManager
 
 from coord import c_coord
 from map import c_map
+from world.route_engine.route_engine import RouteEngine
 
 from world.npc.npc import NPC
 from world.npc.npc_manager import NPCManager
@@ -35,6 +36,12 @@ class World(QObject):
         self.selected_village = None
 
         self.map = c_map()
+
+        # // 쓰레드에서 사용하려면 포인터를 통해 간접 접근을 해야 한다.
+        # cmap(rawptr=self.map_ptr) 이런식으로...
+        self.map_ptr = self.map.ptr()
+
+        self.route_engine = RouteEngine()
         self.grid_unit_m = grid_unit_m
         self.set_grid_unit_m(grid_unit_m)
 
@@ -80,15 +87,13 @@ class World(QObject):
         self.grid_unit_m = grid_unit_m
         self.grid_unit_m_changed.emit(grid_unit_m)
 
-
     def reset(self):
         self.map.clear()
         self.block_mgr.reset()
         self.npc_mgr.reset()
 
     def close(self):
-        # self.block_mgr.close()
-        # self.npc_mgr.close()
+        self.route_engine.shutdown()
         self.map.close()
 
     def create_village(self, name: str, 

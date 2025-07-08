@@ -58,9 +58,6 @@ typedef void (*move_func)(const coord_t* c, void* userdata);
 
 typedef coord_list_t* (*changed_coords_func)(void* userdata);
 
-typedef bool (*dsl_is_blocked_func)(
-    const map_t* m, int x, int y, void* userdata);
-
 typedef struct s_dstar_lite {
     // 맵
     map_t* m;
@@ -79,7 +76,7 @@ typedef struct s_dstar_lite {
     cost_func cost_fn;
     void* cost_fn_userdata;
 
-    dsl_is_blocked_func is_blocked_fn;
+    is_coord_blocked_func is_blocked_fn;
     void* is_blocked_fn_userdata;
 
     // 휴리스틱 함수
@@ -263,9 +260,9 @@ BYUL_API void dstar_lite_set_cost_func_userdata(
 
 BYUL_API bool dstar_lite_is_blocked(
     dstar_lite_t* dsl, int x, int y, void* userdata);    
-BYUL_API dsl_is_blocked_func dstar_lite_get_is_blocked_func(dstar_lite_t* dsl);
+BYUL_API is_coord_blocked_func dstar_lite_get_is_blocked_func(dstar_lite_t* dsl);
 BYUL_API void dstar_lite_set_is_blocked_func(
-    dstar_lite_t* dsl, dsl_is_blocked_func fn);
+    dstar_lite_t* dsl, is_coord_blocked_func fn);
 BYUL_API void* dstar_lite_get_is_blocked_func_userdata(dstar_lite_t* dsl);
 BYUL_API void dstar_lite_set_is_blocked_func_userdata(
     dstar_lite_t* dsl, void* userdata);
