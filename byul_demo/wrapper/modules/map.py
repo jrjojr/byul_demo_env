@@ -13,6 +13,12 @@ class MapNeighborMode(IntEnum):
     DIR_8 = 1
 
 ffi.cdef("""
+typedef bool (*is_coord_blocked_func)(
+    const void* context, int x, int y, void* userdata);
+
+bool is_coord_blocked_map(const void* context, 
+    int x, int y, void* userdata);
+
 typedef enum {
     MAP_NEIGHBOR_4,
     MAP_NEIGHBOR_8
@@ -24,13 +30,20 @@ struct s_map {
     map_neighbor_mode_t mode;
 
     coord_hash_t* blocked_coords;
+
+    is_coord_blocked_func is_coord_blocked_fn;
 };
 
 typedef struct s_map map_t;
 
 // 생성자 및 소멸자
+
+// 0 x 0 , MAP_NEIGHBOR_8
 map_t* map_new();
-map_t* map_new_full(int width, int height, map_neighbor_mode_t mode);
+
+map_t* map_new_full(int width, int height, map_neighbor_mode_t mode,
+    is_coord_blocked_func is_coord_blocked_fn);
+
 void map_free(map_t* m);
 
 // 복사 및 비교
@@ -45,13 +58,15 @@ void map_set_width(map_t* m, int width);
 int map_get_height(const map_t* m);
 void map_set_height(map_t* m, int height);
 
+void map_set_is_coord_blocked_func(map_t* m, is_coord_blocked_func fn);
+is_coord_blocked_func map_get_is_coord_blocked_fn(const map_t* m);
+         
 map_neighbor_mode_t map_get_mode(const map_t* m);
 void map_set_mode(map_t* m);
 
 // 장애물 관련
 bool map_block_coord(map_t* m, int x, int y);
 bool map_unblock_coord(map_t* m, int x, int y);
-bool map_is_blocked(const map_t* m, int x, int y);
 bool map_is_inside(const map_t* m, int x, int y);
 void map_clear(map_t* m);
 
@@ -80,17 +95,25 @@ coord_list_t* map_make_neighbors_at_degree_range(
 
 class c_map:
     def __init__(self, raw_ptr=None, own=False,
-            width=None, height=None, mode=MapNeighborMode.DIR_8):
-        
+                 width=None, height=None, mode=MapNeighborMode.DIR_8,
+                 py_func=None):
+        self._own = own
+        self._py_is_coord_blocked_func = None
+        self._ffi_is_coord_blocked_func = None
+        self._user_handle = None
+
         if raw_ptr:
             self._c = raw_ptr
-            self._own = own
         elif width is not None and height is not None:
-            self._c = C.map_new_full(width, height, mode.value)
-            self._own = True
+            if py_func is not None:
+                self.set_is_coord_blocked_fn(py_func)
+                fn = self._ffi_is_coord_blocked_func
+            else:
+                fn = ffi.NULL
+
+            self._c = C.map_new_full(width, height, mode.value, fn)
         else:
             self._c = C.map_new()
-            self._own = True
 
         if not self._c:
             raise MemoryError("map allocation failed")
@@ -99,6 +122,7 @@ class c_map:
             self._finalizer = weakref.finalize(self, C.map_free, self._c)
         else:
             self._finalizer = None
+
 
     # ───── 속성 접근 ─────
     @property
@@ -126,6 +150,25 @@ class c_map:
     def set_height(self, h):
         C.map_set_height(self._c, h)
 
+    def set_is_coord_blocked_fn(self, py_func):
+        '''
+        @ffi.callback("bool(const void*, int, int, void*)")
+        '''
+        self._py_is_coord_blocked_func = py_func
+
+        @ffi.callback("bool(const void*, int, int, void*)")
+        def _wrapped(m_ptr, x, y, udata_ptr):
+            map_obj = c_map(raw_ptr=m_ptr, own=False)
+            user = ffi.from_handle(udata_ptr) if udata_ptr else None
+            return bool(py_func(map_obj, x, y, user))
+
+        self._ffi_is_coord_blocked_func = _wrapped
+        C.map_set_is_coord_blocked_func(self._c, _wrapped)
+
+    def get_is_coord_blocked_fn(self):
+        # is_coord_blocked_func map_get_is_coord_blocked_fn(const map_t* m);
+        return self._py_is_coord_blocked_func
+
     def set_mode(self, mode: MapNeighborMode):
         C.map_set_mode(self._c, mode.value)
 
@@ -137,7 +180,9 @@ class c_map:
         return bool(C.map_unblock_coord(self._c, x, y))
 
     def is_blocked(self, x, y):
-        return bool(C.map_is_blocked(self._c, x, y))
+        # bool is_coord_blocked_map(const void* context,
+        #     int x, int y, void* userdata);
+        return bool(C.is_coord_blocked_map(self._c, x, y, ffi.NULL))
 
     def is_inside(self, x, y):
         return bool(C.map_is_inside(self._c, x, y))

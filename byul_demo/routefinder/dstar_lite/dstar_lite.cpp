@@ -43,7 +43,7 @@ float dstar_lite_cost(
     if (!m || !start || !goal)
         return FLT_MAX;
 
-    if (map_is_blocked(m, goal->x, goal->y))
+    if (m->is_coord_blocked_fn(m, goal->x, goal->y, nullptr))
         return FLT_MAX;
 
     float dx = (float)(start->x - goal->x);
@@ -73,7 +73,7 @@ bool dstar_lite_is_blocked(
     dstar_lite_t* dsl, int x, int y, void* userdata) {
         
     if (!dsl || !dsl->is_blocked_fn) return false;
-    return map_is_blocked(dsl->m, x, y);
+    return dsl->m->is_coord_blocked_fn(dsl->m, x, y, nullptr);
 }
 
 is_coord_blocked_func dstar_lite_get_is_blocked_func(dstar_lite_t* dsl) {

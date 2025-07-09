@@ -26,7 +26,7 @@ class World(QObject):
     npc_created = Signal(str)
     npc_deleted = Signal(str)
 
-    npc_selected = Signal(NPC)    
+    npc_selected = Signal(NPC)
 
     grid_unit_m_changed = Signal(float)
 

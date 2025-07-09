@@ -502,6 +502,7 @@ start_delay_sec : {self.start_delay_sec}''')
                     prev_goal = self.goal
 
         a_map = self.world.map
+        a_map.set_is_coord_blocked_fn(self._is_coord_blocked_cb)
         self.world.route_engine.submit(map=a_map, npc_id=self.id,
             type= self.algotype,
             start=self.m_start, goal=self.m_goal,
@@ -581,11 +582,11 @@ start_delay_sec : {self.start_delay_sec}''')
         dy = start.y - goal.y
         return math.hypot(dx, dy)
 
-    @staticmethod
-    def _is_blocked_cb(map:c_map, x, y, userdata):
+    # @staticmethod
+    def _is_coord_blocked_cb(self, map:c_map, x, y, userdata):
         c = (x, y)
-        cell = userdata.world.block_mgr.get_cell(c)
-        return userdata.is_obstacle(cell)
+        cell = self.world.block_mgr.get_cell(c)
+        return self.is_obstacle(cell)
 
     def draw(self, painter: QPainter,
                  start_win_pos_x:int, start_win_pos_y:int, cell_size):

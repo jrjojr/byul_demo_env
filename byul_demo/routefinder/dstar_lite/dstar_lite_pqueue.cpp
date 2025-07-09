@@ -9,7 +9,9 @@
 #include <algorithm>
 
 struct s_dstar_lite_pqueue {
-    std::map<dstar_lite_key_t*, std::vector<coord_t*>, DstarLiteKeyLess> key_to_coords;
+    std::map<dstar_lite_key_t*, std::vector<coord_t*>, 
+        DstarLiteKeyLess> key_to_coords;
+        
     coord_hash_t* coord_to_key;
 };
 
