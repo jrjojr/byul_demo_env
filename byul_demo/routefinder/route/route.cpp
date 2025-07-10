@@ -13,9 +13,9 @@
 static const int ROUTE_DIRECTION_VECTORS[9][2] = {
     {  0,  0 },  // UNKNOWN
     {  1,  0 },  // RIGHT
-    {  1, -1 },  // TOP_RIGHT
-    {  0, -1 },  // TOP
-    { -1, -1 },  // TOP_LEFT
+    {  1, -1 },  // UP_RIGHT
+    {  0, -1 },  // UP
+    { -1, -1 },  // UP_LEFT
     { -1,  0 },  // LEFT
     { -1,  1 },  // DOWN_LEFT
     {  0,  1 },  // DOWN

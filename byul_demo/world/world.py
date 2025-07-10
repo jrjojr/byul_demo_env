@@ -8,7 +8,7 @@ from grid.grid_block_manager import GridBlockManager
 
 from coord import c_coord
 from map import c_map
-from world.route_engine.route_engine import RouteEngine
+from world.route_engine.algo_engine import AlgoEngine
 
 from world.npc.npc import NPC
 from world.npc.npc_manager import NPCManager
@@ -41,7 +41,7 @@ class World(QObject):
         # cmap(rawptr=self.map_ptr) 이런식으로...
         self.map_ptr = self.map.ptr()
 
-        self.route_engine = RouteEngine()
+        self.algo_engine = AlgoEngine()
         self.grid_unit_m = grid_unit_m
         self.set_grid_unit_m(grid_unit_m)
 
@@ -93,7 +93,7 @@ class World(QObject):
         self.npc_mgr.reset()
 
     def close(self):
-        self.route_engine.shutdown()
+        self.algo_engine.shutdown()
         self.map.close()
 
     def create_village(self, name: str, 
@@ -200,38 +200,17 @@ class World(QObject):
             g_logger.log_debug(f'elapsed : {elapsed:.3f} msec')
 
     @Slot(NPC)
-    def apply_real_route_to_cells(self, npc: NPC):
-        for coord_list in npc.real_list:
-            for coord in coord_list:
-                ct = coord.to_tuple()
-                if (cell := self.block_mgr.get_cell(ct)):
-                    cell.add_flag(CellFlag.ROUTE)
-
-    def clear_real_route_flags(self, npc: NPC):
-        """
-        NPC의 real_list에 따라 설정된 셀들의 ROUTE 플래그를 제거한다.
-        """
-        for coord in npc.real_list:
+    def apply_route_to_cells(self, npc: NPC):
+        for coord in npc.route_list:
             ct = coord.to_tuple()
-            cell = self.block_mgr.get_cell(ct)
-            if cell:
-                cell.remove_flag(CellFlag.ROUTE)
+            if (cell := self.block_mgr.get_cell(ct)):
+                cell.add_flag(CellFlag.ROUTE)
 
-        g_logger.log_debug(f"[clear_real_route_flags] npc({npc.id})의 경로 깃발 제거 완료")        
-
-    @Slot(NPC)
-    def apply_proto_route_to_cells(self, npc: NPC):
-        for coord_list in npc.proto_list:
-            for coord in coord_list:
-                ct = coord.to_tuple()
-                if (cell := self.block_mgr.get_cell(ct)):
-                    cell.add_flag(CellFlag.ROUTE)
-
-    def clear_proto_route_flags(self, npc: NPC):
+    def clear_route_flags(self, npc: NPC):
         """
-        NPC의 proto_list에 따라 설정된 셀들의 ROUTE 플래그를 제거한다.
+        NPC의 route_list에 따라 설정된 셀들의 ROUTE 플래그를 제거한다.
         """
-        for coord in npc.proto_list:
+        for coord in npc.route_list:
             ct = coord.to_tuple()
             cell = self.block_mgr.get_cell(ct)
             if cell:

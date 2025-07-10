@@ -10,9 +10,9 @@ from enum import IntEnum
 class RouteDir(IntEnum):
     UNKNOWN = 0
     RIGHT = 1
-    TOP_RIGHT = 2
-    TOP = 3
-    TOP_LEFT = 4
+    UP_RIGHT = 2
+    UP = 3
+    UP_LEFT = 4
     LEFT = 5
     DOWN_LEFT = 6
     DOWN = 7
@@ -23,9 +23,9 @@ ffi.cdef("""
 typedef enum e_route_dir {
     ROUTE_DIR_UNKNOWN, 
     ROUTE_DIR_RIGHT,
-    ROUTE_DIR_TOP_RIGHT,
-    ROUTE_DIR_TOP,
-    ROUTE_DIR_TOP_LEFT,
+    ROUTE_DIR_UP_RIGHT,
+    ROUTE_DIR_UP,
+    ROUTE_DIR_UP_LEFT,
     ROUTE_DIR_LEFT,
     ROUTE_DIR_DOWN_LEFT,
     ROUTE_DIR_DOWN,
@@ -312,6 +312,20 @@ class c_route:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
+    def to_string(self):
+        coords = self.coords()  # assume this yields (x, y) tuples or coord objects
+        parts = []
+        for c in coords:
+            if hasattr(c, 'x') and hasattr(c, 'y'):
+                parts.append(f"({c.x}, {c.y})")
+            elif isinstance(c, tuple) and len(c) == 2:
+                parts.append(f"({c[0]}, {c[1]})")
+            else:
+                raise TypeError("Unsupported coord type in route")
+
+        return f"Route(len : {len(parts)}): " + " -> ".join(parts)
+
 
 def direction_to_coord(direction: RouteDir) -> c_coord:
     ptr = C.direction_to_coord(direction)

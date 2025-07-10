@@ -68,18 +68,18 @@ class NpcPropertyWidget(QWidget):
 
         self.retry_spin = QSpinBox()
         self.retry_spin.setRange(0, 10000)
-        self.retry_spin.setValue(self.npc.compute_max_retry)
+        self.retry_spin.setValue(self.npc.max_retry)
         self.form.addRow("🔁 최대 재시도:", self.retry_spin)
 
         # ── 그래픽 설정 ──
         self.disp_dx_spin = QDoubleSpinBox()
         self.disp_dx_spin.setRange(-1000.0, 1000.0)
-        self.disp_dx_spin.setValue(self.npc.disp_dx)
+        self.disp_dx_spin.setValue(self.npc.animator.disp_dx)
         self.form.addRow("disp_dx:", self.disp_dx_spin)
 
         self.disp_dy_spin = QDoubleSpinBox()
         self.disp_dy_spin.setRange(-1000.0, 1000.0)
-        self.disp_dy_spin.setValue(self.npc.disp_dy)
+        self.disp_dy_spin.setValue(self.npc.animator.disp_dy)
         self.form.addRow("disp_dy:", self.disp_dy_spin)
 
         self.form.addRow(QLabel("<b>🏞️ 적합한 지형</b>"), QLabel(""))
@@ -130,8 +130,8 @@ class NpcPropertyWidget(QWidget):
         if npc:
             npc.start_changed_sig.connect(self.set_start_label)
             npc.goal_changed_sig.connect(self.set_goal_label)
-            npc.anim_to_started_sig.connect(self.set_next_label)            
-            npc.anim_to_arrived_sig.connect(self.set_phantom_start_label)
+            npc.animator.anim_to_started_sig.connect(self.set_next_label)            
+            npc.animator.anim_to_arrived_sig.connect(self.set_phantom_start_label)
 
             npc.speed_kmh_changed.connect(self.speed_spin.setValue)
             self.speed_spin.valueChanged.connect(npc.set_speed_kmh)
@@ -157,19 +157,19 @@ class NpcPropertyWidget(QWidget):
                 npc.set_route_capacity(self.capacity_spin.value())
             )
 
-            npc.compute_max_retry_changed.connect(self.retry_spin.setValue)
-            self.retry_spin.valueChanged.connect(npc.set_compute_max_retry)
+            npc.max_retry_changed.connect(self.retry_spin.setValue)
+            self.retry_spin.valueChanged.connect(npc.set_max_retry)
             self.retry_spin.editingFinished.connect(lambda:
-                npc.set_compute_max_retry(self.retry_spin.value())
+                npc.set_max_retry(self.retry_spin.value())
             )
 
-            npc.disp_dx_changed.connect(self.disp_dx_spin.setValue)
+            npc.animator.disp_dx_changed.connect(self.disp_dx_spin.setValue)
             self.disp_dx_spin.valueChanged.connect(npc.set_disp_dx)
             self.disp_dx_spin.editingFinished.connect(lambda:
                 npc.set_disp_dx(self.disp_dx_spin.value())
             )
 
-            npc.disp_dy_changed.connect(self.disp_dy_spin.setValue)
+            npc.animator.disp_dy_changed.connect(self.disp_dy_spin.setValue)
             self.disp_dy_spin.valueChanged.connect(npc.set_disp_dy)
             self.disp_dy_spin.editingFinished.connect(lambda:
                 npc.set_disp_dy(self.disp_dy_spin.value())

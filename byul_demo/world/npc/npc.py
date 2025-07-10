@@ -10,24 +10,16 @@ from coord import c_coord
 from map import c_map
 from dstar_lite import c_dstar_lite
 
-from algo import c_algo, RouteAlgotype
-
 from pathlib import Path
 
 from PySide6.QtGui import QPixmap, QPainter, QColor
 from PySide6.QtCore import QPoint, QRect, Qt, QTimer, QObject, Signal, Slot
 
 from route import c_route, RouteDir, calc_direction
-
-from world.route_engine.route_engine import RouteResult
 from coord_list import c_coord_list
 
 from world.village.village import Village
 from grid.grid_cell import TerrainType, GridCell, CellStatus
-
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from world.world import World  # ✅ 타입 힌트 전용 import
 
 from utils.log_to_panel import g_logger
 
@@ -52,20 +44,16 @@ class NPC(QObject):
 
     speed_kmh_changed = Signal(float)
     start_delay_sec_changed = Signal(float)
-    max_retry_changed = Signal(int)
+    compute_max_retry_changed = Signal(int)
     route_capacity_changed = Signal(int)
 
     disp_dx_changed = Signal(float)
     disp_dy_changed = Signal(float)
 
-    route_found = Signal(c_route)
-
-    def __init__(self, npc_id: str, world:'World', 
-                 algotype:RouteAlgotype=RouteAlgotype.ASTAR, 
-                 start:tuple=None, 
+    def __init__(self, npc_id: str, world, start:tuple=None, 
                  speed_kmh:float=4.0, start_delay_sec=0.5, 
                  route_capacity=100, 
-                 max_retry = 1000, 
+                 compute_max_retry = 1000, 
                  influence_range = 0,
                  max_range = 10,
                  image_path:Path=None, route_image_path:Path=None, 
@@ -86,10 +74,9 @@ class NPC(QObject):
         self.m_goal = self.m_start
         start_coord = c_coord.from_tuple(start)
         self.finder = c_dstar_lite(self.world.map, start_coord)
-
-        self.algotype = algotype
         
-        self.set_max_retry(max_retry)
+        self.compute_max_retry = compute_max_retry
+        self.set_compute_max_retry(compute_max_retry)
 
         self.route_capacity = route_capacity
         self.set_route_capacity(route_capacity)
@@ -119,8 +106,6 @@ class NPC(QObject):
 
         self.goal_list:list[tuple[int,int]] = list()
 
-        self.route_list = list()
-
         self.real_list = list()
         self.proto_list = list()
 
@@ -136,11 +121,11 @@ class NPC(QObject):
 
         self.total_elapsed_sec = 0.0
 
-        # self.finder.set_move_func(self._move_cb)
+        self.finder.set_move_func(self._move_cb)
 
-        # self.finder.set_changed_coords_func(self.world.changed_coords_cb)
+        self.finder.set_changed_coords_func(self.world.changed_coords_cb)
 
-        # self.finder.set_cost_func(self._cost_cb)
+        self.finder.set_cost_func(self._cost_cb)
 
         self.finding_thread = None
         
@@ -165,10 +150,10 @@ class NPC(QObject):
         self.route_capacity_changed.emit(capacity)
 
     @Slot(int)
-    def set_max_retry(self, max_retry:int):
-        self.max_retry = max_retry
-        self.finder.max_retry = max_retry
-        self.max_retry_changed.emit(max_retry)
+    def set_compute_max_retry(self, max_retry:int):
+        self.compute_max_retry = max_retry
+        self.finder.compute_max_retry = max_retry
+        self.compute_max_retry_changed.emit(max_retry)
 
     @Slot(float)
     def set_speed_kmh(self, speed_kmh:float):
@@ -282,7 +267,7 @@ class NPC(QObject):
             # 바로 요청하면 마우스 클릭으로 여러번 함수 호출할때
             # force_quit중에 또 force_quit이 실행되어서 
             # 다음 finder 루프를 돌수 없다.
-            # self.finder.force_quit()
+            self.finder.force_quit()
             # 이제 요청했다. 루프 멈추라고...
             # 즉각적으로 멈추는게 아니다.
             # 아마도 시속에 따라 계산된 interval_msec 이후에 멈춘다.
@@ -339,15 +324,12 @@ class NPC(QObject):
             # if not self._goal_q.empty():
             if len(self.goal_list) > 0:
                 if not self.finding_thread or not self.finding_thread.is_alive():
-                    
                     g_logger.log_debug(f'''지금 find()가 실행되었다
 가장 중요한 finder.is_quit_forced는 {self.finder.is_quit_forced()}
 elapsed_sec : {elapsed_sec}, 
 self.total_elapsed_sec : {self.total_elapsed_sec},
 start_delay_sec : {self.start_delay_sec}''')
-                    
                     self.find()
-
             self.total_elapsed_sec = 0.0
         else:
             self.total_elapsed_sec += elapsed_sec
@@ -473,40 +455,11 @@ start_delay_sec : {self.start_delay_sec}''')
         if self.finding_thread and self.finding_thread.is_alive():
             return  # 이미 실행 중이면 무시
         
-        # self.finding_active = True
-        # self.finding_thread = Thread(
-        #     target=self.find_loop, daemon=True)
+        self.finding_active = True
+        self.finding_thread = Thread(
+            target=self.find_loop, daemon=True)
         
-        # self.finding_thread.start()
-
-        if self.loop_once:
-            # 가장 마지막에 추가된 목표만 사용한다.
-            g = self.goal_list.pop()
-            self.loop_once = False
-            self.goal_list.clear()
-        else:
-            if prev_goal is None:
-                prev_goal = self.m_start
-
-            if prev_goal == self.m_start:
-                if len(self.goal_list) <= 0:
-                    return 
-
-                g = self.goal_list.pop(0)
-                self.goal = g
-                # self.world.add_changed_coord(g)
-                self.m_start = prev_goal
-                self.world.add_changed_coord(prev_goal)
-            else:
-                if prev_goal != self.goal:
-                    prev_goal = self.goal
-
-        a_map = self.world.map
-        a_map.set_is_coord_blocked_fn(self._is_coord_blocked_cb)
-        self.world.route_engine.submit(map=a_map, npc_id=self.id,
-            type= self.algotype,
-            start=self.m_start, goal=self.m_goal,
-            callback=self.on_route_found)
+        self.finding_thread.start()
 
     def stop_finding(self):
         self.finding_active = False
@@ -582,11 +535,11 @@ start_delay_sec : {self.start_delay_sec}''')
         dy = start.y - goal.y
         return math.hypot(dx, dy)
 
-    # @staticmethod
-    def _is_coord_blocked_cb(self, map:c_map, x, y, userdata):
+    @staticmethod
+    def _is_blocked_cb(map:c_map, x, y, userdata):
         c = (x, y)
-        cell = self.world.block_mgr.get_cell(c)
-        return self.is_obstacle(cell)
+        cell = userdata.world.block_mgr.get_cell(c)
+        return userdata.is_obstacle(cell)
 
     def draw(self, painter: QPainter,
                  start_win_pos_x:int, start_win_pos_y:int, cell_size):
@@ -663,22 +616,7 @@ start_delay_sec : {self.start_delay_sec}''')
         self.image_paths = ImageManager.get_npc_image_paths(image_path)
 
     def load_images(self, image_path:Path):
-        self.images = ImageManager.get_npc_image_set(image_path)      
-
-    def on_route_found(self, route_result:RouteResult):
-        a_route = route_result.route
-        a_id = route_result.npc_id
-
-        self.route_list = a_route.coords().to_list()
-
-        # 길이 초과 시 마지막 N개만 유지
-        if len(self.route_list) > self.route_capacity:
-            self.route_list[:] = self.route_list[-self.route_capacity:]
-
-        a_route.print()
-        g_logger.log_debug(f'npc_id : {a_id}')
-        print(f'len(route_list): {len(self.route_list)}')
-        self.route_found.emit(a_route)
+        self.images = ImageManager.get_npc_image_set(image_path)                
 
     def on_proto_route_found(self):
         new_items: list = self.proto_list

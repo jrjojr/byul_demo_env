@@ -14,9 +14,9 @@ extern "C" {
 typedef enum e_route_dir {
     ROUTE_DIR_UNKNOWN, 
     ROUTE_DIR_RIGHT,
-    ROUTE_DIR_TOP_RIGHT,
-    ROUTE_DIR_TOP,
-    ROUTE_DIR_TOP_LEFT,
+    ROUTE_DIR_UP_RIGHT,
+    ROUTE_DIR_UP,
+    ROUTE_DIR_UP_LEFT,
     ROUTE_DIR_LEFT,
     ROUTE_DIR_DOWN_LEFT,
     ROUTE_DIR_DOWN,

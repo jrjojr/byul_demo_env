@@ -118,35 +118,23 @@ class Actions(QObject):
         self.despawn_npc_at_action.triggered.connect(
             self.on_despawn_npc_at_action_triggered)        
         
-        self.clear_route_action = QAction('경로 초기화', parent)
-        self.clear_route_action.setToolTip(
+        self.clear_route_at_canvas_action = QAction('경로 청소 캔버스에서...', parent)
+        self.clear_route_at_canvas_action.setToolTip(
             '모든 ROUTE 플래그를 제거합니다')
+        self.clear_route_at_canvas_action.triggered.connect(
+            self.on_clear_route_at_canvas_action_triggered)
+        
+        self.view_route_action = QAction('npc의 경로 보기', parent)
+        self.view_route_action.setToolTip(
+            'npc의 경로를 보여준다')
+        self.view_route_action.triggered.connect(
+            self.on_view_route_action_triggered)
+
+        self.clear_route_action = QAction('npc의 경로 삭제', parent)
+        self.clear_route_action.setToolTip(
+            'npc의 경로를 삭제한다')
         self.clear_route_action.triggered.connect(
-            self.on_clear_route_action_triggered)
-        
-        self.view_proto_route_action = QAction('npc의 초기 경로 보기', parent)
-        self.view_proto_route_action.setToolTip(
-            'npc의 초기 경로를 보여준다')
-        self.view_proto_route_action.triggered.connect(
-            self.on_view_proto_route_action_triggered)
-
-        self.view_real_route_action = QAction('npc의 실제 경로 보기', parent)
-        self.view_real_route_action.setToolTip(
-            'npc의 실제 경로를 보여준다')
-        self.view_real_route_action.triggered.connect(
-            self.on_view_real_route_action_triggered)
-        
-        self.clear_proto_route_action = QAction('npc의 초기 경로 삭제', parent)
-        self.clear_proto_route_action.setToolTip(
-            'npc의 초기 경로를 삭제한다')
-        self.clear_proto_route_action.triggered.connect(
-            self.on_clear_proto_route_action_triggered)        
-
-        self.clear_real_route_action = QAction('npc의 실제 경로 삭제', parent)
-        self.clear_real_route_action.setToolTip(
-            'npc의 실제 경로를 삭제한다')
-        self.clear_real_route_action.triggered.connect(
-            self.on_clear_real_route_action_triggered)
+            self.on_clear_route_action_triggered)        
         
     def on_load_action_triggered(self):
         file_path, _ = QFileDialog.getOpenFileName(self.parent, 
@@ -252,26 +240,15 @@ class Actions(QObject):
         setting_widget = self.parent.side_panel.canvas_setting_widget
         setting_widget.set_combo_click_mode('despawn_npc_at')        
 
-    def on_clear_route_action_triggered(self):
+    def on_clear_route_at_canvas_action_triggered(self):
         self.parent.grid_canvas.clear_route_flags()
 
-    def on_view_proto_route_action_triggered(self):
-        self.world.apply_proto_route_to_cells(
+    def on_view_route_action_triggered(self):
+        self.world.apply_route_to_cells(
             self.world.selected_npc)
 
-    def on_view_real_route_action_triggered(self):
-        self.world.apply_real_route_to_cells(
-            self.world.selected_npc)
-
-    def on_clear_proto_route_action_triggered(self):
+    def on_clear_route_action_triggered(self):
         if self.world.selected_npc:
-            self.world.selected_npc.clear_proto_route()
+            self.world.selected_npc.clear_route()
         else:
             g_logger.log_always(f'현재 선택된 npc가 없어여')
-
-    def on_clear_real_route_action_triggered(self):
-        if self.world.selected_npc:
-            self.world.selected_npc.clear_real_route()
-        else:
-            g_logger.log_always(f'현재 선택된 npc가 없어여')            
-

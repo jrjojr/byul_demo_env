@@ -10,7 +10,6 @@ from coord import c_coord
 
 from utils.log_to_panel import g_logger
 
-
 class RouteRequest:
     def __init__(self,
                  map_ptr,
@@ -18,7 +17,7 @@ class RouteRequest:
                  type: RouteAlgotype,
                  start: tuple,
                  goal: tuple,
-                 callback: Callable,
+                 on_route_found_cb: Callable,
                  max_retry: int = 10000,
                  visited_logging: bool = False,
                  cost_func: str = "default",
@@ -29,22 +28,19 @@ class RouteRequest:
         self.type = type
         self.start = start
         self.goal = goal
-        self.callback = callback
+        self.on_route_found_cb = on_route_found_cb
         self.max_retry = max_retry
         self.visited_logging = visited_logging
         self.cost_func = cost_func
         self.heuristic_func = heuristic_func
         self.userdata = userdata
 
-
-
 class RouteResult:
     def __init__(self, npc_id: str, route: 'c_route'):
         self.npc_id = npc_id
         self.route = route
 
-
-class RouteEngine:
+class AlgoEngine:
     def __init__(self, max_workers: int = 4):
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.task_queue = Queue()
@@ -63,7 +59,9 @@ class RouteEngine:
 
         map_obj = c_map(raw_ptr=request.map_ptr, own=False)
         # userdata는 C 쪽에서 직접 쓰지 않고 복제해서 넘겨라
-        safe_userdata = request.userdata if isinstance(request.userdata, (int, float, str)) else None
+        safe_userdata = request.userdata if isinstance(
+            request.userdata, (int, float, str)) else None
+        
         self.algo = c_algo(
             map=map_obj,
             type=request.type,
@@ -79,7 +77,7 @@ class RouteEngine:
         route: 'c_route' = self.algo.find()
         g_logger.log_debug_threadsafe('after 길찾기')
         result = RouteResult(request.npc_id, route)
-        request.callback(result)
+        request.on_route_found_cb(result)
 
     def submit(self,
                map: c_map,
@@ -87,7 +85,7 @@ class RouteEngine:
                type: RouteAlgotype,
                start: tuple,
                goal: tuple,
-               callback: Callable,
+               on_route_found_cb: Callable,
                max_retry: int = 10000,
                visited_logging: bool = False,
                cost_func: str = "default",
@@ -100,7 +98,7 @@ class RouteEngine:
             type=type,
             start=start,
             goal=goal,
-            callback=callback,
+            on_route_found_cb=on_route_found_cb,
             max_retry=max_retry,
             visited_logging=visited_logging,
             cost_func=cost_func,
@@ -113,3 +111,4 @@ class RouteEngine:
         self.running = False
         self.task_queue.put(None)
         self.executor.shutdown(wait=True)
+
