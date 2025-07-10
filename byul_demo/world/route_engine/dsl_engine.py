@@ -3,42 +3,12 @@ from queue import Queue
 import threading
 from typing import Callable
 from coord import c_coord
-from route import c_route
 from map import c_map
 from dstar_lite import c_dstar_lite
 from utils.log_to_panel import g_logger
 
-class RouteRequest:
-    def __init__(self,
-                 map_ptr,
-                 npc_id: str,
-                 start: tuple,
-                 goal: tuple,
-                 on_route_found_cb: Callable,
-                 move_cb: Callable,
-                 interval_msec: int = 100,
-                 max_retry: int = 10000,
-                 cost_func: str = "default",
-                 heuristic_func: str = "euclidean",
-                 userdata: any = None,
-                 on_real_route_found_cb: Callable = None):
-        self.map_ptr = map_ptr
-        self.npc_id = npc_id
-        self.start = start
-        self.goal = goal
-        self.on_route_found_cb = on_route_found_cb
-        self.move_cb = move_cb
-        self.interval_msec = interval_msec
-        self.max_retry = max_retry
-        self.cost_func = cost_func
-        self.heuristic_func = heuristic_func
-        self.userdata = userdata
-        self.on_real_route_found_cb = on_real_route_found_cb
+from .base import RouteRequest, RouteResult
 
-class RouteResult:
-    def __init__(self, npc_id: str, route: c_route):
-        self.npc_id = npc_id
-        self.route = route
 
 class DslEngine:
     def __init__(self, max_workers: int = 8):
