@@ -10,35 +10,7 @@ from coord import c_coord
 
 from utils.log_to_panel import g_logger
 
-class RouteRequest:
-    def __init__(self,
-                 map_ptr,
-                 npc_id: str,
-                 type: RouteAlgotype,
-                 start: tuple,
-                 goal: tuple,
-                 on_route_found_cb: Callable,
-                 max_retry: int = 10000,
-                 visited_logging: bool = False,
-                 cost_func: str = "default",
-                 heuristic_func: str = "euclidean",
-                 userdata: any = None):
-        self.map_ptr = map_ptr
-        self.npc_id = npc_id
-        self.type = type
-        self.start = start
-        self.goal = goal
-        self.on_route_found_cb = on_route_found_cb
-        self.max_retry = max_retry
-        self.visited_logging = visited_logging
-        self.cost_func = cost_func
-        self.heuristic_func = heuristic_func
-        self.userdata = userdata
-
-class RouteResult:
-    def __init__(self, npc_id: str, route: 'c_route'):
-        self.npc_id = npc_id
-        self.route = route
+from .base import RouteRequest, RouteResult
 
 class AlgoEngine:
     def __init__(self, max_workers: int = 4):
