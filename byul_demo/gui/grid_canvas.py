@@ -308,14 +308,14 @@ class GridCanvas(QWidget):
                         #     npc = self.world.spawn_npc(npc_id, (gx, gy))
                         #     pass
                         if npc:
-                            if npc.anim_started:
+                            if npc.animator.is_anim_started():
                                 image = ImageManager.get_empty_image()
                             else:
                                 image = npc.get_image()
 
-                            if npc.phantom_start:
-                                npc_phantom_start = npc.phantom_start
-                                win_pos_x, win_pos_y = self.get_win_pos_at_coord(npc_phantom_start)
+                            if npc.start:
+                                npc_start = npc.start
+                                win_pos_x, win_pos_y = self.get_win_pos_at_coord(npc_start)
 
                             if win_pos_x and win_pos_y:
                                 npc.draw( painter, win_pos_x, win_pos_y, self.cell_size)   
@@ -330,7 +330,7 @@ class GridCanvas(QWidget):
                         image = ImageManager.get_obstacle_for_npc_image()
 
                     if cell.has_flag(CellFlag.ROUTE):
-                        image = self.world.selected_npc.get_proto_route_image(coord)
+                        image = self.world.selected_npc.get_proto_image(coord)
 
                     if cell.has_flag(CellFlag.GOAL):
                         image = ImageManager.get_goal_image()
@@ -346,13 +346,13 @@ class GridCanvas(QWidget):
                                     Qt.AlignCenter, cell.text())
 
         if self.world.selected_npc:
-            if self.world.selected_npc.phantom_start:
-                npc_phantom_start = self.world.selected_npc.phantom_start
-                win_pos_x, win_pos_y = self.get_win_pos_at_coord(npc_phantom_start)
+            if self.world.selected_npc.start:
+                npc_start = self.world.selected_npc.start
+                win_pos_x, win_pos_y = self.get_win_pos_at_coord(npc_start)
                 if win_pos_x and win_pos_y:
                     self.draw_selected_npc(painter, win_pos_x, win_pos_y,
-                                            self.world.selected_npc.disp_dx, 
-                                            self.world.selected_npc.disp_dy)
+                                            self.world.selected_npc.pos.disp_dx, 
+                                            self.world.selected_npc.pos.disp_dy)
 
         if self.last_mouse_pos:
             self.draw_hover_cell(painter, self.last_mouse_pos, 120)
@@ -717,7 +717,7 @@ class GridCanvas(QWidget):
         painter.drawPixmap(
                 x, y, self.cell_size, self.cell_size, image)
 
-    def clear_route_flags(self):
+    def clear_proto_flags(self):
         for block in self.world.block_mgr.block_cache.values():
             for cell in block.cells.values():
                 cell.remove_flag(CellFlag.ROUTE)

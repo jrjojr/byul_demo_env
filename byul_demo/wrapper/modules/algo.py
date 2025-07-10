@@ -6,6 +6,7 @@ from coord_hash import c_coord_hash
 
 from route import c_route
 from map import c_map
+from algo_common import g_AlgoCommon
 
 import weakref
 
@@ -70,58 +71,6 @@ class RouteAlgotype(IntEnum):
     MCTS =41 #                     // 2006
 
 ffi.cdef("""
-         
-typedef float (*cost_func)(
-    const map_t*, const coord_t*, const coord_t*, void*);
-
-typedef float (*heuristic_func)(const coord_t*, const coord_t*, void*);
-         
-float default_cost(
-    const map_t*, const coord_t*, const coord_t*, void*);         
-         
-/**
- * @brief 0을 반환하는 비용 함수 (모든 경로 동일 비용)
- */
-float zero_cost(const map_t*, const coord_t*, const coord_t*, void*);
-
-/**
- * @brief 대각선 이동 비용 함수 (√2 근사값 사용)
- */
-float diagonal_cost(
-    const map_t*, const coord_t*, const coord_t*, void*);
-
-                  
-/**
- * @brief 유클리드 거리 휴리스틱
- */
-float euclidean_heuristic(const coord_t*, const coord_t*, void*);
-
-/**
- * @brief 맨해튼 거리 휴리스틱
- */
-float manhattan_heuristic(const coord_t*, const coord_t*, void*);
-         
-/**
- * @brief 체비셰프 거리 휴리스틱
- */
-float chebyshev_heuristic(const coord_t*, const coord_t*, void*);
-                  
-/**
- * @brief 옥타일 거리 휴리스틱 (8방향 이동)
- */
-float octile_heuristic(const coord_t*, const coord_t*, void*);
-
-/**
- * @brief 항상 0을 반환하는 휴리스틱 (탐색 최소화용)
- */
-float zero_heuristic(const coord_t*, const coord_t*, void*);
-
-/**
- * @brief 기본 휴리스틱 ( 유클리드)
- */
-float default_heuristic(const coord_t*, const coord_t*, void*);
-
-                  
 typedef enum e_route_algotype{
     ROUTE_ALGO_UNKNOWN = 0,
 
@@ -483,25 +432,6 @@ class c_algo:
         self.close()
 
     @staticmethod
-    def get_cost_func(name: str):
-        return {
-            "default": C.default_cost,
-            "zero": C.zero_cost,
-            "diagonal": C.diagonal_cost,
-        }.get(name)
-
-    @staticmethod
-    def get_heuristic_func(name: str):
-        return {
-            "euclidean": C.euclidean_heuristic,
-            "manhattan": C.manhattan_heuristic,
-            "chebyshev": C.chebyshev_heuristic,
-            "octile": C.octile_heuristic,
-            "zero": C.zero_heuristic,
-            "default": C.default_heuristic,
-        }.get(name)
-
-    @staticmethod
     def list_algos():
         return list(RouteAlgotype)
 
@@ -513,9 +443,16 @@ class c_algo:
                 return a
         return RouteAlgotype.UNKNOWN
     
-    # def set_cost_func(self)
+    def set_cost_func(self, func_name:str):
         # void algo_set_cost_func(algo_t* a, cost_func cost_fn);
         # cost_func algo_get_cost_func(algo_t* a);
+        cost_fn = g_AlgoCommon.get_cost(func_name)
+        C.algo_set_cost_func(self.ptr(), cost_fn)
+        pass
 
+    def set_heuristic_func(self, func_name:str):
         # void algo_set_heuristic_func(algo_t* a, heuristic_func heuristic_fn);
         # heuristic_func algo_get_heuristic_func(algo_t* a);
+        heuristic_fn = g_AlgoCommon.get_heuristic(func_name)
+        C.algo_set_heuristic_func(self.ptr(), heuristic_fn)
+        pass

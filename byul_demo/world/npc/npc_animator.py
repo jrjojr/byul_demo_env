@@ -2,14 +2,27 @@ from route import RouteDir
 from dataclasses import dataclass
 import time
 
+from route import c_route
+
 class DirectionalAnimator:
-    def __init__(self, cell_size: int):
+    def __init__(self, cell_size=100):
         self.cell_size = cell_size
+
         self.reset()
+
+    def is_anim_started(self):
+        return self.is_running
+    
+    def get_cell_size(self):
+        return self.cell_size
+    
+    def set_cell_size(self, cell_size:int):
+        self.cell_size = cell_size
 
     def reset(self):
         self.total_elapsed_sec = 0.0
         self.output_arrived = False
+        self.is_running = False
 
     def animate_direction_move(
         self,
@@ -21,24 +34,13 @@ class DirectionalAnimator:
         on_complete: callable = None,
         on_start: callable = None,
     ):
-        direction_map = {
-            RouteDir.UP: (0, -1),
-            RouteDir.DOWN: (0, 1),
-            RouteDir.LEFT: (-1, 0),
-            RouteDir.RIGHT: (1, 0),
-            RouteDir.UP_LEFT: (-1, -1),
-            RouteDir.UP_RIGHT: (1, -1),
-            RouteDir.DOWN_LEFT: (-1, 1),
-            RouteDir.DOWN_RIGHT: (1, 1),
-        }
-
-        dx, dy = direction.value if isinstance(
-            direction.value, tuple) else direction_map[direction]
+        dxdy = c_route.direction_to_coord(direction)
         
         start = npc.pos.abs_coord
-        goal = (start[0] + dx, start[1] + dy)
+        goal = (start[0] + dxdy.x, start[1] + dxdy.y)
 
         self.reset()
+        self.is_running = True
 
         if on_start:
             on_start(npc)
@@ -61,6 +63,8 @@ class DirectionalAnimator:
                 break
 
             time.sleep(elapsed_sec)
+
+            self.is_running = False
 
         if on_complete:
             on_complete(npc)

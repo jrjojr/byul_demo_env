@@ -7,15 +7,17 @@ from map import c_map
 from dstar_lite import c_dstar_lite
 from utils.log_to_panel import g_logger
 
-from .base import RouteRequest, RouteResult
+from algo_common import g_AlgoCommon
 
+from .common import RouteRequest, RouteResult
 
 class DslEngine:
     def __init__(self, max_workers: int = 8):
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.task_queue = Queue()
         self.running = True
-        self.dispatcher = threading.Thread(target=self._dispatcher_loop, daemon=True)
+        self.dispatcher = threading.Thread(
+            target=self._dispatcher_loop, daemon=True)
         self.dispatcher.start()
 
     def submit(self,
@@ -27,8 +29,8 @@ class DslEngine:
                move_cb: Callable,
                interval_msec: int = 100,
                max_retry: int = 10000,
-               cost_func: str = "default",
-               heuristic_func: str = "euclidean",
+               cost_func_name: str = "dstar_lite",
+               heuristic_func_name: str = "dstar_lite",
                userdata: any = None,
                on_real_route_found_cb: Callable = None):
         map_ptr = map.ptr()
@@ -41,8 +43,8 @@ class DslEngine:
             move_cb=move_cb,
             interval_msec=interval_msec,
             max_retry=max_retry,
-            cost_func=cost_func,
-            heuristic_func=heuristic_func,
+            cost_func_name=cost_func_name,
+            heuristic_func_name=heuristic_func_name,
             userdata=userdata,
             on_real_route_found_cb=on_real_route_found_cb
         )
@@ -70,14 +72,21 @@ class DslEngine:
             finder.set_goal(c_coord.from_tuple(request.goal))
             finder.set_route_capacity(100)
             finder.set_compute_max_retry(request.max_retry)
-            finder.set_cost_func(c_dstar_lite.get_cost_func(request.cost_func))
-            finder.set_heuristic_func(c_dstar_lite.get_heuristic_func(request.heuristic_func))
+            cost_fn = g_AlgoCommon.get_cost_func(request.cost_func_name)
+            heuristic_fn = g_AlgoCommon.get_heuristic_func(
+                request.heuristic_func_name)
+            
+            finder.set_cost_func(cost_fn)
+            finder.set_heuristic_func(heuristic_fn)
 
-            if isinstance(request.userdata, (int, float, str)):
-                finder.set_userdata(request.userdata)
+            # if isinstance(request.userdata, (int, float, str)):
+            #     finder.set_userdata(request.userdata)
 
             # 핵심 콜백 + 타이밍
-            finder.set_move_callback(lambda coord_c: self._handle_move_cb(request, coord_c))
+            # finder.set_move_func(lambda coord_c: 
+            #                          self._handle_move_cb(request, coord_c))
+            finder.set_move_func(request.move_cb)
+            
             finder.set_interval_msec(request.interval_msec)
 
             # D* Lite 내부적으로 move_cb 호출됨
@@ -97,9 +106,3 @@ class DslEngine:
         except Exception as e:
             g_logger.log_debug_threadsafe(f"[{request.npc_id}] 오류 발생: {e}")
 
-    def _handle_move_cb(self, request: RouteRequest, coord_c: c_coord):
-        try:
-            coord = coord_c.to_tuple()
-            request.move_cb(request.npc_id, coord)
-        except Exception as e:
-            g_logger.log_debug_threadsafe(f"[{request.npc_id}] move_cb 예외: {e}")

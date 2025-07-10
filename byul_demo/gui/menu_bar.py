@@ -47,8 +47,8 @@ class MenuBar(QMenuBar):
 
         edit_menu.addSeparator()
         
-        edit_menu.addAction(self.actions.find_route_action)
-        edit_menu.addAction(self.actions.clear_route_action)
+        edit_menu.addAction(self.actions.find_proto_action)
+        edit_menu.addAction(self.actions.clear_proto_action)
 
     def _setup_tool_menu(self):
         tool_menu = self.addMenu("&Tool")

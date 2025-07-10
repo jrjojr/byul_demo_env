@@ -39,7 +39,7 @@ class World(QObject):
 
         # // 쓰레드에서 사용하려면 포인터를 통해 간접 접근을 해야 한다.
         # cmap(rawptr=self.map_ptr) 이런식으로...
-        self.map_ptr = self.map.ptr()
+        # self.map_ptr = self.map.ptr()
 
         self.algo_engine = AlgoEngine()
         self.grid_unit_m = grid_unit_m
@@ -158,9 +158,6 @@ class World(QObject):
     def set_start(self, npc: NPC, coord: tuple):
         new_cell = self.block_mgr.get_cell(coord)
         if new_cell and npc.is_movable(new_cell):
-            old_cell = self.block_mgr.get_cell(npc.start)
-            if old_cell:
-                old_cell.remove_flag(CellFlag.START)
             new_cell.add_flag(CellFlag.START)
             npc.start = coord
             npc.goal = coord
@@ -188,9 +185,9 @@ class World(QObject):
         if new_cell:
             new_cell.add_flag(CellFlag.GOAL)
         npc.append_goal(coord)
-        self.find_route(npc)
+        self.find_proto(npc)
 
-    def find_route(self, npc: NPC):
+    def find_proto(self, npc: NPC):
         if g_logger.debug_mode:
             t0 = time.time()
         npc.find()
@@ -200,23 +197,23 @@ class World(QObject):
             g_logger.log_debug(f'elapsed : {elapsed:.3f} msec')
 
     @Slot(NPC)
-    def apply_route_to_cells(self, npc: NPC):
-        for coord in npc.route_list:
+    def apply_proto_to_cells(self, npc: NPC):
+        for coord in npc.proto_list:
             ct = coord.to_tuple()
             if (cell := self.block_mgr.get_cell(ct)):
                 cell.add_flag(CellFlag.ROUTE)
 
-    def clear_route_flags(self, npc: NPC):
+    def clear_proto_flags(self, npc: NPC):
         """
-        NPC의 route_list에 따라 설정된 셀들의 ROUTE 플래그를 제거한다.
+        NPC의 proto_list에 따라 설정된 셀들의 ROUTE 플래그를 제거한다.
         """
-        for coord in npc.route_list:
+        for coord in npc.proto_list:
             ct = coord.to_tuple()
             cell = self.block_mgr.get_cell(ct)
             if cell:
                 cell.remove_flag(CellFlag.ROUTE)
 
-        g_logger.log_debug(f"[clear_proto_route_flags] npc({npc.id})의 경로 깃발 제거 완료")
+        g_logger.log_debug(f"[clear_proto_flags] npc({npc.id})의 경로 깃발 제거 완료")
 
 
     def place_npc_to_cell(self, npc: NPC, coord:tuple):
@@ -224,6 +221,8 @@ class World(QObject):
         key = self.block_mgr.get_origin(npc.start)
         cell = self.block_mgr.get_cell(npc.start)
         cell.remove_npc_id(npc.id)
+        cell.remove_flag(CellFlag.START)
+
         self.block_mgr.set_cell(key, cell)
 
         # 새로운 위체의 셀에 npc를 추가한다.
@@ -236,6 +235,7 @@ class World(QObject):
                     npc.native_terrain = cell.terrain
 
             cell.add_npc_id(npc.id)
+            cell.add_flag(CellFlag.START)            
 
             # 경로 제거
             if cell.has_flag(CellFlag.ROUTE):

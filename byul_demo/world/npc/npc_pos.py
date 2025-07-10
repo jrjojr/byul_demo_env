@@ -9,6 +9,13 @@ class NpcPos:
     offset_x: int = 0
     offset_y: int = 0
 
+
+    def set_disp_dx(self, val:float):
+        self.disp_dx = val
+
+    def set_disp_dy(self, val:float):
+        self.disp_dy = val
+        
     def to_pixel(self, cell_size: int) -> tuple:
         px = (self.abs_coord[0] + self.disp_dx) * cell_size + self.offset_x
         py = (self.abs_coord[1] + self.disp_dy) * cell_size + self.offset_y
@@ -28,7 +35,7 @@ class NpcPos:
         if abs(self.disp_dy) < tolerance:
             self.disp_dy = 0.0
 
-    def mirrored_disp_from(self, direction: RouteDir) -> "NpcPos":
+    def mirrored_pos_from(self, direction: RouteDir) -> "NpcPos":
         """
         현재 위치와 보간값을 기준으로, 
         주어진 방향으로 이동했을 때의 
@@ -55,7 +62,7 @@ class NpcPos:
             disp_dy=mirror_y
         )
 
-    def mirrored_disp_to(self, next_coord: tuple) -> "NpcPos":
+    def mirrored_pos_to(self, next_coord: tuple) -> "NpcPos":
         """
         현재 보간 상태를 기준으로, 
         명시된 다음 좌표에서 보간 상태를 반영한 NpcPos를 생성한다.

@@ -6,11 +6,12 @@ import threading
 from route import c_route
 from map import c_map
 from algo import c_algo, RouteAlgotype
+from algo_common import g_AlgoCommon
 from coord import c_coord
 
 from utils.log_to_panel import g_logger
 
-from .base import RouteRequest, RouteResult
+from .common import RouteRequest, RouteResult
 
 class AlgoEngine:
     def __init__(self, max_workers: int = 4):
@@ -29,18 +30,21 @@ class AlgoEngine:
     def _process_request(self, request: RouteRequest):
         g_logger.log_debug_threadsafe('before 길찾기')
 
-        map_obj = c_map(raw_ptr=request.map_ptr, own=False)
         # userdata는 C 쪽에서 직접 쓰지 않고 복제해서 넘겨라
         safe_userdata = request.userdata if isinstance(
             request.userdata, (int, float, str)) else None
         
+        cost_func = g_AlgoCommon.get_cost_func(request.cost_func_name)
+        heuristic_func = g_AlgoCommon.get_heuristic_func(
+            request.heuristic_func_name)
+        
         self.algo = c_algo(
-            map=map_obj,
+            map=request.map,
             type=request.type,
             start=c_coord.from_tuple(request.start),
             goal=c_coord.from_tuple(request.goal),
-            cost_fn=c_algo.get_cost_func(request.cost_func),
-            heuristic_fn=c_algo.get_heuristic_func(request.heuristic_func),
+            cost_fn=cost_func,
+            heuristic_fn=heuristic_func,
             max_retry=request.max_retry,
             visited_logging=request.visited_logging,
             userdata=safe_userdata
@@ -60,12 +64,11 @@ class AlgoEngine:
                on_route_found_cb: Callable,
                max_retry: int = 10000,
                visited_logging: bool = False,
-               cost_func: str = "default",
-               heuristic_func: str = "euclidean",
+               cost_func_name: str = "default",
+               heuristic_func_name: str = "euclidean",
                userdata: any = None):
-        map_ptr = map.ptr()
         request = RouteRequest(
-            map_ptr=map_ptr,
+            map=map,
             npc_id=npc_id,
             type=type,
             start=start,
@@ -73,8 +76,8 @@ class AlgoEngine:
             on_route_found_cb=on_route_found_cb,
             max_retry=max_retry,
             visited_logging=visited_logging,
-            cost_func=cost_func,
-            heuristic_func=heuristic_func,
+            cost_func_name=cost_func_name,
+            heuristic_func_name=heuristic_func_name,
             userdata=userdata
         )
         self.task_queue.put(request)

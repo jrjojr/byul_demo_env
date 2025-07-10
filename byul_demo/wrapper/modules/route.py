@@ -326,10 +326,11 @@ class c_route:
 
         return f"Route(len : {len(parts)}): " + " -> ".join(parts)
 
+    @staticmethod
+    def direction_to_coord(direction: RouteDir) -> c_coord:
+        ptr = C.direction_to_coord(direction)
+        return c_coord(raw_ptr=ptr) if ptr != ffi.NULL else None
 
-def direction_to_coord(direction: RouteDir) -> c_coord:
-    ptr = C.direction_to_coord(direction)
-    return c_coord(raw_ptr=ptr) if ptr != ffi.NULL else None
-
-def calc_direction(start: c_coord, goal: c_coord) -> RouteDir:
-    return RouteDir(C.calc_direction(start.ptr(), goal.ptr()))
+    @staticmethod
+    def calc_direction(start: c_coord, goal: c_coord) -> RouteDir:
+        return RouteDir(C.calc_direction(start.ptr(), goal.ptr()))

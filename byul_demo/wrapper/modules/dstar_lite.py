@@ -2,6 +2,7 @@ from ffi_core import ffi, C
 
 from typing import Any
 
+from algo_common import g_AlgoCommon
 from coord import c_coord
 from coord_list import c_coord_list
 from coord_hash import c_coord_hash
@@ -608,13 +609,13 @@ class c_dstar_lite:
 start={self.get_start()}, goal={self.get_goal()}, km={self.get_km():.2f})'''
 
     # ───── 비용 함수 (cost_fn) 등록 ─────
-    def set_cost_func(self, py_func: callable, userdata: Any = None):
+    def set_cost_func(self, py_func: callable):
         self._py_cost_func = py_func
-        self._cost_func_userdata = userdata
+        # self._cost_func_userdata = userdata
         # self._ffi_cost_func_userdata = ffi.new_handle(userdata)
-        self._ffi_cost_func_userdata = (
-            ffi.new_handle(userdata) if userdata is not None else ffi.NULL
-        )        
+        # self._ffi_cost_func_userdata = (
+        #     ffi.new_handle(userdata) if userdata is not None else ffi.NULL
+        # )        
 
         @ffi.callback(
                 "float(const map_t*, const coord_t*, const coord_t*, void*)")
@@ -628,19 +629,19 @@ start={self.get_start()}, goal={self.get_goal()}, km={self.get_km():.2f})'''
 
         self._ffi_cost_func = _wrapped
         C.dstar_lite_set_cost_func(self._c, _wrapped)
-        C.dstar_lite_set_cost_func_userdata(
-            self._c, self._ffi_cost_func_userdata)
+        # C.dstar_lite_set_cost_func_userdata(
+        #     self._c, self._ffi_cost_func_userdata)
         
 
 
     # ───── 휴리스틱 함수 (heuristic_fn) 등록 ─────
-    def set_heuristic_func(self, py_func: callable, userdata: Any = None):
+    def set_heuristic_func(self, py_func: callable):
         self._py_heuristic_func = py_func
-        self._heuristic_func_userdata = userdata
+        # self._heuristic_func_userdata = userdata
         # self._ffi_heuristic_func_userdata = ffi.new_handle(userdata)
-        self._ffi_heuristic_func_userdata = (
-            ffi.new_handle(userdata) if userdata is not None else ffi.NULL
-        )                
+        # self._ffi_heuristic_func_userdata = (
+        #     ffi.new_handle(userdata) if userdata is not None else ffi.NULL
+        # )                
 
         @ffi.callback("float(const coord_t*, const coord_t*, void*)")
         def _wrapped(s_ptr, g_ptr, udata_ptr):
@@ -651,17 +652,17 @@ start={self.get_start()}, goal={self.get_goal()}, km={self.get_km():.2f})'''
 
         self._ffi_heuristic_func = _wrapped
         C.dstar_lite_set_heuristic_func(self._c, _wrapped)
-        C.dstar_lite_set_heuristic_func_userdata(
-            self._c, self._ffi_heuristic_func_userdata)
+        # C.dstar_lite_set_heuristic_func_userdata(
+        #     self._c, self._ffi_heuristic_func_userdata)
 
     # ───── 장애물 여부 함수 (is_blocked_fn) 등록 ─────
-    def set_is_blocked_func(self, py_func: callable, userdata: Any = None):
+    def set_is_blocked_func(self, py_func: callable):
         self._py_is_blocked_func = py_func
-        self._is_blocked_func_userdata = userdata
+        # self._is_blocked_func_userdata = userdata
         # self._ffi_is_blocked_func_userdata = ffi.new_handle(userdata)
-        self._ffi_is_blocked_func_userdata = (
-            ffi.new_handle(userdata) if userdata is not None else ffi.NULL
-        )
+        # self._ffi_is_blocked_func_userdata = (
+        #     ffi.new_handle(userdata) if userdata is not None else ffi.NULL
+        # )
 
         @ffi.callback("bool(const map_t*, int, int, void*)")
         def _wrapped(m_ptr, x, y, udata_ptr):
@@ -671,17 +672,12 @@ start={self.get_start()}, goal={self.get_goal()}, km={self.get_km():.2f})'''
 
         self._ffi_is_blocked_func = _wrapped
         C.dstar_lite_set_is_blocked_func(self._c, _wrapped)
-        C.dstar_lite_set_is_blocked_func_userdata(
-            self._c, self._ffi_is_blocked_func_userdata)
+        # C.dstar_lite_set_is_blocked_func_userdata(
+        #     self._c, self._ffi_is_blocked_func_userdata)
 
     # ───── 이동 콜백 함수 (move_func) 등록 ─────
-    def set_move_func(self, py_func: callable, userdata: Any = None):
+    def set_move_func(self, py_func: callable):
         self._py_move_func = py_func
-        self._move_func_userdata = userdata
-        # self._ffi_move_func_userdata = ffi.new_handle(userdata)
-        self._ffi_move_func_userdata = (
-            ffi.new_handle(userdata) if userdata is not None else ffi.NULL
-        )
 
         @ffi.callback("void(const coord_t*, void*)")
         def _wrapped(c_ptr, udata_ptr):
@@ -691,17 +687,17 @@ start={self.get_start()}, goal={self.get_goal()}, km={self.get_km():.2f})'''
 
         self._ffi_move_func = _wrapped
         C.dstar_lite_set_move_func(self._c, _wrapped)
-        C.dstar_lite_set_move_func_userdata(
-            self._c, self._ffi_move_func_userdata)
+        # C.dstar_lite_set_move_func_userdata(
+        #     self._c, self._ffi_move_func_userdata)
 
     # ───── 동적 장애물 갱신 함수 (changed_coords_func) 등록 ─────
-    def set_changed_coords_func(self, py_func: callable, userdata: Any = None):
+    def set_changed_coords_func(self, py_func: callable):
         self._py_changed_coords_func = py_func
-        self._changed_coords_func_userdata = userdata
+        # self._changed_coords_func_userdata = userdata
         # self._ffi_changed_coords_func_userdata = ffi.new_handle(userdata)
-        self._ffi_changed_coords_func_userdata = (
-            ffi.new_handle(userdata) if userdata is not None else ffi.NULL
-        )
+        # self._ffi_changed_coords_func_userdata = (
+        #     ffi.new_handle(userdata) if userdata is not None else ffi.NULL
+        # )
 
         @ffi.callback("coord_list_t*(void*)")
         def _wrapped(udata_ptr):
@@ -713,8 +709,8 @@ start={self.get_start()}, goal={self.get_goal()}, km={self.get_km():.2f})'''
 
         self._ffi_changed_coords_func = _wrapped
         C.dstar_lite_set_changed_coords_func(self._c, _wrapped)
-        C.dstar_lite_set_changed_coords_func_userdata(
-            self._c, self._ffi_changed_coords_func_userdata)
+        # C.dstar_lite_set_changed_coords_func_userdata(
+        #     self._c, self._ffi_changed_coords_func_userdata)
 
 if __name__ == '__main__':
     # m = c_map()
@@ -757,3 +753,7 @@ if __name__ == '__main__':
     result.print()
 
     result.close()    
+
+g_AlgoCommon.register_cost("dstar_lite", C.dstar_lite_cost)
+
+g_AlgoCommon.register_heuristic("dstar_lite", C.dstar_lite_heuristic)

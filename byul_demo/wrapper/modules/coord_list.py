@@ -102,6 +102,40 @@ class c_coord_list:
             raise TypeError("append expects a c_coord object")
         return C.coord_list_push_back(self._c, coord.ptr())
 
+    # def append(self, item):
+    #     """자동 추론 기반 append - coord / list / c_coord_list 모두 처리"""
+    #     if isinstance(item, c_coord):
+    #         return self.append_coord(item)
+
+    #     elif isinstance(item, c_coord_list):
+    #         return self.append_coord_list(item)
+
+    #     elif isinstance(item, (list, tuple)):
+    #         return self.append_pylist(item)
+
+    #     else:
+    #         raise TypeError(f"append: unsupported type {type(item)}")
+
+
+    # def append_coord(self, coord):
+    #     if not isinstance(coord, c_coord):
+    #         raise TypeError("append_coord expects a c_coord object")
+    #     return C.coord_list_push_back(self._c, coord.ptr())
+
+
+    # def append_coord_list(self, coord_list):
+    #     if not isinstance(coord_list, c_coord_list):
+    #         raise TypeError("append_coord_list expects a c_coord_list object")
+    #     for i in range(len(coord_list)):
+    #         self.append_coord(coord_list[i])
+
+
+    # def append_pylist(self, lst):
+    #     if not isinstance(lst, (list, tuple)):
+    #         raise TypeError("append_pylist expects a list or tuple of c_coord")
+    #     for coord in lst:
+    #         self.append_coord(coord)
+
     def pop(self):
         ptr = C.coord_list_pop_back(self._c)
         return c_coord(raw_ptr=ptr) if ptr != ffi.NULL else None
