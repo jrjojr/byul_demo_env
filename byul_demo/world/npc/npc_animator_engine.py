@@ -31,7 +31,11 @@ class AnimatorEngine:
             self.executor.submit(self._process_task, task)
 
     def _process_task(self, task):
-        task.npc.animator.step(task.elapsed_sec)
+        arrived = task.npc.animator.step(task.elapsed_sec)
+        if task.npc.animator.is_anim_started() or arrived:
+            task.npc.on_anim_tick()
+        if arrived:
+            task.npc.on_anim_complete()
 
     def shutdown(self):
         self.running = False
