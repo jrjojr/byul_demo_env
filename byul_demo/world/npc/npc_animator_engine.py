@@ -31,7 +31,7 @@ class AnimatorEngine:
             self.executor.submit(self._process_task, task)
 
     def _process_task(self, task):
-        task.npc.animator.step(task.npc, task.world, task.elapsed_sec)
+        task.npc.animator.step(task.elapsed_sec)
 
     def shutdown(self):
         self.running = False
