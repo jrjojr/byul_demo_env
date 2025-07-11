@@ -9,6 +9,7 @@ from grid.grid_block_manager import GridBlockManager
 from coord import c_coord
 from map import c_map
 from world.route_engine.algo_engine import AlgoEngine
+from world.npc.npc_animator_engine import AnimatorEngine
 
 from world.npc.npc import NPC
 from world.npc.npc_manager import NPCManager
@@ -42,6 +43,7 @@ class World(QObject):
         # self.map_ptr = self.map.ptr()
 
         self.algo_engine = AlgoEngine()
+        self.animator_engine = AnimatorEngine()
         self.grid_unit_m = grid_unit_m
         self.set_grid_unit_m(grid_unit_m)
 
@@ -94,6 +96,7 @@ class World(QObject):
 
     def close(self):
         self.algo_engine.shutdown()
+        self.animator_engine.shutdown()
         self.map.close()
 
     def create_village(self, name: str, 

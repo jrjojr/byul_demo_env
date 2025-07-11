@@ -256,11 +256,7 @@ class NPC(QObject):
                 self.next_index_changed = False
 
             if self.animator.is_anim_started():
-                arrived = self.animator.step(elapsed_sec)
-                self.on_anim_tick()
-
-                if arrived:
-                    self.on_anim_complete()
+                self.world.animator_engine.submit(self, self.world, elapsed_sec)
             
     def on_anim_tick(self):
         # 애니매이션이 실행중에 내부 루프에서 호출되는 콜백함수이다.
