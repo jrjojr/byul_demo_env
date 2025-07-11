@@ -239,7 +239,7 @@ class NPC(QObject):
                 f'start_delay_sec : {self.start_delay_sec}')
             self.find()
 
-        if len(self.proto) > 0:
+        if len(self.proto) > 0 and self.next_index < len(self.proto) - 1:
             if self.next_index_changed and not self.animator.is_anim_started():
                 # next_index가 바뀌어야지 아래를 또 실행한다.
                 # on_tick이 아무리 무한 루프더라도 next_index_changed가 없으면
@@ -269,6 +269,9 @@ class NPC(QObject):
     def on_anim_complete(self):
         # 애니매이션이 종료되면 내부에서 호출되는 콜백함수이다.
         self.next_index += 1
+        # 경로 범위를 벗어나지 않도록 보정
+        if self.next_index >= len(self.proto):
+            self.next_index = len(self.proto) - 1
         # self.next_index가 바뀌면 참이 된다.
         self.next_index_changed = True
         pass
