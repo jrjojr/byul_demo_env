@@ -137,6 +137,7 @@ class NPC(QObject):
         
         self.proto_list = list()
         self.proto_route_index = 0
+        self.proto = c_route()
 
         self.next_history = list()
         self.next_index = 0
@@ -147,6 +148,7 @@ class NPC(QObject):
 
         self.start = (0,0)        
         self.goal = self.start
+        self.next_index_changed = False
 
     def close(self):
         '''NPC 종료 시 리소스를 정리한다'''
@@ -237,25 +239,41 @@ class NPC(QObject):
                 f'start_delay_sec : {self.start_delay_sec}')
             self.find()
 
-        # 현재 목표가 없으면 큐에서 꺼내서 대기 목표 설정
-        if len(self.next_history) > 0:
-            next = self.next_history.pop(0)
-        else:
-            next = None
+        if len(self.proto) > 0:
+            if self.next_index_changed:
+                # next_index가 바뀌어야지 아래를 또 실행한다.
+                # on_tick이 아무리 무한 루프더라도 next_index_changed가 없으면 
+                # 실행되지 않는다.
+                # 경로가 존재한다
+                # 이동 시작한다. 이건 쓰레드 또는 타이머로 비동기로 실행해야 한다.
+                # 일정 시간 이상을 사용한다.
+                if self.start == self.goal:
+                    # 시작과 목표가 같으면 애니매이션이 필요없다.
+                    return
+                self.direction = self.proto.get_direction_by_index(self.next_index)
+                self.animator.animate_direction_move(self, self.direction, 
+                    self.world, elapsed_sec, 
+                    on_tick=self.on_anim_tick, 
+                    on_complete=self.on_anim_complete, 
+                    on_start=self.on_anim_start)
+                
+                # 비동기로 animate를 실행했으니까 바로 False로 전환한다.
+                self.next_index_changed = False
+            
+    def on_anim_tick(self):
+        # 애니매이션이 실행중에 내부 루프에서 호출되는 콜백함수이다.
+        pass
 
-        if next:
-            ps = c_coord.from_tuple(self.start)
-            sn = c_coord.from_tuple(next)
-            new_dir = c_route.calc_direction(ps, sn)
-            if new_dir != RouteDir.UNKNOWN:
-                self.direction = new_dir
+    def on_anim_complete(self):
+        # 애니매이션이 종료되면 내부에서 호출되는 콜백함수이다.
+        self.next_index += 1
+        # self.next_index가 바뀌면 참이 된다.
+        self.next_index_changed = True
+        pass
 
-            # self.anim_moving_to(next, elapsed_sec, cell_size)
-
-            # if self.is_anim_arrived():
-            #     self.anim_to_arrived_sig.emit(next)
-            #     self.start = next
-            #     self.world.add_changed_coord(next)
+    def on_anim_start(self):
+        # 애니매이션 시작시에 호출되는 콜백함수이다.
+        pass
 
     def find(self):
         if len(self.goal_list) > 0:
@@ -268,12 +286,13 @@ class NPC(QObject):
         map = self.world.map
         map.set_is_coord_blocked_fn(self._is_blocked_cb)
         self.world.algo_engine.submit(map, self.id,
-            self.algotype, self.start, goal, self.on_proto_route_found,
+            self.algotype, self.start, goal, self.on_proto_found,
             self.max_retry)
 
-    def on_proto_route_found(self, result:RouteResult):
+    def on_proto_found(self, result:RouteResult):
         id = result.npc_id
         route:c_route = result.route
+        self.proto.append(route, nodup=True)
 
         a_list = route.coords().to_list()
 
@@ -284,10 +303,21 @@ class NPC(QObject):
         if len(self.proto_list) > self.route_capacity:
             self.proto_list[:] = self.proto_list[-self.route_capacity:]
 
+        end  = len(self.proto)
+        if end > self.route_capacity:
+            odd = end - self.route_capacity
+            start = odd
+
+            sliced = self.proto.slice(start, end)
+            self.proto = sliced
+
         g_logger.log_debug_threadsafe(
             f'npc_id : {id}, len(proto_list): {len(self.proto_list)}')
         g_logger.log_debug_threadsafe(
             f'route.to_string() : {route.to_string()}')
+
+        # proto를 생성했으니 self.next_index_changed = True 발생
+        self.next_index_changed = True
 
         # coord =  self.proto_list[-1].to_tuple()
         # self.world.set_start(self, coord)

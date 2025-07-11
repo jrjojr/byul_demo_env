@@ -198,16 +198,35 @@ int route_find(const route_t* p, const coord_t* c) {
     return coord_list_find(p->coords, c);
 }
 
-void route_slice(route_t* p, int start, int end) {
-    if (!p || start < 0 || end <= start) return;
+// void route_slice(route_t* p, int start, int end) {
+//     if (!p || start < 0 || end <= start) return;
+//     int length = coord_list_length(p->coords);
+//     if (end > length) return;
+
+//     coord_list_t* sliced = coord_list_sublist(p->coords, start, end);
+//     if (!sliced) return;
+
+//     coord_list_free(p->coords);
+//     p->coords = sliced;
+// }
+
+route_t* route_slice(const route_t* p, int start, int end) {
+    if (!p || start < 0 || end <= start) return NULL;
+
     int length = coord_list_length(p->coords);
-    if (end > length) return;
+    if (end > length) return NULL;
 
-    coord_list_t* sliced = coord_list_sublist(p->coords, start, end);
-    if (!sliced) return;
+    coord_list_t* sliced_coords = coord_list_sublist(p->coords, start, end);
+    if (!sliced_coords) return NULL;
 
-    coord_list_free(p->coords);
-    p->coords = sliced;
+    route_t* new_route = route_new();  // route_new() 함수가 있어야 함
+    if (!new_route) {
+        coord_list_free(sliced_coords);
+        return NULL;
+    }
+
+    new_route->coords = sliced_coords;
+    return new_route;
 }
 
 void route_print(const route_t* p) {
@@ -224,33 +243,79 @@ void route_print(const route_t* p) {
     printf("\n");
 }
 
+// coord_t* route_make_direction(route_t* p, int index) {
+//     if (!p || coord_list_length(p->coords) < 2) return coord_new_full(0, 0);
+//     int len = coord_list_length(p->coords);
+//     if (index < 0 || index >= len) return coord_new_full(0, 0);
+
+//     const coord_t* curr = coord_list_get(p->coords, index);
+//     const coord_t* prev = (index >= 1) ? 
+//         coord_list_get(p->coords, index - 1) : curr;
+
+//     const coord_t* next = (index < len - 1) ? 
+//         coord_list_get(p->coords, index + 1) : curr;
+
+//     if (!curr || !prev || !next) return coord_new_full(0, 0);
+
+//     int vx = 0, vy = 0;
+//     vx += coord_get_x(curr) - coord_get_x(prev);
+//     vy += coord_get_y(curr) - coord_get_y(prev);
+//     vx += coord_get_x(next) - coord_get_x(curr);
+//     vy += coord_get_y(next) - coord_get_y(curr);
+
+//     if (vx > 1) vx = 1;
+//     if (vx < -1) vx = -1;
+//     if (vy > 1) vy = 1;
+//     if (vy < -1) vy = -1;
+
+//     return coord_new_full(vx, vy);
+// }
+
 coord_t* route_make_direction(route_t* p, int index) {
     if (!p || coord_list_length(p->coords) < 2) return coord_new_full(0, 0);
+
     int len = coord_list_length(p->coords);
     if (index < 0 || index >= len) return coord_new_full(0, 0);
 
     const coord_t* curr = coord_list_get(p->coords, index);
-    const coord_t* prev = (index >= 1) ? 
-        coord_list_get(p->coords, index - 1) : curr;
 
-    const coord_t* next = (index < len - 1) ? 
-        coord_list_get(p->coords, index + 1) : curr;
+    // 시작점: next - curr
+    if (index == 0) {
+        const coord_t* next = coord_list_get(p->coords, index + 1);
+        return coord_new_full(
+            coord_get_x(next) - coord_get_x(curr),
+            coord_get_y(next) - coord_get_y(curr)
+        );
+    }
 
-    if (!curr || !prev || !next) return coord_new_full(0, 0);
+    // 끝점: curr - prev
+    if (index == len - 1) {
+        const coord_t* prev = coord_list_get(p->coords, index - 1);
+        return coord_new_full(
+            coord_get_x(curr) - coord_get_x(prev),
+            coord_get_y(curr) - coord_get_y(prev)
+        );
+    }
 
-    int vx = 0, vy = 0;
-    vx += coord_get_x(curr) - coord_get_x(prev);
-    vy += coord_get_y(curr) - coord_get_y(prev);
-    vx += coord_get_x(next) - coord_get_x(curr);
-    vy += coord_get_y(next) - coord_get_y(curr);
+    // 중간점: (curr - prev) + (next - curr)
+    const coord_t* prev = coord_list_get(p->coords, index - 1);
+    const coord_t* next = coord_list_get(p->coords, index + 1);
 
-    if (vx > 1) vx = 1;
-    if (vx < -1) vx = -1;
-    if (vy > 1) vy = 1;
-    if (vy < -1) vy = -1;
+    int dx = 0, dy = 0;
+    dx += coord_get_x(curr) - coord_get_x(prev);
+    dy += coord_get_y(curr) - coord_get_y(prev);
+    dx += coord_get_x(next) - coord_get_x(curr);
+    dy += coord_get_y(next) - coord_get_y(curr);
 
-    return coord_new_full(vx, vy);
+    // 정규화: -1 ~ 1
+    if (dx > 1) dx = 1;
+    if (dx < -1) dx = -1;
+    if (dy > 1) dy = 1;
+    if (dy < -1) dy = -1;
+
+    return coord_new_full(dx, dy);
 }
+
 
 route_dir_t route_get_direction_by_coord(const coord_t* dxdy) {
     if (coord_get_x(dxdy) == 0 && coord_get_y(dxdy) == 0)

@@ -87,15 +87,16 @@ int  route_add_visited(route_t* p, const coord_t* c);
 void route_clear_visited(route_t* p);
 
 /** 병합 및 편집 **/
-void route_append(route_t dest, const route_t* src);
-void route_append_nodup(route_t dest, const route_t* src);
+void route_append(route_t* dest, const route_t* src);
+void route_append_nodup(route_t* dest, const route_t* src);
 
 void route_insert(route_t* p, int index, const coord_t* c);
 void route_remove_at(route_t* p, int index);
 void route_remove_value(route_t* p, const coord_t* c);
 int  route_contains(const route_t* p, const coord_t* c);
 int  route_find(const route_t* p, const coord_t* c);
-void route_slice(route_t* p, int start, int end);
+// void route_slice(route_t* p, int start, int end);
+route_t* route_slice(route_t* p, int start, int end);
 
 /** 출력 및 디버깅 **/
 void route_print(const route_t* p);
@@ -245,7 +246,7 @@ class c_route:
         return C.route_find(self._c, coord.ptr())
 
     def slice(self, start, end):
-        C.route_slice(self._c, start, end)
+        return C.route_slice(self._c, start, end)
 
     # ───── 방향 처리 ─────
     def look_at(self, index):
@@ -312,6 +313,9 @@ class c_route:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
+    def __len__(self):
+        return self.length()
 
     def to_string(self):
         coords = self.coords()  # assume this yields (x, y) tuples or coord objects

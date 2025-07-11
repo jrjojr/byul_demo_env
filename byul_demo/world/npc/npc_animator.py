@@ -43,7 +43,7 @@ class DirectionalAnimator:
         self.is_running = True
 
         if on_start:
-            on_start(npc)
+            on_start()
 
         while True:
             if self.total_elapsed_sec < npc.start_delay_sec:
@@ -55,7 +55,7 @@ class DirectionalAnimator:
                 npc, goal, elapsed_sec, world.grid_unit_m)
 
             if on_tick:
-                on_tick(npc)
+                on_tick()
 
             if arrived:
                 npc.pos.snap_to(goal)
@@ -67,7 +67,7 @@ class DirectionalAnimator:
             self.is_running = False
 
         if on_complete:
-            on_complete(npc)
+            on_complete()
 
     def _step_ratio(self, npc, goal: tuple, elapsed_sec: float, 
                     grid_unit_m: float) -> bool:

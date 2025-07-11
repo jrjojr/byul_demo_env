@@ -78,15 +78,24 @@ BYUL_API int  route_add_visited(route_t* p, const coord_t* c);
 BYUL_API void route_clear_visited(route_t* p);
 
 /** 병합 및 편집 **/
-BYUL_API void route_append(route_t dest, const route_t* src);
-BYUL_API void route_append_nodup(route_t dest, const route_t* src);
+BYUL_API void route_append(route_t* dest, const route_t* src);
+
+// 여러개의 경로를 병합할때 시작과 끝이 서로 중복되는 경로가 있으면 시작과 끝을
+// 중복제거해서 하나의 좌표로 생성한다 중간에 중복되는 경로는 병합하지 않는다
+// 오로지 시작과 끝만 병합한다.
+BYUL_API void route_append_nodup(route_t* dest, const route_t* src);
 
 BYUL_API void route_insert(route_t* p, int index, const coord_t* c);
 BYUL_API void route_remove_at(route_t* p, int index);
 BYUL_API void route_remove_value(route_t* p, const coord_t* c);
 BYUL_API int  route_contains(const route_t* p, const coord_t* c);
 BYUL_API int  route_find(const route_t* p, const coord_t* c);
-BYUL_API void route_slice(route_t* p, int start, int end);
+
+// BYUL_API void route_slice(route_t* p, int start, int end);
+
+// route에서 시작 인덱스와 끝 인덱스를 부분적으로 잘라내서 반환한다.
+// 원본은 유지 하고 새로운 route_t*가 생성되는거다.
+BYUL_API route_t* route_slice(const route_t* p, int start, int end);
 
 /** 출력 및 디버깅 **/
 BYUL_API void route_print(const route_t* p);
