@@ -1,6 +1,5 @@
 from route import RouteDir
 from dataclasses import dataclass
-import time
 
 from route import c_route
 
@@ -23,51 +22,44 @@ class DirectionalAnimator:
         self.total_elapsed_sec = 0.0
         self.output_arrived = False
         self.is_running = False
+        self.npc = None
+        self.world = None
+        self.goal = None
 
-    def animate_direction_move(
-        self,
-        npc,
-        direction: RouteDir,
-        world,
-        elapsed_sec: float = 0.016,
-        on_tick: callable = None,
-        on_complete: callable = None,
-        on_start: callable = None,
-    ):
+    def start(self, npc, direction: RouteDir, world):
+        """Begin animating the NPC in the given direction."""
         dxdy = c_route.direction_to_coord(direction)
-        
+
         start = npc.pos.abs_coord
-        goal = (start[0] + dxdy.x, start[1] + dxdy.y)
 
         self.reset()
+        self.goal = (start[0] + dxdy.x, start[1] + dxdy.y)
         self.is_running = True
+        self.npc = npc
+        self.world = world
 
-        if on_start:
-            on_start()
+    def step(self, elapsed_sec: float) -> bool:
+        """Advance the animation one tick.
 
-        while True:
-            if self.total_elapsed_sec < npc.start_delay_sec:
-                self.total_elapsed_sec += elapsed_sec
-                time.sleep(elapsed_sec)
-                continue
+        Returns True when the destination cell is reached."""
+        if not self.is_running or not self.npc or not self.world:
+            return True
 
-            arrived = self._step_ratio(
-                npc, goal, elapsed_sec, world.grid_unit_m)
+        npc = self.npc
 
-            if on_tick:
-                on_tick()
+        if self.total_elapsed_sec < npc.start_delay_sec:
+            self.total_elapsed_sec += elapsed_sec
+            return False
 
-            if arrived:
-                npc.pos.snap_to(goal)
-                world.add_changed_coord(goal)
-                break
+        arrived = self._step_ratio(
+            npc, self.goal, elapsed_sec, self.world.grid_unit_m)
 
-            time.sleep(elapsed_sec)
-
+        if arrived:
+            npc.pos.snap_to(self.goal)
+            self.world.add_changed_coord(self.goal)
             self.is_running = False
 
-        if on_complete:
-            on_complete()
+        return arrived
 
     def _step_ratio(self, npc, goal: tuple, elapsed_sec: float, 
                     grid_unit_m: float) -> bool:

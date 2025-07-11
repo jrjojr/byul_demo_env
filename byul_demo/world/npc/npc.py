@@ -240,25 +240,27 @@ class NPC(QObject):
             self.find()
 
         if len(self.proto) > 0:
-            if self.next_index_changed:
+            if self.next_index_changed and not self.animator.is_anim_started():
                 # next_index가 바뀌어야지 아래를 또 실행한다.
-                # on_tick이 아무리 무한 루프더라도 next_index_changed가 없으면 
+                # on_tick이 아무리 무한 루프더라도 next_index_changed가 없으면
                 # 실행되지 않는다.
                 # 경로가 존재한다
-                # 이동 시작한다. 이건 쓰레드 또는 타이머로 비동기로 실행해야 한다.
-                # 일정 시간 이상을 사용한다.
                 if self.start == self.goal:
                     # 시작과 목표가 같으면 애니매이션이 필요없다.
                     return
                 self.direction = self.proto.get_direction_by_index(self.next_index)
-                self.animator.animate_direction_move(self, self.direction, 
-                    self.world, elapsed_sec, 
-                    on_tick=self.on_anim_tick, 
-                    on_complete=self.on_anim_complete, 
-                    on_start=self.on_anim_start)
-                
-                # 비동기로 animate를 실행했으니까 바로 False로 전환한다.
+                self.animator.start(self, self.direction, self.world)
+                self.on_anim_start()
+
+                # 시작했으니 플래그 초기화
                 self.next_index_changed = False
+
+            if self.animator.is_anim_started():
+                arrived = self.animator.step(elapsed_sec)
+                self.on_anim_tick()
+
+                if arrived:
+                    self.on_anim_complete()
             
     def on_anim_tick(self):
         # 애니매이션이 실행중에 내부 루프에서 호출되는 콜백함수이다.
