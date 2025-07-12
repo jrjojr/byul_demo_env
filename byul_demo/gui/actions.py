@@ -245,10 +245,10 @@ class Actions(QObject):
 
     def on_view_proto_action_triggered(self):
         self.world.apply_proto_to_cells(
-            self.world.selected_npc)
+            self.parent.grid_canvas.selected_npc)
 
     def on_clear_proto_action_triggered(self):
-        if self.world.selected_npc:
-            self.world.selected_npc.clear_proto()
+        if self.parent.grid_canvas.selected_npc:
+            self.parent.grid_canvas.selected_npc.clear_proto()
         else:
             g_logger.log_always(f'현재 선택된 npc가 없어여')

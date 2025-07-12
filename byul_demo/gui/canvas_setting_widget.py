@@ -112,7 +112,7 @@ class CanvasSettingWidget(QWidget):
         self.field_cell_size.setText(str(canvas.cell_size))
         self.on_interval_msec_changed(canvas.interval_msec)
 
-        selected = canvas.world.selected_npc
+        selected = canvas.selected_npc
         if selected:
             self.on_npc_selected(selected)
         else:
@@ -135,7 +135,7 @@ class CanvasSettingWidget(QWidget):
         self.canvas.world.npc_created.connect(self.on_npc_created)
         self.canvas.world.npc_deleted.connect(self.on_npc_deleted)
 
-        self.canvas.world.npc_selected.connect(self.on_npc_selected)
+        self.canvas.npc_selected.connect(self.on_npc_selected)
         self.canvas.interval_msec_changed.connect(
             self.on_interval_msec_changed)
 

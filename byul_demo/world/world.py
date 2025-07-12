@@ -27,8 +27,6 @@ class World(QObject):
     npc_created = Signal(str)
     npc_deleted = Signal(str)
 
-    npc_selected = Signal(NPC)
-
     grid_unit_m_changed = Signal(float)
 
     def __init__(self, block_size=100, grid_unit_m=1.0, parent=None):
@@ -49,8 +47,8 @@ class World(QObject):
 
         self.block_mgr = GridBlockManager(block_size)
         self.npc_mgr = NPCManager(self)
-        # self.block_mgr.on_after_block_loaded = self.on_after_block_loaded
-        # self.block_mgr.on_before_block_evicted = self.on_before_block_evicted
+        self.block_mgr.on_after_block_loaded = self.on_after_block_loaded
+        self.block_mgr.on_before_block_evicted = self.on_before_block_evicted
         
         self.villages: dict[str, Village] = {}
 
@@ -58,7 +56,7 @@ class World(QObject):
         village = self.create_village(FIRST_VILLAGE_ID, 0, 0, 4000, 4000)
 
         # 기본 NPC 생성
-        self.m_selected_npc = None        
+
         npc = self.spawn_npc(FIRST_NPC_ID, (0, 0))
 
         self.selected_village = village
@@ -74,15 +72,6 @@ class World(QObject):
         self._despawning_scheduled = False
 
         self._changed_q = Queue()        
-
-    @property
-    def selected_npc(self):
-        return self.m_selected_npc
-    
-    @selected_npc.setter
-    def selected_npc(self, npc:NPC):
-        self.m_selected_npc = npc
-        self.npc_selected.emit(npc)
 
     @Slot(float)
     def set_grid_unit_m(self, grid_unit_m:float):
@@ -286,10 +275,6 @@ class World(QObject):
         
         npc = self.npc_mgr.get_npc(npc_id)
 
-        if self.selected_npc is None:
-            if npc.id == FIRST_NPC_ID:
-                self.selected_npc = npc
-
         npc.anim_to_arrived_sig.connect(lambda coord, n=npc: 
             self.place_npc_to_cell(n, coord))
 
@@ -324,9 +309,6 @@ class World(QObject):
 
         # npc 객체 추출
         npc: NPC = self.npc_mgr.npc_dict.pop(npc_id)
-
-        if npc == self.selected_npc:
-            self.selected_npc = None
 
         # 현재 위치 기준 셀에서 npc 제거
         key = self.block_mgr.get_origin(npc.start)

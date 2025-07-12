@@ -196,4 +196,4 @@ class NpcPropertyWidget(QWidget):
 
 
     def bind_canvas(self, canvas: GridCanvas):
-        self.set_npc(canvas.world.selected_npc)
+        self.set_npc(canvas.selected_npc)

@@ -5,9 +5,8 @@ from queue import Queue
 import threading
 
 class AnimatorTask:
-    def __init__(self, npc, world, elapsed_sec):
-        self.npc = npc
-        self.world = world
+    def __init__(self, animator, elapsed_sec):
+        self.animator = animator
         self.elapsed_sec = elapsed_sec
 
 class AnimatorEngine:
@@ -19,9 +18,10 @@ class AnimatorEngine:
             target=self._dispatcher_loop, daemon=True)
         self.thread.start()
 
-    def submit(self, npc, world, elapsed_sec):
-        task = AnimatorTask(npc, world, elapsed_sec)
-        self.queue.put(task)
+    def submit(self, animator, elapsed_sec):
+        """애니메이터를 큐에 제출한다. (NPC가 아니라 Animator 기준)"""
+        if animator and animator.is_anim_started():
+            self.queue.put(AnimatorTask(animator, elapsed_sec))
 
     def _dispatcher_loop(self):
         while self.running:
@@ -30,12 +30,10 @@ class AnimatorEngine:
                 break
             self.executor.submit(self._process_task, task)
 
-    def _process_task(self, task):
-        arrived = task.npc.animator.step(task.elapsed_sec)
-        if task.npc.animator.is_anim_started() or arrived:
-            task.npc.on_anim_tick()
-        if arrived:
-            task.npc.on_anim_complete()
+    def _process_task(self, task: AnimatorTask):
+        task.animator.tick(task.elapsed_sec)
+        # tick() 내부에서 on_anim_complete() 호출됨
+        # 필요시 이후 프레임처리는 NPC가 직접 구현 가능
 
     def shutdown(self):
         self.running = False

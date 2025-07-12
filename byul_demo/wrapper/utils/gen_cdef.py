@@ -236,9 +236,9 @@ class CdefExtractor:
         lines.append("if platform.system() == 'Windows':")
         lines.append("    glib_dir = Path('C:/msys64/clang64/bin')")
         lines.append("    os.add_dll_directory(str(glib_dir))")
-        lines.append("    dll_path = Path.home() / 'byul_demo' / 'bin' / 'libroutefinder.dll'")
+        lines.append("    dll_path = Path.home() / 'byul_demo' / 'bin' / 'libbyul_algo.dll'")
         lines.append("else:")
-        lines.append("    dll_path = Path.home() / 'byul_demo' / 'bin' / 'libroutefinder.so'")
+        lines.append("    dll_path = Path.home() / 'byul_demo' / 'bin' / 'libbyul_algo.so'")
         lines.append("C = ffi.dlopen(str(dll_path))")
         lines.append("")
 

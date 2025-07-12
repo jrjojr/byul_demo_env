@@ -39,7 +39,7 @@ class SideDockingPanel(QDockWidget):
 
         self.check_auto_hide()
 
-        canvas.world.npc_selected.connect(self.on_npc_selected)
+        canvas.npc_selected.connect(self.on_npc_selected)
 
     # def on_tab_close_requested(self, index: int):
     #     widget = self.tabs.widget(index)

@@ -71,12 +71,12 @@ class NpcPropertyWidget(QWidget):
         # ── 그래픽 설정 ──
         self.disp_dx_spin = QDoubleSpinBox()
         self.disp_dx_spin.setRange(-1000.0, 1000.0)
-        self.disp_dx_spin.setValue(self.npc.pos.disp_dx)
+        self.disp_dx_spin.setValue(self.npc.disp_dx)
         self.form.addRow("disp_dx:", self.disp_dx_spin)
 
         self.disp_dy_spin = QDoubleSpinBox()
         self.disp_dy_spin.setRange(-1000.0, 1000.0)
-        self.disp_dy_spin.setValue(self.npc.pos.disp_dy)
+        self.disp_dy_spin.setValue(self.npc.disp_dy)
         self.form.addRow("disp_dy:", self.disp_dy_spin)
 
         self.form.addRow(QLabel("<b>🏞️ 적합한 지형</b>"), QLabel(""))
@@ -146,20 +146,20 @@ class NpcPropertyWidget(QWidget):
                 npc.set_route_capacity(self.capacity_spin.value())
             )
 
-            npc.compute_max_retry_changed.connect(self.retry_spin.setValue)
-            self.retry_spin.valueChanged.connect(npc.set_compute_max_retry)
+            npc.max_retry_changed.connect(self.retry_spin.setValue)
+            self.retry_spin.valueChanged.connect(npc.set_max_retry)
             self.retry_spin.editingFinished.connect(lambda:
-                npc.set_compute_max_retry(self.retry_spin.value())
+                npc.set_max_retry(self.retry_spin.value())
             )
 
             npc.disp_dx_changed.connect(self.disp_dx_spin.setValue)
-            self.disp_dx_spin.valueChanged.connect(npc.pos.set_disp_dx)
+            self.disp_dx_spin.valueChanged.connect(npc.set_disp_dx)
             self.disp_dx_spin.editingFinished.connect(lambda:
                 npc.pos.set_disp_dx(self.disp_dx_spin.value())
             )
 
             npc.disp_dy_changed.connect(self.disp_dy_spin.setValue)
-            self.disp_dy_spin.valueChanged.connect(npc.pos.set_disp_dy)
+            self.disp_dy_spin.valueChanged.connect(npc.set_disp_dy)
             self.disp_dy_spin.editingFinished.connect(lambda:
                 npc.pos.set_disp_dy(self.disp_dy_spin.value())
             )            
@@ -185,4 +185,4 @@ class NpcPropertyWidget(QWidget):
 
 
     def bind_canvas(self, canvas: GridCanvas):
-        self.set_npc(canvas.world.selected_npc)
+        self.set_npc(canvas.selected_npc)

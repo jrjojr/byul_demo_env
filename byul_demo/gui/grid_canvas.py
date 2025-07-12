@@ -18,7 +18,7 @@ from collections import deque
 from utils.log_to_panel import g_logger
 from utils.mouse_input_handler import MouseInputHandler
 
-from world.world import World
+from world.world import World, FIRST_NPC_ID
 from world.village.village import Village
 from world.npc.npc import NPC
 
@@ -48,6 +48,7 @@ class GridCanvas(QWidget):
 
     tick_elapsed = Signal(float)
 
+    npc_selected = Signal(NPC)
 
 
     def __init__(self, world:World, interval_msec=30, min_px=30, parent=None):
@@ -108,7 +109,17 @@ class GridCanvas(QWidget):
         self._move_timer.timeout.connect(self._dequeue_move)
         self._move_timer.start()        
 
+        if world.npc_mgr.has_npc(FIRST_NPC_ID):
+            self.m_selected_npc = world.npc_mgr.get_npc(FIRST_NPC_ID)
 
+    @property
+    def selected_npc(self):
+        return self.m_selected_npc
+    
+    @selected_npc.setter
+    def selected_npc(self, npc:NPC):
+        self.m_selected_npc = npc
+        self.npc_selected.emit(npc)
 
 
     @Slot(int)
@@ -134,8 +145,9 @@ class GridCanvas(QWidget):
         if npc is None:
             g_logger.log_debug(f'spawn_npc({npc_id}) 실패했다')
 
-        if self.world.selected_npc is None:
-            self.world.selected_npc = npc
+        if self.selected_npc is None:
+            if npc.id == FIRST_NPC_ID:
+                self.selected_npc = npc            
 
         g_logger.log_always(f"NPC 추가됨: at ({coord[0]},{coord[1]})")            
 
@@ -146,8 +158,8 @@ class GridCanvas(QWidget):
                 npc_id = cell.npc_ids[0]
                 npc = self.world.npc_mgr.get_npc(npc_id)
                 if npc:
-                    if npc == self.world.selected_npc:
-                        self.world.selected_npc = None
+                    if npc == self.selected_npc:
+                        self.selected_npc = None
                         
                     self.world.delete_npc(npc_id)
                     g_logger.log_always(
@@ -308,14 +320,12 @@ class GridCanvas(QWidget):
                         #     npc = self.world.spawn_npc(npc_id, (gx, gy))
                         #     pass
                         if npc:
-                            if npc.animator.is_anim_started():
+                            if npc.anim_started:
                                 image = ImageManager.get_empty_image()
                             else:
                                 image = npc.get_image()
 
-                            if npc.start:
-                                npc_start = npc.start
-                                win_pos_x, win_pos_y = self.get_win_pos_at_coord(npc_start)
+                            win_pos_x, win_pos_y = self.get_win_pos_at_coord(npc.start)
 
                             if win_pos_x and win_pos_y:
                                 npc.draw( painter, win_pos_x, win_pos_y, self.cell_size)   
@@ -323,14 +333,16 @@ class GridCanvas(QWidget):
                 elif cell.status == CellStatus.EMPTY:
                     image = ImageManager.get_empty_image()
 
-                if self.world.selected_npc:
+                if self.selected_npc:
                     coord = (gx, gy)
                     
-                    if not cell.terrain in self.world.selected_npc.movable_terrain:
+                    if not cell.terrain in self.selected_npc.movable_terrain:
                         image = ImageManager.get_obstacle_for_npc_image()
 
                     if cell.has_flag(CellFlag.ROUTE):
-                        image = self.world.selected_npc.get_proto_image(coord)
+                        # index = self.selected_npc.cur_index
+                        # image = self.selected_npc.get_proto_image(index)
+                        image = self.selected_npc.get_proto_route_image(coord)
 
                     if cell.has_flag(CellFlag.GOAL):
                         image = ImageManager.get_goal_image()
@@ -345,14 +357,11 @@ class GridCanvas(QWidget):
                     painter.drawText(px, py, self.cell_size, self.cell_size, 
                                     Qt.AlignCenter, cell.text())
 
-        if self.world.selected_npc:
-            if self.world.selected_npc.start:
-                npc_start = self.world.selected_npc.start
-                win_pos_x, win_pos_y = self.get_win_pos_at_coord(npc_start)
-                if win_pos_x and win_pos_y:
-                    self.draw_selected_npc(painter, win_pos_x, win_pos_y,
-                                            self.world.selected_npc.pos.disp_dx, 
-                                            self.world.selected_npc.pos.disp_dy)
+        if self.selected_npc:
+            npc_start = self.selected_npc.start
+            win_pos_x, win_pos_y = self.get_win_pos_at_coord(npc_start)
+            if win_pos_x and win_pos_y:
+                self.draw_selected_npc(painter, win_pos_x, win_pos_y)
 
         if self.last_mouse_pos:
             self.draw_hover_cell(painter, self.last_mouse_pos, 120)
@@ -376,7 +385,7 @@ class GridCanvas(QWidget):
                 self.last_mouse_pos.x(), self.last_mouse_pos.y())
             if cell:
                 c = (cell.x, cell.y)
-                self.world.toggle_obstacle(c, self.world.selected_npc)
+                self.world.toggle_obstacle(c, self.selected_npc)
 
         # print(f"[KEY] {event.key()}, focus: {self.hasFocus()}")            
 
@@ -612,10 +621,10 @@ class GridCanvas(QWidget):
         if self.click_mode == "select_npc":
             npc = self.get_first_npc_in_cell(cell)
             if npc:
-                self.world.selected_npc = npc
+                self.selected_npc = npc
                 g_logger.log_always(f"✅ 선택된 NPC: {npc.id}")
             else:
-                self.world.selected_npc = None                
+                self.selected_npc = None                
                 g_logger.log_always("⚠️ 해당 셀에 NPC가 없습니다.")
         
         elif self.click_mode == "spawn_npc_at":
@@ -643,9 +652,9 @@ class GridCanvas(QWidget):
         coord = (gx, gy)
 
         if self.click_mode == "select_npc":
-            if self.world.selected_npc:
+            if self.selected_npc:
                 g_logger.log_always(f"🔴 목표 위치 설정: ({gx}, {gy})")
-                self.world.set_goal(self.world.selected_npc, coord)
+                self.world.set_goal(self.selected_npc, coord)
             
             else:
                 g_logger.log_always("⚠️ 현재 선택된 NPC가 없습니다.")
@@ -669,9 +678,9 @@ class GridCanvas(QWidget):
         coord = (gx, gy)
 
         if self.click_mode == "select_npc":
-            if self.world.selected_npc:
+            if self.selected_npc:
                 g_logger.log_always(f"🔴 목표 위치 추가: ({gx}, {gy})")
-                self.world.append_goal(self.world.selected_npc, coord)
+                self.world.append_goal(self.selected_npc, coord)
             else:
                 g_logger.log_always("⚠️ 현재 선택된 NPC가 없습니다.")
 
@@ -700,12 +709,12 @@ class GridCanvas(QWidget):
         first_id = cell.npc_ids[0]
         return self.world.npc_mgr.npc_dict.get(first_id)
 
-    def draw_selected_npc(self, painter, win_pos_x:int, win_pos_y:int, 
-                          disp_dx:float, disp_dy:float):
+    def draw_selected_npc(self, painter: QPainter, 
+        win_pos_x:int, win_pos_y:int):
         '''실제 디바이스에 이미지를 그린다.
         '''
-        x = win_pos_x +  int(disp_dx)
-        y = win_pos_y +  int(disp_dy)
+        x = win_pos_x + self.selected_npc.draw_offset_x + int(self.selected_npc.disp_dx)
+        y = win_pos_y + self.selected_npc.draw_offset_y + int(self.selected_npc.disp_dy)
 
         # 배경: 반투명 검정
         # rect = QRect(x, y, self.m_cell_size, self.m_cell_size)
@@ -713,7 +722,8 @@ class GridCanvas(QWidget):
         # painter.setPen(Qt.NoPen)
         # painter.drawRect(rect)
 
-        image = self.world.selected_npc.get_selected_npc_image()
+        image = self.selected_npc.get_selected_npc_image()
+
         painter.drawPixmap(
                 x, y, self.cell_size, self.cell_size, image)
 

@@ -103,8 +103,12 @@ void route_print(const route_t* p);
 
 /** 방향 계산 **/
 coord_t* route_make_direction(route_t* p, int index);
-route_dir_t route_get_direction_by_coord(const coord_t* dxdy);
+         
+
+route_dir_t route_get_direction_by_dir_coord(const coord_t* dxdy);
+         
 route_dir_t route_get_direction_by_index(route_t* p, int index);
+         
 route_dir_t route_calc_average_facing(route_t* p, int history);
 float route_calc_average_dir(route_t* p, int history);
 
@@ -253,17 +257,15 @@ class c_route:
         ptr = C.route_make_direction(self._c, index)
         return c_coord(raw_ptr=ptr) if ptr != ffi.NULL else None
 
-    def get_direction_by_coord(self, dxdy: c_coord):
-        return RouteDir(C.route_get_direction_by_coord(dxdy.ptr()))
-
-    def get_direction_by_index(self, index):
-        return RouteDir(C.route_get_direction_by_index(self._c, index))
-
     def calc_average_facing(self, history):
         return RouteDir(C.route_calc_average_facing(self._c, history))
 
     def calc_average_dir(self, history):
         return C.route_calc_average_dir(self._c, history)
+    
+    def get_direction_by_index(self, index):
+        return RouteDir(C.route_get_direction_by_index(self._c, index))
+
 
     # ───── 방향 변화 판단 ─────
     def has_changed(self, from_coord, to_coord, angle_threshold):
@@ -338,3 +340,8 @@ class c_route:
     @staticmethod
     def calc_direction(start: c_coord, goal: c_coord) -> RouteDir:
         return RouteDir(C.calc_direction(start.ptr(), goal.ptr()))
+
+    @staticmethod
+    def get_direction_by_dir_coord(dxdy: c_coord):
+        return RouteDir(C.route_get_direction_by_dir_coord(dxdy.ptr()))
+

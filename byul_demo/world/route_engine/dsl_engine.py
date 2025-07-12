@@ -71,7 +71,7 @@ class DslEngine:
             finder = c_dstar_lite(map_obj, c_coord.from_tuple(request.start))
             finder.set_goal(c_coord.from_tuple(request.goal))
             finder.set_route_capacity(100)
-            finder.set_compute_max_retry(request.max_retry)
+            finder.set_max_retry(request.max_retry)
             cost_fn = g_AlgoCommon.get_cost_func(request.cost_func_name)
             heuristic_fn = g_AlgoCommon.get_heuristic_func(
                 request.heuristic_func_name)
