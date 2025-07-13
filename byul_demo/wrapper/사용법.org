@@ -21,11 +21,11 @@ C:/Users/critl/byul_demo/include/internal/map.h `
 
 python gen_cdef.py -o `
 C:/Users/critl/docs/byul_demo_env/byul_demo/wrapper/modules `
-C:/Users/critl/byul_demo/include/internal/algo.h `
+C:/Users/critl/byul_demo/include/internal/route_finder.h `
 
 python gen_cdef.py -o `
 C:/Users/critl/docs/byul_demo_env/byul_demo/wrapper/modules `
-C:/Users/critl/byul_demo/include/internal/algo_utils.h `
+C:/Users/critl/byul_demo/include/internal/route_finder_utils.h `
 
 # gen_cdef.py 모듈이 있는 폴더로 이동 `
 cd C:/Users/critl/docs/byul_demo_env/byul_demo/wrapper `

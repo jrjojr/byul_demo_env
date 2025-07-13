@@ -90,15 +90,15 @@ class AlgoCommon:
     def all_heuristic_names(self):
         return list(self._heuristic_funcs.keys())
 
-g_AlgoCommon = AlgoCommon()
+g_RouteFinderCommon = AlgoCommon()
 
-g_AlgoCommon.register_cost("default", C.default_cost)
-g_AlgoCommon.register_cost("zero", C.zero_cost)
-g_AlgoCommon.register_cost("diagonal", C.diagonal_cost)
+g_RouteFinderCommon.register_cost("default", C.default_cost)
+g_RouteFinderCommon.register_cost("zero", C.zero_cost)
+g_RouteFinderCommon.register_cost("diagonal", C.diagonal_cost)
 
-g_AlgoCommon.register_heuristic("euclidean", C.euclidean_heuristic)
-g_AlgoCommon.register_heuristic("manhattan", C.manhattan_heuristic)
-g_AlgoCommon.register_heuristic("chebyshev", C.chebyshev_heuristic)
-g_AlgoCommon.register_heuristic("octile", C.octile_heuristic)
-g_AlgoCommon.register_heuristic("zero", C.zero_heuristic)
-g_AlgoCommon.register_heuristic("default", C.default_heuristic)
+g_RouteFinderCommon.register_heuristic("euclidean", C.euclidean_heuristic)
+g_RouteFinderCommon.register_heuristic("manhattan", C.manhattan_heuristic)
+g_RouteFinderCommon.register_heuristic("chebyshev", C.chebyshev_heuristic)
+g_RouteFinderCommon.register_heuristic("octile", C.octile_heuristic)
+g_RouteFinderCommon.register_heuristic("zero", C.zero_heuristic)
+g_RouteFinderCommon.register_heuristic("default", C.default_heuristic)

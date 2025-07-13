@@ -5,8 +5,8 @@ import threading
 
 from route import c_route
 from map import c_map
-from algo import c_algo, RouteAlgotype
-from algo_common import g_AlgoCommon
+from route_finder import c_route_finder, RouteFindertype
+from route_finder_common import g_RouteFinderCommon
 from coord import c_coord
 
 from utils.log_to_panel import g_logger
@@ -34,11 +34,11 @@ class AlgoEngine:
         safe_userdata = request.userdata if isinstance(
             request.userdata, (int, float, str)) else None
         
-        cost_func = g_AlgoCommon.get_cost_func(request.cost_func_name)
-        heuristic_func = g_AlgoCommon.get_heuristic_func(
+        cost_func = g_RouteFinderCommon.get_cost_func(request.cost_func_name)
+        heuristic_func = g_RouteFinderCommon.get_heuristic_func(
             request.heuristic_func_name)
         
-        self.algo = c_algo(
+        self.route_finder = c_route_finder(
             map=request.map,
             type=request.type,
             start=c_coord.from_tuple(request.start),
@@ -50,7 +50,7 @@ class AlgoEngine:
             userdata=safe_userdata
         )
 
-        route: 'c_route' = self.algo.find()
+        route: 'c_route' = self.route_finder.find()
         g_logger.log_debug_threadsafe('after 길찾기')
         result = RouteResult(request.npc_id, route)
         request.on_route_found_cb(result)
@@ -58,7 +58,7 @@ class AlgoEngine:
     def submit(self,
                map: c_map,
                npc_id: str,
-               type: RouteAlgotype,
+               type: RouteFindertype,
                start: tuple,
                goal: tuple,
                on_route_found_cb: Callable,

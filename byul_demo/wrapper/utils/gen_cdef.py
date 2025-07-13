@@ -75,7 +75,7 @@ REPLACEMENTS = {
     "map_neighbor_mode_t": "int",
 }
 
-CUSTOM_POINTER_STRUCTS = {'flud', 'algo', 'route', 'map', 'coord'}
+CUSTOM_POINTER_STRUCTS = {'flud', 'route_finder', 'route', 'map', 'coord'}
 
 EXTERNAL_FORWARD_DECLS = {
     "GHashTable": "typedef struct _GHashTable GHashTable;",
@@ -86,7 +86,7 @@ EXTERNAL_FORWARD_DECLS = {
     "GDestroyNotify": "typedef void (*GDestroyNotify)(void*);",
 }
 
-FUNC_POINTER_NAMES = {"algo_find_func", "cost_func", "heuristic_func",
+FUNC_POINTER_NAMES = {"route_finder_find_func", "cost_func", "heuristic_func",
                       "cost_func", "heuristic_func"}
 
 def patch_func_ptr_fields(decls: list[str]) -> list[str]:

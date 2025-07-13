@@ -46,7 +46,7 @@ void map_print_ascii_with_visited_count(
     const map_t* m, const route_t* p, int margin);
 """)
 
-class c_algo_utils:
+class c_route_finder_utils:
     @staticmethod
     def map_print(m: c_map):
         if not isinstance(m, c_map):

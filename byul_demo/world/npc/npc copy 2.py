@@ -40,7 +40,7 @@ from world.npc.npc_animator import DirectionalAnimator
 from world.npc.npc_pos import NpcPos
 
 from world.route_engine.common import RouteResult
-from algo import RouteAlgotype
+from route_finder import RouteAlgotype
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:

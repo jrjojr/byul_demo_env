@@ -2,7 +2,7 @@ from ffi_core import ffi, C
 
 from typing import Any
 
-from algo_common import g_AlgoCommon
+from route_finder_common import g_RouteFinderCommon
 from coord import c_coord
 from coord_list import c_coord_list
 from coord_hash import c_coord_hash
@@ -754,6 +754,6 @@ if __name__ == '__main__':
 
     result.close()    
 
-g_AlgoCommon.register_cost("dstar_lite", C.dstar_lite_cost)
+g_RouteFinderCommon.register_cost("dstar_lite", C.dstar_lite_cost)
 
-g_AlgoCommon.register_heuristic("dstar_lite", C.dstar_lite_heuristic)
+g_RouteFinderCommon.register_heuristic("dstar_lite", C.dstar_lite_heuristic)
