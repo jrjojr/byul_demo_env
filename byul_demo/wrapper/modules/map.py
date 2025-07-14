@@ -74,18 +74,18 @@ void map_clear(map_t* m);
 const coord_hash_t* map_get_blocked_coords(const map_t* m);
 
 // 이웃 탐색
-coord_list_t* map_make_neighbors(const map_t* m, int x, int y);
-coord_list_t* map_make_neighbors_all(const map_t* m, int x, int y);
-coord_list_t* map_make_neighbors_all_range(
+coord_list_t* map_clone_neighbors(const map_t* m, int x, int y);
+coord_list_t* map_clone_neighbors_all(const map_t* m, int x, int y);
+coord_list_t* map_clone_neighbors_all_range(
     map_t* m, int x, int y, int range);
 
-coord_t* map_make_neighbor_at_degree(const map_t* m, 
+coord_t* map_clone_neighbor_at_degree(const map_t* m, 
     int x, int y, double degree);
     
-coord_t* map_make_neighbor_at_goal(const map_t* m, 
+coord_t* map_clone_neighbor_at_goal(const map_t* m, 
     const coord_t* center, const coord_t* goal);
 
-coord_list_t* map_make_neighbors_at_degree_range(
+coord_list_t* map_clone_neighbors_at_degree_range(
     const map_t* m,
     const coord_t* center, const coord_t* goal,
     double start_deg, double end_deg,
@@ -200,25 +200,25 @@ class c_map:
         return c_coord_list(raw_ptr=ptr, own=True)
 
     def neighbors_all(self, x, y):
-        ptr = C.map_make_neighbors_all(self._c, x, y)
+        ptr = C.map_clone_neighbors_all(self._c, x, y)
         return c_coord_list(raw_ptr=ptr, own=True)
 
     def neighbors_range(self, x, y, range_val):
-        ptr = C.map_make_neighbors_all_range(self._c, x, y, range_val)
+        ptr = C.map_clone_neighbors_all_range(self._c, x, y, range_val)
         return c_coord_list(raw_ptr=ptr, own=True)
 
     def neighbor_at_degree(self, x, y, degree):
-        ptr = C.map_make_neighbor_at_degree(self._c, x, y, degree)
+        ptr = C.map_clone_neighbor_at_degree(self._c, x, y, degree)
         return c_coord(raw_ptr=ptr) if ptr != ffi.NULL else None
 
     def neighbor_at_goal(self, center: c_coord, goal: c_coord):
-        ptr = C.map_make_neighbor_at_goal(self._c, center.ptr(), goal.ptr())
+        ptr = C.map_clone_neighbor_at_goal(self._c, center.ptr(), goal.ptr())
         return c_coord(raw_ptr=ptr) if ptr != ffi.NULL else None
 
     def neighbors_at_degree_range(self, center: c_coord, goal: c_coord,
         start_deg: float, end_deg: float, range_val: int):
 
-        ptr = C.map_make_neighbors_at_degree_range(
+        ptr = C.map_clone_neighbors_at_degree_range(
             self._c, center.ptr(), goal.ptr(), start_deg, end_deg, range_val)
         
         return c_coord_list(raw_ptr=ptr, own=True)

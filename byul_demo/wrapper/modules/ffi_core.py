@@ -16,8 +16,11 @@ ffi.cdef("""
 system = platform.system()
 root = Path.home() / "byul"
 
+
 if system == "Windows":
-    routefinder_path = root / "bin" / "libbyul.dll"
+    # 설치 위치를 변경했다
+    root = Path('Z:/incoming/byul')
+    routefinder_path = root / "bin" / "byul.dll"
 
     # --- MinGW DLL 경로 추가 (자동) ---
     mingw_path = Path("C:/msys64/mingw64/bin")  # 별이아빠님의 환경에 맞게
