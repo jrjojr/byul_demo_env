@@ -36,6 +36,16 @@ from threading import Thread
 
 import copy
 
+from world.npc.npc_animator import DirectionalAnimator
+from world.npc.npc_pos import NpcPos
+
+from world.route_engine.common import RouteResult
+from route_finder import RouteFindertype
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from world.world import World  # 순환 참조 방지용 타입 힌트
+
 class NPC(QObject):
     anim_to_started_sig = Signal(tuple)
     anim_to_arrived_sig = Signal(tuple)
@@ -50,16 +60,17 @@ class NPC(QObject):
     disp_dx_changed = Signal(float)
     disp_dy_changed = Signal(float)
 
-    def __init__(self, npc_id: str, world, start:tuple=None, 
+    def __init__(self, npc_id: str, world:'World', start=(0,0), 
                  speed_kmh:float=4.0, start_delay_sec=0.5, 
-                 route_capacity=100, 
+                route_capacity=100,
+                 algotype = RouteFindertype.ASTAR,
                  max_retry = 1000, 
                  influence_range = 0,
                  max_range = 10,
                  image_path:Path=None, route_image_path:Path=None, 
                  parent=None):
         
-        '''start_delay_sec는 0.5 밑으로는 설정하지 마라.
+        '''start_delay_sec는 dstar_lite에서는 0.5 밑으로는 설정하지 마라.
         여러번 클릭시에 경로 찾기가 잠깐 멈춘다 다시 클릭해야 npc가 움직인다.
         '''
         super().__init__()
@@ -67,23 +78,21 @@ class NPC(QObject):
         self.world = world
         self.id = npc_id
         self.native_terrain = TerrainType.NORMAL
+        self.movable_terrain = [TerrainType.NORMAL]
         self.influence_range = influence_range
         self.max_range = max_range
 
-        self.m_start = start
-        self.m_goal = self.m_start
-        start_coord = c_coord.from_tuple(start)
-        self.finder = c_dstar_lite(self.world.map, start_coord)
-        
+        self.pos = NpcPos(start)
+        self.m_goal = start
+
+        self.algotype = algotype
         self.max_retry = max_retry
-        self.set_max_retry(max_retry)
+        self.set_compute_max_retry(max_retry)
 
         self.route_capacity = route_capacity
         self.set_route_capacity(route_capacity)
 
         self.loop_once = False
-
-        self.movable_terrain = [TerrainType.NORMAL]
 
         # 경로 및 이미지 캐시에서 로딩
         self.image_paths = ImageManager.get_npc_image_paths(image_path)
@@ -94,55 +103,36 @@ class NPC(QObject):
         self.direction = random.randint(
             RouteDir.RIGHT.value, RouteDir.DOWN_RIGHT.value)
         
-        self.disp_dx = 0.0
-        self.set_disp_dx(0.0)
-        self.disp_dy = 0.0
-        self.set_disp_dy(0.0)
+        self.reset()
 
-        self.draw_offset_x = 0
-        self.draw_offset_y = 0
-        self.anim_dx_arrived = False
-        self.anim_dy_arrived = False
+        self.animator = DirectionalAnimator(self,
+            on_complete_cb=self.on_anim_complete_cb,
+            on_tick_cb=self.on_anim_tick_cb,
+            on_start_cb=self.on_anim_start_cb)
+
+    def reset(self):
+        """NPC 상태를 초기화한다. (경로, 애니메이션, 큐 등)"""
+
+        # self.goal_list.clear()
 
         self.goal_list:list[tuple[int,int]] = list()
 
         self.real_list = list()
+        
         self.proto_list = list()
+        self.proto_route_index = 0
+        self.proto = c_route()
 
-        self.phantom_start = self.m_start
-        self.anim_started = False
-
-        self.next = None
         self.next_history = list()
-        
-        self.speed_kmh = speed_kmh  # default speed
-        self.start_delay_sec = start_delay_sec
-        self.set_start_delay_sec(start_delay_sec)
+        self.cur_index = 0
+       
+        self.speed_kmh = 4  # default speed
+        self.start_delay_sec = 0.5
+        self.set_start_delay_sec(0.5)
 
-        self.total_elapsed_sec = 0.0
-
-        self.finder.set_move_func(self._move_cb)
-
-        self.finder.set_changed_coords_func(self.world.changed_coords_cb)
-
-        self.finder.set_cost_func(self._cost_cb)
-
-        self.finding_thread = None
-        
-        self.finding_active = False
-
-        # self._real_q = Queue()
-        # self._proto_q = Queue()
-
-    @Slot(float)
-    def set_disp_dx(self, dx:float):
-        self.disp_dx = dx
-        self.disp_dx_changed.emit(dx)
-
-    @Slot(float)
-    def set_disp_dy(self, dy:float):
-        self.disp_dy = dy
-        self.disp_dy_changed.emit(dy)
+        self.start = (0,0)        
+        self.goal = self.start
+        self.cur_index_changed = False
 
     @Slot(int)
     def set_route_capacity(self, capacity:int):
@@ -150,10 +140,9 @@ class NPC(QObject):
         self.route_capacity_changed.emit(capacity)
 
     @Slot(int)
-    def set_max_retry(self, max_retry:int):
+    def set_compute_max_retry(self, max_retry:int):
         self.max_retry = max_retry
-        self.finder.max_retry = max_retry
-        self.max_retry_changed.emit(max_retry)
+        self.compute_max_retry_changed.emit(max_retry)
 
     @Slot(float)
     def set_speed_kmh(self, speed_kmh:float):
@@ -164,40 +153,8 @@ class NPC(QObject):
         self.start_delay_sec = delay_sec
         self.start_delay_sec_changed.emit(delay_sec)
 
-    def reset(self):
-        """NPC 상태를 초기화한다. (경로, 애니메이션, 큐 등)"""
-        # 탐색기 재초기화
-        self.finder.reset()
-
-        self.goal_list.clear()
-
-        self.next = None
-
-        # 애니메이션 상태
-        self.anim_started = False
-        self.anim_dx_arrived = False
-        self.anim_dy_arrived = False
-        self.disp_dx = 0.0
-        self.disp_dy = 0.0
-        self.disp_dx_changed.emit(0.0)
-        self.disp_dy_changed.emit(0.0)
-
-        # 위치 추적 및 타이머
-        self.phantom_start = self.m_start
-        self.total_elapsed_sec = 0.0
-
-        # 스레드 상태
-        self.finding_thread = None
-        self.finding_active = False
-
     def close(self):
         '''NPC 종료 시 리소스를 정리한다'''
-        # 🔸 탐색 쓰레드 정지
-        self.stop_finding()
-
-        self.phantom_start = None
-
-        self.finder.close()
 
         # 🔸 로깅
         g_logger.log_debug(f"[NPC.close] npc({self.id}) 종료 완료")
@@ -207,32 +164,51 @@ class NPC(QObject):
 
     @property
     def start(self):
-        # return self.finder.start.to_tuple()
-        c = self.finder.get_start()
-        return c.to_tuple()
+        return self.pos.cur_coord
         
     @start.setter
     def start(self, coord:tuple):
-        # self.finder.start = c_coord.from_tuple(coord)
-        self.m_start = coord
-        c = c_coord.from_tuple(coord)
-        self.finder.set_start(c)
-        # self.world.add_changed_coord(coord)
+        # self.pos.cur_coord = coord
+        self.pos.move_to(coord)
+        if self.proto:
+            self.direction = self.proto.get_direction_by_index(self.cur_index)
         self.start_changed_sig.emit(coord)
 
     @property
     def goal(self):
-        # return self.finder.goal.to_tuple()
-        c = self.finder.get_goal()
-        return c.to_tuple()
+        return self.m_goal
     
     @goal.setter
     def goal(self, coord: tuple):
-        # self.finder.goal = c_coord.from_tuple(coord)
         self.m_goal = coord
-        self.finder.set_goal(c_coord.from_tuple(coord))
-        # self.world.add_changed_coord(coord)
         self.goal_changed_sig.emit(coord)
+
+    def append_goal(self, coord:tuple):
+        self.goal_list.append(coord)
+
+    def move_to(self, coord: tuple):
+        self.loop_once = True
+        self.goal_list.clear()
+        self.append_goal(coord)
+        self.goal = coord
+
+    @property
+    def disp_dx(self) -> float:
+        return self.pos.disp_dx
+
+    @disp_dx.setter
+    def disp_dx(self, value: float):
+        self.pos.disp_dx = value
+        self.disp_dx_changed.emit(value)
+
+    @property
+    def disp_dy(self) -> float:
+        return self.pos.disp_dy
+
+    @disp_dy.setter
+    def disp_dy(self, value: float):
+        self.pos.disp_dy = value
+        self.disp_dy_changed.emit(value)
 
     @property
     def speed_kmh(self):
@@ -241,7 +217,6 @@ class NPC(QObject):
     @speed_kmh.setter
     def speed_kmh(self, kmh: float):
         self.m_speed_kmh = kmh
-        self.finder.set_interval_msec(self.interval_msec)
         self.speed_kmh_changed.emit(kmh)
 
     @property
@@ -252,233 +227,101 @@ class NPC(QObject):
             return float('inf')  # 속도가 0이면 무한대 시간 필요
         return int((self.world.grid_unit_m / speed_mps) * 1000)
 
-    @Slot(int, int)
-    def set_start_from_int(self, x:int, y:int):
-        s = (x, y)
-        self.m_start = s
+    def on_tick(self, elapsed_sec: float):
+        # 길찾기 요청 조건 (목표 존재 + 시작 ≠ 목표)
+        if len(self.goal_list) > 0 and self.start != self.goal:
+            g_logger.log_debug(f'지금 find()가 실행되었다 '
+                f'elapsed_sec : {elapsed_sec}, '
+                f'start_delay_sec : {self.start_delay_sec}')
+            self.find()
 
-    def append_goal(self, coord:tuple):
-        # self._goal_q.put(coord)
-        self.goal_list.append(coord)
-        
-    def move_to(self, coord: tuple):
-        if self.finding_thread and self.finding_thread.is_alive():
-            g_logger.log_debug("🔁 현재 find 루프 종료 요청 중...")
-            # 바로 요청하면 마우스 클릭으로 여러번 함수 호출할때
-            # force_quit중에 또 force_quit이 실행되어서 
-            # 다음 finder 루프를 돌수 없다.
-            self.finder.force_quit()
-            # 이제 요청했다. 루프 멈추라고...
-            # 즉각적으로 멈추는게 아니다.
-            # 아마도 시속에 따라 계산된 interval_msec 이후에 멈춘다.
-            self.finding_active = False
+        # 경로가 존재하고, 아직 도달하지 않았는가?
+        if len(self.proto) > 0 and self.cur_index < len(self.proto):
+            if self.cur_index_changed and not self.animator.is_anim_started():
+                if self.start == self.goal:
+                    return  # 목적지 = 시작점이면 애니메이션 불필요
 
-        self.goal = coord
-        # c = c_coord.from_tuple(coord)
-        # self.finder.update_vertex(c)
+                self.direction = self.proto.get_direction_by_index(self.cur_index)
+                self.animator.start(self.direction)
 
-        # 목표 모드가 한번만 설정하는것이다.
-        # append_goal은 기본적으로 클릭할때마다 목표를 추가한다
-        # 하지만 모드가 loop_once 이므로 가장 마지막에 설정된 목표만 
-        # 실제 이동할때 사용된다.
-        self.loop_once = True
+                self.cur_index_changed = False
 
-        # 바로 목표로 이동하는게 아니다.
-        # 시작 지연 msec에 따라 약간 지연 후에 on_tick에서 이동 시작한다.        
-        self.append_goal(coord)
+            # animator가 실행 중이면 tick을 제출
+            if self.animator.is_anim_started():
+                self.world.animator_engine.submit(self.animator, elapsed_sec)
 
-    def anim_moving_to(self, next: tuple, elapsed_sec: float, cell_size:int):
-        speed_mps = self.speed_kmh * 1000 / 3600.0
-        speed_pixel_per_sec = speed_mps * (cell_size / self.world.grid_unit_m)
-        delta = speed_pixel_per_sec * elapsed_sec
-        epsilon = 1e-3
+    def on_anim_tick_cb(self):
+        # 필요 시 디버깅/로깅 가능
+        pass
 
-        target_dx = (next[0] - self.phantom_start[0]) * cell_size
-        target_dy = (next[1] - self.phantom_start[1]) * cell_size
+    def on_anim_complete_cb(self):
+        self.cur_index += 1
+        self.cur_index_changed = True
+        next = self.proto.coord_at(self.cur_index).to_tuple()
+        self.pos.move_to(next)
+        self.world.set_start(self, next)
+        if self.start == self.goal:
+            self.cur_index = 0
 
-        delta_x = target_dx - self.disp_dx
-        if abs(delta_x) <= delta + epsilon:
-            self.disp_dx = target_dx
-            self.anim_dx_arrived = True
-            self.disp_dx_changed.emit(target_dx)
-        else:
-            self.disp_dx += delta if delta_x > 0 else -delta
-            self.anim_dx_arrived = False
-            self.disp_dx_changed.emit(self.disp_dx)
+        self.world.add_changed_coord(self.goal)
 
-        delta_y = target_dy - self.disp_dy
-        if abs(delta_y) <= delta + epsilon:
-            self.disp_dy = target_dy
-            self.anim_dy_arrived = True
-            self.disp_dy_changed.emit(target_dy)
-        else:
-            self.disp_dy += delta if delta_y > 0 else -delta
-            self.anim_dy_arrived = False
-            self.disp_dy_changed.emit(self.disp_dy)
-
-    def is_anim_arrived(self) -> bool:
-        return self.anim_dx_arrived and self.anim_dy_arrived
-    
-    def on_tick(self, elapsed_sec: float, cell_size:int):
-        if self.total_elapsed_sec >= self.start_delay_sec:
-            # if not self._goal_q.empty():
-            if len(self.goal_list) > 0:
-                if not self.finding_thread or not self.finding_thread.is_alive():
-                    g_logger.log_debug(f'''지금 find()가 실행되었다
-가장 중요한 finder.is_quit_forced는 {self.finder.is_quit_forced()}
-elapsed_sec : {elapsed_sec}, 
-self.total_elapsed_sec : {self.total_elapsed_sec},
-start_delay_sec : {self.start_delay_sec}''')
-                    self.find()
-            self.total_elapsed_sec = 0.0
-        else:
-            self.total_elapsed_sec += elapsed_sec
-
-        # 현재 목표가 없으면 큐에서 꺼내서 대기 목표 설정
-        if not self.next and not self.anim_started:
-            if len(self.next_history) > 0:
-                next = self.next_history.pop(0)
-                self.next = next
-                self.anim_started = True
-                self.anim_to_started_sig.emit(self.next)
-            else:
-                next = None
-
-        if self.next:
-            ps = c_coord.from_tuple(self.phantom_start)
-            sn = c_coord.from_tuple(self.next)
-            new_dir = c_route.calc_direction(ps, sn)
-            if new_dir != RouteDir.UNKNOWN:
-                self.direction = new_dir
-
-            self.anim_moving_to(self.next, elapsed_sec, cell_size)
-
-            if self.is_anim_arrived():
-                self.anim_to_arrived_sig.emit(self.next)
-                self.m_start = self.next
-                self.world.add_changed_coord(self.next)
-                self.phantom_start = self.m_start
-
-                self.disp_dx = 0
-                self.disp_dy = 0
-                self.disp_dx_changed.emit(0)
-                self.disp_dy_changed.emit(0)
-                self.anim_dx_arrived = False
-                self.anim_dy_arrived = False
-                self.anim_started = False
-                self.next = None  # 다음 tick에서 새 목표 pop
-
-    def find_loop(self):
-        '''쓰레드에서 실행된다.'''
-        try:
-            prev_goal = None
-            while self.finding_active:
-                try:
-                    if self.loop_once:
-                        # 가장 마지막에 추가된 목표만 사용한다.
-                        g = self.goal_list.pop()
-                        
-                        self.goal = g
-                        # self.world.add_changed_coord(g)
-
-                        self.loop_once = False
-
-                        self.goal_list.clear()
-
-                    else:
-                        if prev_goal is None:
-                            prev_goal = self.m_start
-
-                        if prev_goal == self.m_start:
-                            if len(self.goal_list) <= 0:
-                                break
-
-                            g = self.goal_list.pop(0)
-                            self.goal = g
-                            # self.world.add_changed_coord(g)
-                            self.m_start = prev_goal
-                            self.world.add_changed_coord(prev_goal)
-                        else:
-                            if prev_goal != self.goal:
-                                prev_goal = self.goal
-
-                    self.finder.find_proto()
-                    route = self.finder.get_proto_route()
-                    l = route.coords().to_list()
-                    for c in l:
-                        self.proto_list.append(c)
-
-                    # if route.success:
-                    if route.is_success():
-                        g_logger.log_debug_threadsafe(f'proto route 찾기가 성공했다')
-                    else:
-                        g_logger.log_debug_threadsafe(f'proto route 찾기가 실패했다')
-                        '''실패시 행동요령
-                        1. 실패하면 목표를 찾아야 한다.
-                        2. 장애물을 제거해야 한다.
-                        3. 가만 있는다.
-                        '''
-
-                    g_logger.log_debug_threadsafe(f'''초기 경로 찾기 로그:
-        self.finder.proto_compute_retry_count : {self.finder.proto_compute_retry_count}, 
-        self.finder.reconstruct_retry_count : {self.finder.reconstruct_retry_count}, 
-        ''')
-
-                    self.finder.find_loop()
-                    route1 = self.finder.get_real_route()
-                    self.real_list.append(route1.coords().to_list())
-                    # if route1.success:
-                    if route1.is_success():
-                        g_logger.log_debug_threadsafe(f'real route 찾기가 성공했다')
-                    else:
-                        g_logger.log_debug_threadsafe(f'real route 찾기가 실패했다')
-
-                    g_logger.log_debug_threadsafe(f'''실제 경로 찾기 로그
-        self.finder.real_compute_retry_count : {self.finder.real_compute_retry_count}, 
-        self.finder.real_loop_retry_count : {self.finder.real_loop_retry_count}
-        ''')
-                    g_logger.log_debug_threadsafe(
-                                '✅ find_loop가 정상 종료되었습니다')
-                except Empty:
-                    g_logger.log_debug_threadsafe(
-                        '✅ find_loop가 self._goal_q.get_nowait()가 '
-                        'Empty라서 종료되었습니다')
-                    break
-
-        except Exception as e:
-            g_logger.log_debug_threadsafe(f'🚨 경로 탐색 중 예외 발생: {e}')
-
-        finally:
-            # 🔸 종료 처리 (외부에서 self.finding_active = False 호출할 수 
-            # 있으므로 여기선 굳이 다시 False 안 해도 됨)
-            self.finding_thread = None
+    def on_anim_start_cb(self):
+        # 필요 시 효과음, 감정 연출 등 후처리
+        # grid_canvas에서 그림을 제거해야한다.
+        pass
 
     def find(self):
-        if self.finding_thread and self.finding_thread.is_alive():
-            return  # 이미 실행 중이면 무시
-        
-        self.finding_active = True
-        self.finding_thread = Thread(
-            target=self.find_loop, daemon=True)
-        
-        self.finding_thread.start()
+        if len(self.goal_list) > 0:
+            goal = self.goal_list.pop(0)
+        else:
+            if self.start == self.goal:
+                return
+            goal = self.goal
+            
+        map = self.world.map
+        map.set_is_coord_blocked_fn(self._is_blocked_cb)
+        self.world.route_finder_engine.submit(
+            map,
+            self.id,
+            self.algotype,
+            self.start,
+            goal,
+            self.on_proto_found,
+            self.max_retry,
+        )
 
-    def stop_finding(self):
-        self.finding_active = False
+    def on_proto_found(self, result:RouteResult):
+        id = result.npc_id
+        route:c_route = result.route
+        self.proto.append(route, nodup=True)
 
-        if self.finding_thread:
-            if self.finding_thread.is_alive():
-                # finder() 내부에서 while루프에 forece_quite = True해서 루프 종료
-                # finder()가 종료되면 자연스럽게 쓰레드 종료
-                self.finder.force_quit()
+        a_list = route.coords().to_list()
 
-                self.finding_thread.join(timeout=1.0)
-                if self.finding_thread and self.finding_thread.is_alive():
-                    g_logger.log_debug_threadsafe(
-                        "⏰ 타임아웃: 쓰레드 아직 종료되지 않음!")
-                    # 필요하면 여기서 강제종료 로직 또는 경고 처리
-                    return  # 또는 그냥 남겨둠
-            self.finding_thread = None
+        for i in range(len(a_list)):
+            self.proto_list.append(a_list[i])
+
+        # 길이 초과 시 마지막 N개만 유지
+        if len(self.proto_list) > self.route_capacity:
+            self.proto_list[:] = self.proto_list[-self.route_capacity:]
+
+        end  = len(self.proto)
+        if end > self.route_capacity:
+            odd = end - self.route_capacity
+            start = odd
+
+            sliced = self.proto.slice(start, end)
+            self.proto = sliced
+
+        g_logger.log_debug_threadsafe(
+            f'npc_id : {id}, len(proto_list): {len(self.proto_list)}')
+        g_logger.log_debug_threadsafe(
+            f'route.to_string() : {route.to_string()}')
+
+        # proto를 생성했으니 self.cur_index_changed = True 발생
+        self.cur_index_changed = True
+
+        # coord =  self.proto_list[-1].to_tuple()
+        # self.world.set_start(self, coord)
 
     def _move_cb(self, coord_c:'c_coord', userdata):
         try:
@@ -506,30 +349,31 @@ start_delay_sec : {self.start_delay_sec}''')
         dy = start.y - goal.y
         return math.hypot(dx, dy)
 
-    @staticmethod
-    def _is_blocked_cb(map:c_map, x, y, userdata):
+    def _is_blocked_cb(self, map:c_map, x, y, userdata):
         c = (x, y)
-        cell = userdata.world.block_mgr.get_cell(c)
-        return userdata.is_obstacle(cell)
+        cell = self.world.block_mgr.get_cell(c)
+        return self.is_obstacle(cell)
 
-    def draw(self, painter: QPainter,
-                 start_win_pos_x:int, start_win_pos_y:int, cell_size):
-        '''실제 디바이스에 이미지를 그린다.
-        '''
-        x = start_win_pos_x + self.draw_offset_x + int(self.disp_dx)
-        y = start_win_pos_y + self.draw_offset_y + int(self.disp_dy)
+    def draw(self, painter: QPainter, 
+            start_win_pos_x: int, start_win_pos_y: int, 
+            cell_size: int):
+        """
+        NPC를 현재 위치에 그린다.
+        disp_dx, disp_dy는 -1.0 ~ 1.0 사이의 상대 위치 비율이다.
+        """
+        # cur_pos = self.pos.get_pos()
+        cur_pos_x = self.pos.disp_dx
+        cur_pos_y = self.pos.disp_dy
 
-        # 배경: 반투명 검정
-        # rect = QRect(x, y, cell_size, cell_size)
-        # painter.setBrush(QColor(0, 0, 0, 127))
-        # painter.setPen(Qt.NoPen)
-        # painter.drawRect(rect)
+        # 실제 렌더링 좌표 계산 (비율 적용 + cell_size 보간)
+        draw_x = start_win_pos_x + cur_pos_x * cell_size
+        draw_y = start_win_pos_y + cur_pos_y * cell_size
 
         image = self.get_image()
 
-        painter.drawPixmap(
-                x, y, cell_size, cell_size, image)
-        pass
+        # 이미지 크기 = cell_size × cell_size 로 고정 렌더링
+        painter.drawPixmap(int(draw_x), int(draw_y), 
+                           cell_size, cell_size, image)
 
     def get_image(self):
         return self.images[self.direction]
@@ -537,54 +381,24 @@ start_delay_sec : {self.start_delay_sec}''')
     def get_image_path(self):
         return self.image_paths[self.direction]
     
-    def get_proto_route_image(self, coord):
-        c = c_coord.from_tuple(coord)
-        direction = c_route.get_direction_by_dir_coord(c)
-        return self.route_images[direction]
-    
-        # for sublist in self.proto_list:  # sublist: list of c_coord
-        #     try:
-        #         cur_idx = sublist.index(c)
-        #     except ValueError:
-        #         continue  # 현재 coord_list에는 없음, 다음 coord_list로
+    def get_proto_image(self, index:int):
+        if len(self.proto_list) <= 0:
+            return None
 
-        #     if cur_idx + 1 < len(sublist):
-        #         start = c
-        #         end = sublist[cur_idx + 1]
-        #     elif cur_idx - 1 >= 0:
-        #         start = sublist[cur_idx - 1]
-        #         end = c
-        #     else:
-        #         return None  # 단일 좌표인 경우
+        # 마지막 지점 → 이전 방향
+        if index >= len(self.proto) - 1:
+            dir = self.proto.get_direction_by_index(len(self.proto) - 2)
+        else:
+            # 시작지점이거나 중간 좌표는 다음 좌표와의 관계로 방향을 얻으면 된다.
+            dir = self.proto.get_direction_by_index(index)
+            
+        return self.route_images[dir]
 
-        #     # direction = c_route.calc_direction(start, end)
-        #     direction = c_route.get_direction_by_dir_coord(c)
-        #     return self.route_images[direction]
-
-        # return None  # 모든 coord_list에 coord가 없을 경우
+    # def get_proto_image(self):
+    #     return self.route_images[self.direction]
         
     def get_real_route_image(self, coord):
-        c = c_coord.from_tuple(coord)
-
-        for sublist in self.real_list:  # sublist: list of c_coord
-            try:
-                cur_idx = sublist.index(c)
-            except ValueError:
-                continue  # 현재 coord_list에는 없음, 다음 coord_list로
-
-            if cur_idx + 1 < len(sublist):
-                start = c
-                end = sublist[cur_idx + 1]
-            elif cur_idx - 1 >= 0:
-                start = sublist[cur_idx - 1]
-                end = c
-            else:
-                return None  # 단일 좌표인 경우
-
-            direction = calc_direction(start, end)
-            return self.route_images[direction]
-
-        return None  # 모든 coord_list에 coord가 없을 경우    
+        pass
 
     def load_image_paths(self, image_path:Path):
         self.image_paths = ImageManager.get_npc_image_paths(image_path)
@@ -592,48 +406,15 @@ start_delay_sec : {self.start_delay_sec}''')
     def load_images(self, image_path:Path):
         self.images = ImageManager.get_npc_image_set(image_path)                
 
-    def on_proto_route_found(self):
-        new_items: list = self.proto_list
-
-        if not new_items:
-            g_logger.log_debug('proto_list is empty')
-            return
-
-        # 중복 없이 추가
-        for item in new_items:
-            if item not in self.proto_list:
-                self.proto_list.append(item)
-
-        # 길이 초과 시 마지막 N개만 유지
-        if len(self.proto_list) > self.route_capacity:
-            self.proto_list[:] = self.proto_list[-self.route_capacity:]
-
-        g_logger.log_debug(f'len(proto_list): {len(self.proto_list)}')
-
     def on_real_route_found(self):
-        new_items: list = self.real_list
+        pass
 
-        if not new_items:
-            g_logger.log_debug('real_list is empty')
-            return
-
-        # 중복 없이 추가
-        for item in new_items:
-            if item not in self.real_list:
-                self.real_list.append(item)
-
-        # 길이 초과 시 마지막 N개만 유지
-        if len(self.real_list) > self.route_capacity:
-            self.real_list[:] = self.real_list[-self.route_capacity:]
-
-        g_logger.log_debug(f'len(real_list): {len(self.real_list)}')
-
-
-    def clear_proto_route(self):
+    def clear_proto(self):
+        self.world.clear_proto_flags(self)
         self.proto_list.clear()
 
     def clear_real_route(self):
-        self.real_list.clear()
+        pass
 
     def is_movable(self, cell:GridCell):
         return not self.is_obstacle(cell)
